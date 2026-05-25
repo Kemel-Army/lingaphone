@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FEMO — Методический гайд для учителей-разработчиков</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #B45309;
+      --gold-dark:  #92400E;
+      --gold-light: #FEF3C7;
+      --gold-mid:   #FDE68A;
+      --green:      #16A34A;
+      --green-light:#DCFCE7;
+      --green-mid:  #86EFAC;
+      --dark:       #1C1917;
+      --medium:     #78716C;
+      --light:      #F5F5F4;
+      --border:     #E7E5E4;
+      --white:      #FFFFFF;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #D6D3D1;
+      color: var(--dark);
+    }
+
+    /* ══════════════════════════════════
+       PAGE SHELL
+    ══════════════════════════════════ */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 16px auto;
+      background: var(--white);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.14);
+      padding: 18mm 20mm 16mm;
+      position: relative;
+    }
+
+    @media print {
+      body { background: white; }
+      .page {
+        margin: 0 auto;
+        box-shadow: none;
+        page-break-after: always;
+        padding: 14mm 18mm 12mm;
+      }
+    }
+
+    /* ══════════════════════════════════
+       PAGE HEADER (recurring)
+    ══════════════════════════════════ */
+    .ph {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1.5px solid var(--gold);
+      padding-bottom: 8px;
+      margin-bottom: 22px;
+    }
+    .ph-brand { font-size: 8pt; font-weight: 700; color: var(--gold); letter-spacing: 0.18em; text-transform: uppercase; }
+    .ph-right  { font-size: 7.5pt; color: var(--medium); }
+
+    /* ══════════════════════════════════
+       TYPOGRAPHY
+    ══════════════════════════════════ */
+    .tag-label {
+      font-size: 7pt; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.16em; color: var(--gold); margin-bottom: 5px;
+    }
+    h1 { font-size: 30pt; font-weight: 700; line-height: 1.08; letter-spacing: -0.025em; color: var(--dark); }
+    h2 { font-size: 18pt; font-weight: 700; line-height: 1.18; letter-spacing: -0.02em; color: var(--dark); margin-bottom: 14px; }
+    h3 { font-size: 11.5pt; font-weight: 700; color: var(--dark); margin-bottom: 7px; }
+    h4 { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 7px; }
+    p  { font-size: 9.5pt; line-height: 1.65; color: var(--medium); margin-bottom: 9px; }
+    p:last-child { margin-bottom: 0; }
+    strong { color: var(--dark); font-weight: 600; }
+    em { color: var(--gold-dark); font-style: italic; }
+
+    /* ══════════════════════════════════
+       COVER PAGE
+    ══════════════════════════════════ */
+    .cover { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .cover-stripe { height: 10px; background: var(--gold); }
+    .cover-body { padding: 22mm 20mm 20mm; display: flex; flex-direction: column; flex: 1; }
+    .cover-logo { font-size: 10pt; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+    .cover-logo-sub { font-size: 8pt; color: var(--medium); letter-spacing: 0.08em; margin-top: 2px; margin-bottom: 44px; }
+    .cover-rule { width: 56px; height: 3px; background: var(--gold); margin-bottom: 28px; }
+    .cover-h1 { font-size: 34pt; font-weight: 700; line-height: 1.06; letter-spacing: -0.03em; color: var(--dark); margin-bottom: 18px; }
+    .cover-desc { font-size: 12pt; color: var(--medium); line-height: 1.65; max-width: 145mm; margin-bottom: 40px; }
+    .cover-pills { display: flex; gap: 10px; margin-bottom: 44px; flex-wrap: wrap; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 100px; font-size: 8.5pt; font-weight: 600;
+    }
+    .pill-gold { background: var(--gold-light); color: var(--gold-dark); border: 1px solid var(--gold-mid); }
+    .pill-green { background: var(--green-light); color: #166534; border: 1px solid var(--green-mid); }
+    .pill-gray { background: var(--light); color: var(--medium); border: 1px solid var(--border); }
+    .cover-footer {
+      margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .cover-footer-note { font-size: 8pt; color: var(--medium); line-height: 1.5; }
+    .cover-version { font-size: 8pt; font-weight: 700; color: var(--gold); }
+
+    /* ══════════════════════════════════
+       INFO / HIGHLIGHT BOXES
+    ══════════════════════════════════ */
+    .ibox {
+      border-left: 3px solid var(--gold); padding: 10px 14px;
+      background: var(--gold-light); border-radius: 0 6px 6px 0; margin: 12px 0;
+    }
+    .ibox p { font-size: 9.5pt; color: var(--gold-dark); margin: 0; }
+    .ibox-green {
+      border-left-color: var(--green); background: var(--green-light);
+    }
+    .ibox-green p { color: #166534; }
+
+    /* ══════════════════════════════════
+       GRID LAYOUTS
+    ══════════════════════════════════ */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .g2-6040 { display: grid; grid-template-columns: 60% 40%; gap: 16px; }
+
+    /* ══════════════════════════════════
+       CARDS
+    ══════════════════════════════════ */
+    .card {
+      padding: 13px 15px; border: 1px solid var(--border); border-radius: 8px;
+    }
+    .card-gold { background: var(--gold-light); border-color: var(--gold-mid); }
+    .card-green { background: var(--green-light); border-color: var(--green-mid); }
+    .card-dark { background: var(--dark); color: white; }
+    .card-light { background: var(--light); border-color: var(--border); }
+    .card h4 { margin-bottom: 8px; }
+    .card-dark h4 { color: #FCD34D; }
+    .card-dark p { color: #D6D3D1; }
+
+    /* ══════════════════════════════════
+       PROCESS FLOW
+    ══════════════════════════════════ */
+    .flow-wrap { display: flex; align-items: stretch; gap: 0; margin: 16px 0; }
+    .flow-step {
+      flex: 1; padding: 11px 10px; text-align: center;
+      background: var(--gold-light); border: 1px solid var(--gold-mid);
+      position: relative;
+    }
+    .flow-step + .flow-step { margin-left: 18px; }
+    .flow-step + .flow-step::before {
+      content: '→'; position: absolute; left: -14px; top: 50%;
+      transform: translateY(-50%); color: var(--gold); font-size: 13pt; font-weight: 700; z-index: 1;
+    }
+    .flow-step-n { font-size: 7pt; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; display: block; }
+    .flow-step-t { font-size: 9pt; font-weight: 700; color: var(--dark); display: block; margin: 3px 0; }
+    .flow-step-d { font-size: 7.5pt; color: var(--medium); line-height: 1.4; display: block; }
+
+    /* ══════════════════════════════════
+       OVERVIEW TABLE — 11 layers
+    ══════════════════════════════════ */
+    .ov-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin: 12px 0; }
+    .ov-table th {
+      background: var(--dark); color: white; padding: 7px 9px; text-align: left;
+      font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+    }
+    .ov-table td { padding: 7px 9px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+    .ov-table tr:nth-child(even) td { background: var(--light); }
+    .ov-table .n {
+      width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: white;
+      font-weight: 700; font-size: 11pt; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .ov-table .layer-name-bold { font-weight: 700; color: var(--dark); }
+    .ov-table .layer-sub { font-size: 8pt; color: var(--medium); font-style: italic; }
+
+    /* ══════════════════════════════════
+       LAYER CARDS (detailed)
+    ══════════════════════════════════ */
+    .lc {
+      border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 14px; overflow: hidden;
+    }
+    .lc-head {
+      display: grid; grid-template-columns: auto 1fr;
+      gap: 13px; align-items: center;
+      padding: 11px 15px; background: var(--gold-light);
+      border-bottom: 1px solid var(--gold-mid);
+    }
+    .lc-num {
+      width: 38px; height: 38px; border-radius: 50%; background: var(--gold); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13pt; font-weight: 700; flex-shrink: 0;
+    }
+    .lc-title { font-size: 12pt; font-weight: 700; color: var(--dark); line-height: 1.2; }
+    .lc-subtitle { font-size: 8.5pt; color: var(--gold-dark); font-style: italic; margin-top: 1px; }
+    .lc-body { display: grid; grid-template-columns: 1fr 1fr; }
+    .lc-col { padding: 13px 15px; }
+    .lc-col:first-child { border-right: 1px solid var(--border); }
+    .lc-col-label {
+      font-size: 7.5pt; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--gold); margin-bottom: 8px;
+    }
+    .lc-col-label-green { color: var(--green); }
+    .lc-text { font-size: 9pt; color: var(--medium); line-height: 1.6; }
+
+    /* ══════════════════════════════════
+       NEED LIST
+    ══════════════════════════════════ */
+    .nl { list-style: none; padding: 0; margin: 0; }
+    .nl li {
+      font-size: 9pt; color: var(--dark); line-height: 1.5;
+      padding: 3px 0 3px 16px; position: relative;
+    }
+    .nl li::before { content: '▸'; position: absolute; left: 0; color: var(--green); font-size: 8.5pt; }
+
+    /* Format hint */
+    .fmt-hint {
+      padding: 7px 12px; background: var(--light); border: 1px solid var(--border);
+      border-radius: 4px; margin-top: 8px;
+    }
+    .fmt-hint span { font-size: 7.5pt; color: var(--medium); }
+    .fmt-hint span strong { color: var(--gold-dark); font-weight: 600; }
+
+    /* ══════════════════════════════════
+       DATA TABLE
+    ══════════════════════════════════ */
+    .dt { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 10px 0; }
+    .dt th {
+      background: var(--dark); color: white; padding: 8px 10px;
+      text-align: left; font-size: 7.5pt; text-transform: uppercase;
+      letter-spacing: 0.08em; font-weight: 600;
+    }
+    .dt td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+    .dt tr:nth-child(even) td { background: var(--light); }
+    .dt .td-name { font-weight: 700; color: var(--dark); }
+    .dt .td-cap { font-weight: 700; color: var(--gold); text-align: center; }
+    .dt .td-h { text-align: center; color: var(--medium); }
+
+    /* ══════════════════════════════════
+       CHECKLIST
+    ══════════════════════════════════ */
+    .cl { list-style: none; padding: 0; margin: 0; }
+    .cl li {
+      padding: 7px 0 7px 26px; position: relative;
+      border-bottom: 1px solid var(--border); font-size: 9.5pt; color: var(--dark); line-height: 1.4;
+    }
+    .cl li:last-child { border-bottom: none; }
+    .cl li::before { content: '☐'; position: absolute; left: 0; font-size: 14pt; line-height: 1; color: var(--gold); }
+    .cl-section { font-size: 8pt; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; padding: 10px 0 4px; }
+
+    /* ══════════════════════════════════
+       KTP ROW
+    ══════════════════════════════════ */
+    .ktp-row {
+      display: flex; gap: 10px; align-items: center;
+      padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 5px;
+    }
+    .ktp-n {
+      width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: white;
+      font-size: 8.5pt; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ktp-topic { flex: 1; font-size: 9pt; font-weight: 600; color: var(--dark); }
+    .ktp-sub { flex: 1.5; font-size: 8.5pt; color: var(--medium); }
+    .ktp-h { font-size: 8pt; color: var(--medium); background: var(--light); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+    .ktp-cap { font-size: 8.5pt; font-weight: 700; color: var(--gold); white-space: nowrap; }
+
+    /* ══════════════════════════════════
+       FORM FIELDS (template)
+    ══════════════════════════════════ */
+    .ff { margin-bottom: 12px; }
+    .ff-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--medium); margin-bottom: 3px; display: block; }
+    .ff-box {
+      border: 1px solid var(--border); border-radius: 4px; padding: 7px 10px;
+      min-height: 26px; background: #FAFAF9; font-size: 8.5pt; color: var(--medium); font-style: italic;
+    }
+    .ff-box.tall { min-height: 46px; }
+    .ff-box.xtall { min-height: 72px; }
+
+    /* ══════════════════════════════════
+       UTILITY
+    ══════════════════════════════════ */
+    .sp { height: 12px; }
+    .sp-sm { height: 7px; }
+    .sp-lg { height: 22px; }
+    hr.light { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    hr.gold  { border: none; border-top: 2px solid var(--gold-mid); margin: 18px 0; }
+    .note { font-size: 8pt; color: var(--medium); font-style: italic; line-height: 1.5; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 3px;
+      font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .b-gold { background: var(--gold-light); color: var(--gold-dark); border: 1px solid var(--gold-mid); }
+    .b-green { background: var(--green-light); color: #166534; border: 1px solid var(--green-mid); }
+    .b-gray  { background: var(--light); color: var(--medium); border: 1px solid var(--border); }
+    .txt-right { text-align: right; }
+    .txt-center { text-align: center; }
+
+    /* ══════════════════════════════════
+       LAYER EXAMPLE BLOCK
+    ══════════════════════════════════ */
+    .lc-example {
+      padding: 10px 15px 12px;
+      background: #F0FDF4;
+      border-top: 1px solid var(--green-mid);
+    }
+    .lc-example .lc-col-label-green { margin-bottom: 5px; }
+    .lc-example .lc-text { font-size: 8.5pt; line-height: 1.6; color: #166534; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 1 · ОБЛОЖКА
+═══════════════════════════════════════════════════════ -->
+<div class="page cover">
+  <div class="cover-stripe"></div>
+  <div class="cover-body">
+
+    <div>
+      <div class="cover-logo">FEMO</div>
+      <div class="cover-logo-sub">Образовательная платформа нового поколения</div>
+    </div>
+
+    <div class="cover-rule"></div>
+
+    <h1 class="cover-h1">Методический<br>гайд для<br>учителей-<br>разработчиков</h1>
+
+    <p class="cover-desc">
+      Руководство по подготовке учебных материалов для системы <strong>STRATA</strong> — 
+      11-слойной архитектуры освоения знаний. Всё, что нужно знать учителю, 
+      чтобы его опыт стал основой цифровой капсулы.
+    </p>
+
+    <div class="cover-pills">
+      <span class="pill pill-gold">Система STRATA</span>
+      <span class="pill pill-gold">11 слоёв капсулы</span>
+      <span class="pill pill-green">Методика для учителей</span>
+      <span class="pill pill-gray">Версия 1.0 · 2026</span>
+    </div>
+
+    <div class="cover-footer">
+      <div class="cover-footer-note">
+        Для учителей, участвующих в разработке учебных капсул.<br>
+        Пожалуйста, прочитайте перед подачей материалов.
+      </div>
+      <div class="cover-version">FEMO · STRATA · v1.0</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 2 · О СИСТЕМЕ
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">01 · О системе</span>
+  </div>
+
+  <div class="tag-label">Раздел 01</div>
+  <h2>Что такое FEMO?</h2>
+
+  <div class="g2" style="margin-bottom: 18px;">
+    <div>
+      <p>
+        <strong>FEMO</strong> — цифровая образовательная платформа, которая позволяет ученику 
+        самостоятельно и полноценно освоить любую тему школьной программы без постоянного 
+        участия преподавателя рядом.
+      </p>
+      <p>
+        Платформа не заменяет учителя — она превращает <strong>опыт лучших педагогов</strong> в 
+        масштабируемый цифровой продукт. Каждая «умная» тема на платформе создаётся на 
+        основе материалов реального учителя-эксперта.
+      </p>
+    </div>
+    <div class="card card-gold">
+      <h4>Ключевые факты</h4>
+      <ul class="nl">
+        <li>Предмет запуска: <strong>математика, 5–11 классы</strong></li>
+        <li>Язык: русский и казахский</li>
+        <li>Аудитория: школьники Казахстана</li>
+        <li>Цель: освоение темы на уровне <strong>≥ 80%</strong> за 20–40 мин</li>
+        <li>Адаптация: система подстраивается под каждого ученика</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="light">
+
+  <div class="tag-label">Методологическая основа</div>
+  <h3>Система STRATA: 11-слойная капсула знания</h3>
+
+  <p>
+    В основе FEMO лежит методика <strong>STRATA</strong> 
+    (Стратифицированная Адаптивная Архитектура Преподавания). 
+    Её суть — каждая тема представлена не как урок, а как <strong>капсула</strong>: 
+    строго упорядоченная последовательность из <strong>11 когнитивных слоёв</strong>. 
+    Ни один слой не пропускается. Каждый слой имеет автоматически проверяемое условие завершения.
+  </p>
+
+  <div class="ibox">
+    <p>
+      <strong>Ключевой принцип:</strong> STRATA не изобретает педагогику — она объединяет проверенные методики 
+      (Mastery Learning Блума, теорию когнитивной нагрузки, техника Фейнмана, CAT-тестирование) 
+      в единую воспроизводимую систему.
+    </p>
+  </div>
+
+  <div class="sp"></div>
+
+  <hr class="light">
+
+  <div class="tag-label">Ваша роль</div>
+  <h3>Учитель и платформа: разделение ролей</h3>
+
+  <div class="g2">
+    <div class="card card-gold">
+      <h4>Учитель даёт</h4>
+      <ul class="nl">
+        <li>Содержание и экспертизу по предмету</li>
+        <li>Примеры из реальной практики</li>
+        <li>Знание типичных ошибок учеников</li>
+        <li>Разбор решений «как думает эксперт»</li>
+        <li>Формулировки заданий и ответы</li>
+        <li>Идеи для жизненных сценариев</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <h4 style="color:#166534;">Команда FEMO делает</h4>
+      <ul class="nl" style="">
+        <li style="color:#166534;">Структурирует материал по 11 слоям</li>
+        <li style="color:#166534;">Создаёт интерактивный интерфейс</li>
+        <li style="color:#166534;">Настраивает адаптивную сложность</li>
+        <li style="color:#166534;">Добавляет визуализации и анимации</li>
+        <li style="color:#166534;">Интегрирует AI-проверку ответов</li>
+        <li style="color:#166534;">Тестирует и публикует на платформе</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sp"></div>
+  <div class="ibox-green ibox">
+    <p>
+      <strong>Вам не нужно</strong> разбираться в программировании, AI или платформе. 
+      Ваша задача — поделиться своими знаниями в структурированном формате. Мы берём на себя всё техническое.
+    </p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 3 · ПРОЦЕСС РАЗРАБОТКИ
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">02 · Процесс разработки</span>
+  </div>
+
+  <div class="tag-label">Раздел 02</div>
+  <h2>Как создаётся учебная капсула</h2>
+
+  <p>Процесс от вашего КТП до готовой цифровой темы на платформе проходит через 5 этапов:</p>
+
+  <div class="flow-wrap">
+    <div class="flow-step">
+      <span class="flow-step-n">Шаг 01</span>
+      <span class="flow-step-t">Ваш КТП</span>
+      <span class="flow-step-d">Тематический план на год или четверть</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-step-n">Шаг 02</span>
+      <span class="flow-step-t">Декомпозиция</span>
+      <span class="flow-step-d">Совместно делим темы на атомарные единицы</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-step-n">Шаг 03</span>
+      <span class="flow-step-t">Материалы</span>
+      <span class="flow-step-d">Вы заполняете шаблон по каждой теме</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-step-n">Шаг 04</span>
+      <span class="flow-step-t">Разработка</span>
+      <span class="flow-step-d">Команда FEMO строит 11-слойную капсулу</span>
+    </div>
+    <div class="flow-step">
+      <span class="flow-step-n">Шаг 05</span>
+      <span class="flow-step-t">Ревью</span>
+      <span class="flow-step-d">Вы проверяете и утверждаете финальный результат</span>
+    </div>
+  </div>
+
+  <hr class="gold">
+
+  <div class="tag-label">Ключевое понятие</div>
+  <h3>Что такое атомарная тема (одна капсула)?</h3>
+
+  <p>
+    <strong>Атомарная тема</strong> — это наименьшая единица знания, которую можно полноценно освоить 
+    за один сеанс (20–40 минут). Одна капсула = одна атомарная тема.
+  </p>
+
+  <div class="g2">
+    <div class="card card-light">
+      <h4>Примеры атомарных тем</h4>
+      <ul class="nl">
+        <li>«Понятие обыкновенной дроби»</li>
+        <li>«Сравнение дробей с разными знаменателями»</li>
+        <li>«Умножение дробей»</li>
+        <li>«Деление дробей на целое число»</li>
+        <li>«Смешанные числа: перевод и обратно»</li>
+      </ul>
+    </div>
+    <div class="card card-light">
+      <h4>НЕ атомарные (слишком широко)</h4>
+      <ul class="nl">
+        <li><span style="color:#DC2626;">✗</span> «Дроби» — слишком широко (→ 8–10 капсул)</li>
+        <li><span style="color:#DC2626;">✗</span> «Уравнения» — нужно делить на подтипы</li>
+        <li><span style="color:#DC2626;">✗</span> «Геометрия» — это целый раздел</li>
+        <li><span style="color:#16A34A;">✓</span> Правило: 20–40 мин полного освоения</li>
+        <li><span style="color:#16A34A;">✓</span> Можно проверить одним тестом на 80%</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="light">
+
+  <div class="tag-label">Пример декомпозиции</div>
+  <h3>КТП → капсулы: раздел «Дроби», 6 класс (~20 часов)</h3>
+
+  <div class="ktp-row" style="background:var(--gold-light);">
+    <div class="ktp-n">1</div>
+    <div class="ktp-topic">Понятие обыкновенной дроби</div>
+    <div class="ktp-sub">Числитель, знаменатель, дробная черта</div>
+    <div class="ktp-h">2 ч</div>
+    <div class="ktp-cap">1 капсула</div>
+  </div>
+  <div class="ktp-row">
+    <div class="ktp-n">2</div>
+    <div class="ktp-topic">Правильные и неправильные дроби</div>
+    <div class="ktp-sub">Сравнение с единицей, смешанные числа</div>
+    <div class="ktp-h">2 ч</div>
+    <div class="ktp-cap">1 капсула</div>
+  </div>
+  <div class="ktp-row">
+    <div class="ktp-n">3</div>
+    <div class="ktp-topic">Сравнение дробей</div>
+    <div class="ktp-sub">С одинаковыми и разными знаменателями</div>
+    <div class="ktp-h">3 ч</div>
+    <div class="ktp-cap">2 капсулы</div>
+  </div>
+  <div class="ktp-row">
+    <div class="ktp-n">4</div>
+    <div class="ktp-topic">Сложение и вычитание дробей</div>
+    <div class="ktp-sub">С одинаковыми и с разными знаменателями</div>
+    <div class="ktp-h">5 ч</div>
+    <div class="ktp-cap">3 капсулы</div>
+  </div>
+  <div class="ktp-row">
+    <div class="ktp-n">5</div>
+    <div class="ktp-topic">Умножение дробей</div>
+    <div class="ktp-sub">Дробь × дробь, дробь × целое</div>
+    <div class="ktp-h">4 ч</div>
+    <div class="ktp-cap">2 капсулы</div>
+  </div>
+  <div class="ktp-row">
+    <div class="ktp-n">6</div>
+    <div class="ktp-topic">Деление дробей</div>
+    <div class="ktp-sub">Понятие обратной дроби, деление на дробь</div>
+    <div class="ktp-h">4 ч</div>
+    <div class="ktp-cap">2 капсулы</div>
+  </div>
+
+  <div class="sp-sm"></div>
+  <div class="ibox">
+    <p>
+      Итого: ~20 часов из КТП → <strong>11 капсул</strong> на платформе. 
+      Каждая капсула осваивается учеником за 20–35 минут. 
+      Ваш вклад: заполнить шаблон (стр. 11) для каждой из 11 атомарных тем.
+    </p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 4 · ОБЗОР 11 СЛОЁВ
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">03 · Архитектура капсулы</span>
+  </div>
+
+  <div class="tag-label">Раздел 03</div>
+  <h2>11 слоёв капсулы: обзор</h2>
+
+  <p>
+    Каждая тема на FEMO проходится строго по 11 слоям. 
+    Ученик не может пропустить слой — каждый завершается автоматической проверкой. 
+    Ниже — краткое описание каждого слоя и что он даёт ученику.
+  </p>
+
+  <table class="ov-table">
+    <thead>
+      <tr>
+        <th style="width:40px;">#</th>
+        <th style="width:90px;">Слой</th>
+        <th>Что происходит</th>
+        <th style="width:90px;">Педагогическая основа</th>
+        <th style="width:55px;">Время</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="n">I</span></td>
+        <td><span class="layer-name-bold">Хук</span><br><span class="layer-sub">Emotional hook</span></td>
+        <td>Короткий (≤1 мин) захват внимания: парадоксальный факт, реальная ситуация или провокационный вопрос. Ученик отвечает на микро-реакцию.</td>
+        <td>Аффективная нейронаука, мотивация</td>
+        <td class="txt-center">1–2 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">II</span></td>
+        <td><span class="layer-name-bold">Диагностика</span><br><span class="layer-sub">Adaptive test</span></td>
+        <td>Адаптивный микро-тест из 3–7 вопросов. Устанавливает стартовый уровень, выявляет пробелы в предпосылочных знаниях.</td>
+        <td>CAT, Item Response Theory, Осубель</td>
+        <td class="txt-center">2–3 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">III</span></td>
+        <td><span class="layer-name-bold">Интуиция</span><br><span class="layer-sub">Pre-formal</span></td>
+        <td>Ученик взаимодействует с визуальной моделью и формирует <em>доформальное</em> понимание концепции. Формул нет — только образы и аналогии.</td>
+        <td>Направляемое открытие (Брунер), Understanding by Design</td>
+        <td class="txt-center">3–5 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">IV</span></td>
+        <td><span class="layer-name-bold">Объяснение</span><br><span class="layer-sub">Explanation</span></td>
+        <td>Структурированная передача знания: текст, видео-нарратив или пошаговая демонстрация. Материал разбит на чанки с микро-проверками между ними.</td>
+        <td>Когнитивная нагрузка (Свеллер), Двойное кодирование (Пайвио)</td>
+        <td class="txt-center">4–6 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">V</span></td>
+        <td><span class="layer-name-bold">Формализация</span><br><span class="layer-sub">Formal language</span></td>
+        <td>Ученик активно реконструирует формальное представление: достраивает определение, выбирает запись формулы, формулирует правило.</td>
+        <td>Генеративное обучение (Витрок)</td>
+        <td class="txt-center">3–4 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">VI</span></td>
+        <td><span class="layer-name-bold">Разбор</span><br><span class="layer-sub">Worked examples</span></td>
+        <td>2–4 разобранных примера с возрастающей сложностью. Первый разобран полностью, второй частично, третий решается самостоятельно с подсказкой.</td>
+        <td>Worked examples effect (Свеллер), Когнитивное ученичество (Коллинз)</td>
+        <td class="txt-center">4–6 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">VII</span></td>
+        <td><span class="layer-name-bold">Тренажёр</span><br><span class="layer-sub">Trainer</span></td>
+        <td>Серия задач с адаптивной сложностью и мгновенной обратной связью. При ошибке — сократическая подсказка, затем корректирующая задача.</td>
+        <td>ACT-R (Андерсон), Interleaving (Рор)</td>
+        <td class="txt-center">5–8 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">VIII</span></td>
+        <td><span class="layer-name-bold">Сценарий</span><br><span class="layer-sub">Transfer</span></td>
+        <td>Задачи-сценарии из реальной жизни: ученик сам распознаёт применимость концепции. Сценарий имеет внутреннюю логику и последствия.</td>
+        <td>Situated learning (Лейв, Венгер), Transfer of learning</td>
+        <td class="txt-center">4–6 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">IX</span></td>
+        <td><span class="layer-name-bold">Ловушки</span><br><span class="layer-sub">Error traps</span></td>
+        <td>Провокационные задачи на типичные ошибки. При ошибке — немедленный разбор причины и визуальное доказательство неверности.</td>
+        <td>Refutation texts (Типпетт), Concept change (Познер)</td>
+        <td class="txt-center">3–5 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">X</span></td>
+        <td><span class="layer-name-bold">Объясни сам</span><br><span class="layer-sub">Teach-back</span></td>
+        <td>Ученик объясняет концепцию «виртуальному младшему» своими словами. AI анализирует полноту и точность объяснения.</td>
+        <td>Техника Фейнмана, Self-explanation effect (Чи)</td>
+        <td class="txt-center">3–5 мин</td>
+      </tr>
+      <tr>
+        <td><span class="n">XI</span></td>
+        <td><span class="layer-name-bold">Мастери-чек</span><br><span class="layer-sub">Mastery check</span></td>
+        <td>Итоговый тест из 5–10 задач на всех когнитивных уровнях. Порог — 80%. При неудаче: система точно определяет слабые слои и отправляет повторить только их.</td>
+        <td>Mastery Learning (Блум), Testing effect (Карпике)</td>
+        <td class="txt-center">5–8 мин</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="sp-sm"></div>
+  <div class="ibox">
+    <p>
+      Итого: одна капсула проходится за <strong>37–58 минут</strong>. 
+      Для ученика это заменяет 1–2 урока. 
+      Порог мастерства (80% в Мастери-чеке) — это условие перехода к следующей теме.
+    </p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 5 · СЛОИ I–III
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">04 · Слои I–III: мотивация и первичное понимание</span>
+  </div>
+
+  <div class="tag-label">Раздел 04 — Слои I–III</div>
+  <h2>Мотивация и первичное понимание</h2>
+
+  <!-- LAYER 1 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">I</div>
+      <div>
+        <div class="lc-title">Хук — Эмоциональный захват внимания</div>
+        <div class="lc-subtitle">Ответить на вопрос «зачем мне это?» до того, как ученик его задал</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик видит короткий (до 1 минуты) контент — парадокс, удивительный факт или реальную ситуацию, — и делает микро-реакцию: кликает, отвечает на вопрос без «правильного» ответа. Цель — не передать знание, а <strong>пробудить интерес</strong> до начала обучения.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>2–3 <strong>удивительных факта</strong> из реальной жизни, связанных с темой</li>
+          <li><strong>Парадокс или противоречие</strong> («кажется, что… но на самом деле…»)</li>
+          <li>Реальная ситуация, где этот навык жизненно нужен ученику</li>
+          <li>Провокационный вопрос, на который интересно ответить</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> текстовый документ или сообщение. 2–5 предложений на каждую идею. Необязательно: фото/иллюстрация.</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">«У тебя ¾ пиццы, и ты хочешь отдать другу ⅔ от того, что есть. Большинство учеников пишут «⁵⁄₇» — складывают числители и знаменатели. Правильный ответ: <strong>½</strong>. Провокация от учителя: «Ты уверен, что умеешь правильно делиться пиццей?»</div>
+    </div>
+  </div>
+
+  <!-- LAYER 2 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">II</div>
+      <div>
+        <div class="lc-title">Диагностика — Установление стартовой точки</div>
+        <div class="lc-subtitle">Что ученик уже знает? Какие предпосылочные знания необходимы?</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Адаптивный тест из 3–7 вопросов оценивает уровень ученика. Каждый следующий вопрос подбирается на основе предыдущего ответа. Результат обновляет модель ученика и определяет, какие акценты расставить в следующих слоях.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>Список <strong>5–7 предпосылочных знаний</strong> (что ученик должен знать ДО этой темы)</li>
+          <li><strong>5–7 диагностических вопросов</strong> с правильными ответами</li>
+          <li>К каждому вопросу: <strong>типичный неправильный ответ</strong> и что он говорит о пробеле</li>
+          <li>Вопросы должны охватывать разные уровни сложности</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> таблица «Вопрос | Правильный ответ | Типичная ошибка | Что означает ошибка»</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Предпосылочные знания:</strong> понятие числителя и знаменателя, умножение натуральных чисел, дробь как «часть от целого».<br>
+        <strong>1.</strong> Что такое числитель в ¾? → 3 <em>(ошибка: называют 4 — путают понятия)</em><br>
+        <strong>2.</strong> Чему равно 3×2? → 6 <em>(предпосылка: умение перемножать)</em><br>
+        <strong>3.</strong> Что больше: ¾ или 1? → 1 <em>(понимание, что правильная дробь < 1)</em>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 3 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">III</div>
+      <div>
+        <div class="lc-title">Интуиция — Доформальное понимание</div>
+        <div class="lc-subtitle">Сформировать образное понимание ДО введения формул и терминов</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик взаимодействует с визуальной или интерактивной моделью: перемещает ползунки, наблюдает закономерности, отвечает на направляющие вопросы. Формальные термины на этом этапе <strong>не вводятся</strong> — только образы и аналогии.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>Объяснение концепции <strong>без формул</strong> — через образ, историю, аналогию</li>
+          <li>2–3 <strong>метафоры или аналогии</strong> из повседневной жизни</li>
+          <li>Описание: «Если бы я <strong>нарисовал</strong> это без формул, я бы показал…»</li>
+          <li>Как бы вы объяснили это <strong>8-летнему ребёнку</strong>?</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> свободный текст. Можно с рисунками или фото с доски. Длина: 0.5–1 страница.</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">Возьми лист бумаги. Сложи его пополам — это <strong>½ листа</strong>. Сложи эту половину ещё раз пополам — осталась <strong>¼ листа</strong>. Ты «взял половину от половины» — это и есть <em>умножение дробей</em>: ½ × ½ = ¼. Часть от части — всегда меньшая часть.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 6 · СЛОИ IV–VI
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">05 · Слои IV–VI: передача и освоение знания</span>
+  </div>
+
+  <div class="tag-label">Раздел 05 — Слои IV–VI</div>
+  <h2>Передача и освоение знания</h2>
+
+  <!-- LAYER 4 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">IV</div>
+      <div>
+        <div class="lc-title">Объяснение — Структурированная передача знания</div>
+        <div class="lc-subtitle">Формальное содержание, разбитое на чанки с учётом рабочей памяти</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик получает полное объяснение темы: текст, видео-нарратив или пошаговая демонстрация. Материал разделён на смысловые блоки (чанки). Между блоками — 1–2 проверочных вопроса. Ученик может задавать уточняющие вопросы AI-репетитору.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li><strong>Полный текст лекции</strong> или конспект урока</li>
+          <li>Список <strong>ключевых понятий</strong> с определениями</li>
+          <li><strong>Цели обучения</strong>: что ученик должен знать и уметь после</li>
+          <li>Видеозапись урока (если есть — отлично, но не обязательно)</li>
+          <li>2–3 <strong>проверочных вопроса</strong> по ходу объяснения с ответами</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> Word/PDF, презентация PowerPoint/Google Slides, видеофайл, или конспект в свободной форме</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Правило:</strong> числитель × числитель, знаменатель × знаменатель — отдельно.<br>
+        <strong>Пример:</strong> ¾ × ⅔ = (3·2)/(4·3) = ⁶⁄₁₂ = ½<br>
+        <em>Ключевой акцент:</em> результат умножения дробей <em>меньше</em> обоих множителей — это нормально, мы берём «часть от части».
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 5 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">V</div>
+      <div>
+        <div class="lc-title">Формализация — Перевод в символьный язык</div>
+        <div class="lc-subtitle">Ученик активно реконструирует официальное определение и формулы</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик не читает готовую формулу — он <strong>достраивает</strong> её: заполняет пропуски, выбирает правильную запись, формулирует определение по шаблону. Система проверяет корректность. Это активная фиксация, а не пассивное чтение.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>Официальные <strong>определения</strong> из учебника (дословно)</li>
+          <li>Все <strong>формулы и правила</strong> в стандартной математической записи</li>
+          <li><strong>Расшифровка обозначений</strong>: что означает каждый символ/буква</li>
+          <li>Альтернативные записи (если есть несколько равнозначных)</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> структурированный список. Можно фото учебника, страницы с формулами. Точность обозначений критична.</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Официальное определение:</strong> «Чтобы умножить дробь на дробь, надо перемножить их числители и записать произведение в числитель, а знаменатели перемножить и записать в знаменатель».<br>
+        <strong>Формула:</strong> <em>a/b · c/d = (a·c)/(b·d)</em>, где b ≠ 0, d ≠ 0<br>
+        <em>Допустимо:</em> сокращать крест-накрест до умножения.
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 6 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">VI</div>
+      <div>
+        <div class="lc-title">Разбор — Эталонные примеры с ходом мысли эксперта</div>
+        <div class="lc-subtitle">Показать не только «что делать», но и «как думать»</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик видит 2–4 разобранных примера возрастающей сложности. Первый — полностью разобран. Второй — частично, ученик завершает. Третий — решает самостоятельно. Ключевое: к каждому шагу <strong>объясняется «почему»</strong>, а не только «что».
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>4–6 <strong>решённых примеров</strong> с пошаговым объяснением</li>
+          <li>К каждому шагу: <strong>комментарий «почему»</strong> (не только «что»)</li>
+          <li>Примеры от <strong>простого к сложному</strong> (уровни Л/С/Т)</li>
+          <li>Типичные <strong>ошибки в ходе решения</strong> — как они выглядят в записи</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> пронумерованные примеры с аннотацией к каждому шагу. Можно: фото решений с доски + голосовой комментарий или текст.</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Задача:</strong> ¾ × ⅔ = ?<br>
+        <strong>Шаг 1:</strong> числители → 3 × 2 = 6 <em>(«сколько кусочков берём»)</em><br>
+        <strong>Шаг 2:</strong> знаменатели → 4 × 3 = 12 <em>(«на сколько долей всё поделено»)</em><br>
+        <strong>Шаг 3:</strong> записываем: ⁶⁄₁₂<br>
+        <strong>Шаг 4:</strong> сокращаем: ⁶⁄₁₂ ÷6 = <strong>½</strong> <em>(три из шести = половина)</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 7 · СЛОИ VII–IX
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">06 · Слои VII–IX: практика и иммунизация</span>
+  </div>
+
+  <div class="tag-label">Раздел 06 — Слои VII–IX</div>
+  <h2>Практика, перенос и иммунизация</h2>
+
+  <!-- LAYER 7 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">VII</div>
+      <div>
+        <div class="lc-title">Тренажёр — Автоматизация навыка</div>
+        <div class="lc-subtitle">Серия задач с адаптивной сложностью и мгновенной обратной связью</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик решает серию задач. Каждая ошибка вызывает сократическую подсказку (наводящий вопрос, не ответ) и затем — корректирующую задачу. Задачи чередуются между подтипами. Условие завершения: точность ≥ 75% на серии.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li><strong>30–50 задач</strong> с ответами, разделённых по уровню: лёгкий / средний / трудный</li>
+          <li>К сложным задачам: <strong>подсказки-вопросы</strong> (не ответ, а наводящий вопрос)</li>
+          <li>Задачи разных <strong>подтипов в рамках темы</strong> (для чередования)</li>
+          <li>Формулировки, которые не копируют примеры из «Разбора»</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> таблица «Задача | Уровень (Л/С/Т) | Ответ | Подсказка (для уровня С и Т)»</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Л:</strong> ½ × ⅓ = ? → <em>⅙</em><br>
+        <strong>С:</strong> ¾ × ⅔ = ? → <em>½</em> &nbsp;<span style="color:#166534;font-size:8pt;">(подсказка: «Что получится, если перемножить только числители?»)</span><br>
+        <strong>Т:</strong> ⁵⁄₆ × ³⁄₁₀ = ? → <em>¼</em> &nbsp;<span style="color:#166534;font-size:8pt;">(подсказка: «Попробуй сократить крест-накрест ДО умножения»)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 8 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">VIII</div>
+      <div>
+        <div class="lc-title">Сценарий — Перенос знания в контекст</div>
+        <div class="lc-subtitle">Ученик самостоятельно распознаёт применимость концепции в реальной ситуации</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик получает сценарий из реальной жизни: магазин, кулинария, строительство, спорт — всё, где нужна тема урока. Задача сформулирована «вокруг» концепции, но не называет её напрямую. Ученик видит последствия своего ответа внутри сценария.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>5–7 <strong>жизненных ситуаций</strong>, где применяется эта тема</li>
+          <li>К каждой: <strong>краткий нарратив-контекст</strong> (2–4 предложения) + вопрос</li>
+          <li>Описание: что произойдёт при <strong>правильном и неправильном</strong> ответе в рамках сценария</li>
+          <li>Ситуации, не связанные с математикой напрямую (готовка, спорт, деньги, природа)</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> описание каждого сценария: «Ситуация: … Задача: … Верный ответ: … Что происходит если неверно: …»</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Ситуация:</strong> Алина печёт торт. Рецепт рассчитан на ¾ кг муки. Она хочет испечь только ⅔ от рецепта.<br>
+        <em>Задача:</em> Сколько муки нужно Алине? <em>(задача намеренно не называет действие — ученик сам распознаёт умножение)</em><br>
+        <strong>Ответ:</strong> ¾ × ⅔ = <strong>½ кг</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 9 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">IX</div>
+      <div>
+        <div class="lc-title">Ловушки — Превентивная иммунизация от ошибок</div>
+        <div class="lc-subtitle">Показать типичные заблуждения ДО итогового теста — с разбором</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Ученик получает задачи с «ловушками» — формулировками, которые провоцируют типичную ошибку. При ошибке: мгновенный разбор с визуальным доказательством, почему интуитивный ответ неверен. При верном ответе: ученик получает «иммунитет».
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>Список <strong>5–10 типичных ошибок</strong>, которые вы видели у своих учеников</li>
+          <li>К каждой ошибке: как выглядит <strong>неправильный ответ</strong> в записи</li>
+          <li><strong>Почему возникает ошибка</strong>: в чём именно неверна логика ученика</li>
+          <li>«Ловушечная» <strong>формулировка задачи</strong>, провоцирующая эту ошибку</li>
+          <li><strong>Правильный алгоритм</strong> и как объяснить его «против» ошибки</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> таблица «Ошибка | Неверная запись/ответ | Почему возникает | Ловушечная формулировка | Правильный подход»</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Ошибка:</strong> ¾ × ⅔ = ⁵⁄₇ <em>(складывают 3+2=5 и 4+3=7 вместо умножения!)</em><br>
+        <strong>Ловушечная формулировка:</strong> «Найди произведение ¾ и ⅔» — часть учеников машинально складывает.<br>
+        <strong>Разбор:</strong> при умножении результат <em>меньше</em> множителей — ½ &lt; ¾. Спросить: «Ответ должен быть больше ¾ или меньше?»
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 8 · СЛОИ X–XI
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">07 · Слои X–XI: верификация мастерства</span>
+  </div>
+
+  <div class="tag-label">Раздел 07 — Слои X–XI</div>
+  <h2>Верификация мастерства</h2>
+
+  <!-- LAYER 10 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">X</div>
+      <div>
+        <div class="lc-title">Объясни сам — Реверсивное объяснение (техника Фейнмана)</div>
+        <div class="lc-subtitle">Проверка глубины понимания через объяснение материала своими словами</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Система берёт на себя роль «виртуального младшего ученика». Учащийся объясняет концепцию своими словами в текстовой или голосовой форме. AI-анализ проверяет объяснение на: полноту, точность, наличие ключевых идей и логическую связность. Система задаёт уточняющие вопросы, если чего-то не хватает.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>Список <strong>3–5 ключевых концептов</strong>, которые ученик ОБЯЗАН уметь объяснить</li>
+          <li><strong>Эталонное объяснение</strong>: как вы сами объяснили бы это 10-летнему ребёнку (1–2 абзаца)</li>
+          <li><strong>Обязательные элементы</strong> хорошего объяснения: ключевые слова, идеи, примеры, которые должны присутствовать</li>
+          <li>2–3 уточняющих вопроса, которые можно задать если объяснение неполное</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> список концептов + образцовое объяснение (текст) + список ключевых слов и идей, которые должны быть в хорошем ответе</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Запрос ученику:</strong> «Объясни мне: как умножить ¾ на ⅔? Почему знаменатели умножаются, а не складываются?»<br>
+        <strong>Ключевые слова в хорошем ответе:</strong> числитель, знаменатель, перемножить, сократить, «часть от части».<br>
+        <em>Уточняющий вопрос:</em> «А что значит «⅔ от ¾» в повседневной жизни?»
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER 11 -->
+  <div class="lc">
+    <div class="lc-head">
+      <div class="lc-num">XI</div>
+      <div>
+        <div class="lc-title">Мастери-чек — Итоговая верификация освоения (порог 80%)</div>
+        <div class="lc-subtitle">Финальный тест, охватывающий все когнитивные уровни по теме</div>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-col">
+        <div class="lc-col-label">Что происходит в этом слое</div>
+        <div class="lc-text">
+          Композитный тест из 5–10 задач на всех уровнях таксономии Блума: воспроизведение → понимание → применение → анализ → перенос. Формулировки <strong>отличаются</strong> от встречавшихся в тренажёре (исключение эффекта узнавания). При балле ниже 80%: система определяет слабые слои и отправляет повторить только их.
+        </div>
+      </div>
+      <div class="lc-col">
+        <div class="lc-col-label lc-col-label-green">Что нам нужно от вас</div>
+        <ul class="nl">
+          <li>10–15 <strong>контрольных вопросов</strong> с ответами — на все аспекты темы</li>
+          <li>Вопросы разных уровней: <strong>воспроизведение, понимание, применение, анализ, перенос</strong></li>
+          <li>Формулировки, <strong>не совпадающие</strong> с вопросами из тренажёра</li>
+          <li>Одна-две <strong>нестандартные задачи</strong> (с переносом в незнакомый контекст)</li>
+          <li>Отметки уровня сложности и таксономического уровня для каждого вопроса</li>
+        </ul>
+        <div class="fmt-hint"><span><strong>Формат:</strong> пронумерованный тест. Таблица: «Вопрос | Ответ | Уровень (Л/С/Т) | Уровень Блума (Знание/Понимание/Применение/Анализ/Перенос)»</span></div>
+      </div>
+    </div>
+    <div class="lc-example">
+      <div class="lc-col-label lc-col-label-green">Пример слоя — «Умножение дробей», 6 класс</div>
+      <div class="lc-text">
+        <strong>Применение (Л):</strong> ³⁄₅ × ⁵⁄₆ = ? → <em>½</em><br>
+        <strong>Перенос (Т):</strong> В саду ¾ яблок красные. Из красных — ⅔ спелые. Какая доля всех яблок — спелая и красная? → <em>½</em> <span style="color:#166534;font-size:8pt;">(ученик сам определяет действие)</span><br>
+        <strong>Анализ (С):</strong> Почему ¾ × ⅔ = ½, хотя ½ меньше обоих множителей?
+      </div>
+    </div>
+  </div>
+
+  <hr class="gold">
+
+  <div class="tag-label">Итоговая схема: что нужно предоставить</div>
+  <h3>Сводная таблица материалов по теме</h3>
+
+  <table class="dt">
+    <thead>
+      <tr>
+        <th>Слой</th>
+        <th>Что предоставить</th>
+        <th style="width:55px;">Объём</th>
+        <th style="width:75px;">Приоритет</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="td-name">I · Хук</td><td>Удивительные факты, парадокс, реальная ситуация</td><td>3–5 идей</td><td><span class="badge b-gold">Важно</span></td></tr>
+      <tr><td class="td-name">II · Диагностика</td><td>Предпосылки + диагностические вопросы + типичные ошибки</td><td>5–7 вопросов</td><td><span class="badge b-gold">Важно</span></td></tr>
+      <tr><td class="td-name">III · Интуиция</td><td>Неформальные аналогии, метафоры, визуальные образы</td><td>0.5–1 стр.</td><td><span class="badge b-gold">Важно</span></td></tr>
+      <tr><td class="td-name">IV · Объяснение</td><td>Полная лекция / конспект / видео + цели обучения</td><td>1–3 стр.</td><td><span class="badge b-green">Ключевое</span></td></tr>
+      <tr><td class="td-name">V · Формализация</td><td>Определения, формулы, расшифровка символов</td><td>Точный список</td><td><span class="badge b-green">Ключевое</span></td></tr>
+      <tr><td class="td-name">VI · Разбор</td><td>4–6 разобранных примеров с аннотацией «почему»</td><td>4–6 прим.</td><td><span class="badge b-green">Ключевое</span></td></tr>
+      <tr><td class="td-name">VII · Тренажёр</td><td>30–50 задач с ответами и подсказками</td><td>30–50 задач</td><td><span class="badge b-gold">Важно</span></td></tr>
+      <tr><td class="td-name">VIII · Сценарий</td><td>5–7 жизненных ситуаций с контекстом</td><td>5–7 сцен.</td><td><span class="badge b-gold">Важно</span></td></tr>
+      <tr><td class="td-name">IX · Ловушки</td><td>5–10 типичных ошибок + формулировки «ловушек»</td><td>5–10 ошибок</td><td><span class="badge b-gold">Важно</span></td></tr>
+      <tr><td class="td-name">X · Объясни сам</td><td>Эталонное объяснение + ключевые концепты</td><td>1–2 абзаца</td><td><span class="badge b-gray">Базово</span></td></tr>
+      <tr><td class="td-name">XI · Мастери-чек</td><td>10–15 контрольных вопросов всех уровней</td><td>10–15 вопр.</td><td><span class="badge b-green">Ключевое</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 9 · ПРИМЕР РАЗРАБОТКИ
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">08 · Практический пример</span>
+  </div>
+
+  <div class="tag-label">Раздел 08 — Кейс</div>
+  <h2>Пример: тема «Сложение дробей с одинаковыми знаменателями» · 6 класс</h2>
+
+  <p>Ниже показано, как учитель математики заполнил бы материалы для одной конкретной капсулы. Используйте как образец при работе со своей темой.</p>
+
+  <div class="g2-6040" style="margin-bottom: 14px;">
+    <div>
+      <div class="card card-gold" style="margin-bottom: 10px;">
+        <h4>Слой I · Хук — пример</h4>
+        <p style="color:var(--gold-dark); font-size:9pt; margin:0; font-style:italic;">
+          «У Ани съели ²⁄₅ пиццы, у Коли — ¹⁄₅. Сколько осталось? Можно узнать за секунду — 
+          но многие взрослые считают неверно! Как ты думаешь, ответ — ³⁄₅ или ³⁄₁₀?»
+        </p>
+      </div>
+      <div class="card card-light" style="margin-bottom: 10px;">
+        <h4>Слой II · Диагностика — пример</h4>
+        <table class="dt" style="font-size:8pt; margin:0;">
+          <thead><tr><th>Вопрос</th><th>Ответ</th><th>Ошибка</th></tr></thead>
+          <tbody>
+            <tr><td>Что такое числитель дроби ³⁄₅?</td><td>3</td><td>Называет 5</td></tr>
+            <tr><td>Покажи ²⁄₄ на числовой прямой</td><td>0.5</td><td>Рисует 2 и 4</td></tr>
+            <tr><td>Какая дробь больше: ²⁄₇ или ⁵⁄₇?</td><td>⁵⁄₇</td><td>Говорит ²⁄₇ (путает)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="card card-light" style="margin-bottom: 10px;">
+        <h4>Слой III · Интуиция — пример</h4>
+        <p style="font-size:9pt; color:var(--medium); margin:0; line-height:1.55;">
+          «Представь пиццу, разрезанную на 8 одинаковых кусочков. Взял 2 кусочка, потом ещё 3 — сколько всего? 
+          Кусочков: 2+3=5. Частей всего: 8. Значит взял ⁵⁄₈ пиццы. 
+          Знаменатель — это размер кусочка. Если кусочки одинаковые, просто считай кусочки!»
+        </p>
+      </div>
+      <div class="card card-light">
+        <h4>Слой IX · Ловушки — пример</h4>
+        <table class="dt" style="font-size:8pt; margin:0;">
+          <thead><tr><th>Ошибка</th><th>Ловушечная задача</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>²⁄₅ + ¹⁄₅ = ³⁄₁₀<br><span style="color:var(--medium);">Складывают знаменатели</span></td>
+              <td>Чему равно ²⁄₇ + ³⁄₇?<br><span style="color:var(--medium);">Ответ: ⁵⁄₇, не ⁵⁄₁₄</span></td>
+            </tr>
+            <tr>
+              <td>⁴⁄₄ = 0<br><span style="color:var(--medium);">Думают «всё отдали»</span></td>
+              <td>Что такое ⁴⁄₄ пиццы?<br><span style="color:var(--medium);">Ответ: целая пицца = 1</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-light" style="margin-bottom: 10px;">
+    <h4>Слой VI · Разбор — пример (1 из 4 примеров)</h4>
+    <div class="g3" style="font-size:9pt; color:var(--medium);">
+      <div>
+        <strong style="color:var(--dark);">Задача:</strong> ¹⁄₆ + ²⁄₆ = ?<br>
+        <br>
+        <strong style="color:var(--gold);">Шаг 1:</strong> Проверяем знаменатели.<br>
+        Оба равны 6 — одинаковые ✓<br>
+        <em>Почему важно: кусочки одного размера</em>
+      </div>
+      <div>
+        <strong style="color:var(--gold);">Шаг 2:</strong> Складываем числители.<br>
+        1 + 2 = 3<br>
+        <em>Почему: считаем количество кусочков</em>
+      </div>
+      <div>
+        <strong style="color:var(--gold);">Шаг 3:</strong> Знаменатель не меняем.<br>
+        Результат: ³⁄₆<br>
+        <strong style="color:var(--gold);">Шаг 4:</strong> Сокращаем: ³⁄₆ = ½<br>
+        <em>Почему: три из шести = половина</em>
+      </div>
+    </div>
+  </div>
+
+  <div class="ibox-green ibox">
+    <p>
+      <strong>Как видите:</strong> учитель предоставил реальные примеры из практики. 
+      Команда FEMO берёт эти материалы и превращает в интерактивный цифровой слой: 
+      анимации, адаптивный выбор сложности, AI-проверку ответов, мгновенную обратную связь.
+    </p>
+  </div>
+
+  <hr class="gold">
+
+  <div class="tag-label">Форматы подачи материалов</div>
+  <h3>Мы принимаем материалы в любом из форматов</h3>
+
+  <div class="g3">
+    <div class="card card-light">
+      <h4>Текстовые</h4>
+      <ul class="nl">
+        <li>Word / Google Docs</li>
+        <li>PDF (конспект, учебник)</li>
+        <li>Текстовое сообщение</li>
+        <li>Электронная почта</li>
+      </ul>
+    </div>
+    <div class="card card-light">
+      <h4>Визуальные</h4>
+      <ul class="nl">
+        <li>PowerPoint / Google Slides</li>
+        <li>Фото с доски (разборчивое)</li>
+        <li>Сканы конспектов</li>
+        <li>Скриншоты задач</li>
+      </ul>
+    </div>
+    <div class="card card-light">
+      <h4>Аудио/видео</h4>
+      <ul class="nl">
+        <li>Запись урока (любое качество)</li>
+        <li>Голосовое сообщение</li>
+        <li>Видео с объяснением</li>
+        <li>Zoom / Meet запись</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sp-sm"></div>
+  <p class="note">
+    Не переживайте об идеальном оформлении. Нам важно содержание, а не форма. 
+    Лучше быстро отправить «сырые» материалы, чем откладывать ради идеального вида.
+    Мы свяжемся с вами если что-то потребует уточнения.
+  </p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 10 · КАК РАБОТАТЬ С КТП
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">09 · Работа с КТП</span>
+  </div>
+
+  <div class="tag-label">Раздел 09</div>
+  <h2>Как работать с вашим КТП</h2>
+
+  <p>
+    Вам не нужно разрабатывать новую программу — мы берём за основу 
+    <strong>ваш действующий КТП (Календарно-Тематический План)</strong>. 
+    Ниже — инструкция по тому, как он преобразуется в набор капсул.
+  </p>
+
+  <h3 style="margin-bottom: 12px;">Шаг 1 · Пришлите нам ваш КТП</h3>
+  <div class="g2" style="margin-bottom: 16px;">
+    <div class="card card-light">
+      <h4>Что нужно прислать</h4>
+      <ul class="nl">
+        <li>КТП на <strong>полный учебный год</strong> или на <strong>четверть</strong></li>
+        <li>Класс и предмет (например: математика, 6 класс)</li>
+        <li>Используемый <strong>учебник</strong> (автор, год издания)</li>
+        <li>Общее количество <strong>часов в неделю</strong> на предмет</li>
+      </ul>
+    </div>
+    <div class="card card-light">
+      <h4>Что мы с этим делаем</h4>
+      <ul class="nl">
+        <li>Анализируем структуру тем и разделов</li>
+        <li>Определяем атомарные единицы (= капсулы)</li>
+        <li>Составляем «дерево тем» с зависимостями</li>
+        <li>Согласовываем с вами разбивку — вы финально утверждаете</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom: 12px;">Шаг 2 · Согласование атомарных тем</h3>
+  <p>
+    После анализа КТП мы возвращаемся к вам со списком атомарных тем и согласуем: 
+    правильно ли мы разбили? Нет ли слишком широких или слишком узких единиц?
+  </p>
+
+  <div class="ibox" style="margin-bottom: 16px;">
+    <p>
+      <strong>Пример:</strong> тема «Дроби» в КТП на 20 часов → 11 атомарных тем (капсул). 
+      Мы предложим разбивку, вы скажете «да, всё верно» или предложите уточнения.
+    </p>
+  </div>
+
+  <h3 style="margin-bottom: 12px;">Шаг 3 · Работа по темам</h3>
+  <p>
+    Для каждой атомарной темы вы заполняете <strong>Шаблон материалов</strong> (следующая страница). 
+    Можно работать последовательно — тема за темой. Можно начать с тех, по которым 
+    у вас уже есть готовые конспекты или хорошие примеры.
+  </p>
+
+  <div class="g2" style="margin-bottom: 16px;">
+    <div class="card card-gold">
+      <h4>Приоритет: с чего начать?</h4>
+      <ul class="nl">
+        <li>Темы, где у вас <strong>больше всего материалов</strong></li>
+        <li>Темы, в которых вы сильнее всего как педагог</li>
+        <li>Темы, где ученики <strong>чаще всего ошибаются</strong></li>
+        <li>Темы, с которых начинается учебный год</li>
+      </ul>
+    </div>
+    <div class="card card-light">
+      <h4>Реалистичный темп</h4>
+      <ul class="nl">
+        <li>1 атомарная тема ≈ <strong>1–2 часа</strong> работы по шаблону</li>
+        <li>Уже имеющиеся конспекты ускоряют в 3–4 раза</li>
+        <li>Один раздел (6–10 тем) ≈ <strong>1–2 рабочих дня</strong></li>
+        <li>Дедлайны согласуются индивидуально</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom: 12px;">Шаг 4 · Ревью готовой капсулы</h3>
+  <p>
+    После разработки вы получите доступ к готовой капсуле на платформе. 
+    Ваша задача: проверить содержательную точность и дать финальное одобрение. 
+    Мы вносим правки по вашим комментариям.
+  </p>
+
+  <hr class="gold">
+
+  <div class="tag-label">Итоговая схема</div>
+  <h3>Ваши усилия vs Результат на платформе</h3>
+
+  <table class="dt">
+    <thead>
+      <tr><th>Вы предоставляете</th><th>Мы создаём</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Конспект урока / текст лекции</td>
+        <td>Интерактивный слой «Объяснение» с AI-репетитором</td>
+      </tr>
+      <tr>
+        <td>Разобранные примеры с аннотацией</td>
+        <td>Анимированный пошаговый «Разбор» с управлением</td>
+      </tr>
+      <tr>
+        <td>30–50 задач с ответами</td>
+        <td>Адаптивный «Тренажёр» с мгновенной обратной связью</td>
+      </tr>
+      <tr>
+        <td>Описание жизненных ситуаций</td>
+        <td>Интерактивный «Сценарий» с последствиями выбора</td>
+      </tr>
+      <tr>
+        <td>Список типичных ошибок</td>
+        <td>«Ловушки» с визуальным разбором заблуждений</td>
+      </tr>
+      <tr>
+        <td>Контрольные вопросы</td>
+        <td>Адаптивный «Мастери-чек» с порогом 80%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 11 · ШАБЛОН МАТЕРИАЛОВ
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">10 · Шаблон материалов по теме</span>
+  </div>
+
+  <div class="tag-label">Раздел 10</div>
+  <h2>Шаблон: материалы по одной атомарной теме</h2>
+  <p class="note" style="margin-bottom:14px;">Заполняйте в Word или Google Doc. Одна копия шаблона = одна атомарная тема (капсула).</p>
+
+  <div class="g2">
+    <div>
+      <div class="ff">
+        <span class="ff-label">Предмет и класс</span>
+        <div class="ff-box">Например: Математика, 6 класс</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Название атомарной темы</span>
+        <div class="ff-box">Например: Сложение дробей с одинаковыми знаменателями</div>
+      </div>
+    </div>
+    <div>
+      <div class="ff">
+        <span class="ff-label">Учебник и страницы</span>
+        <div class="ff-box">Например: Алимов Ш., стр. 78–82</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Количество часов по КТП</span>
+        <div class="ff-box">Например: 2 часа (урок 34–35)</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="light">
+
+  <div class="g2">
+    <div>
+      <div class="ff">
+        <span class="ff-label">Слой I · Хук: удивительный факт / парадокс / реальная ситуация</span>
+        <div class="ff-box tall">Напишите 2–3 идеи. Что вас самих когда-то удивило в этой теме?</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой II · Диагностика: список предпосылочных знаний</span>
+        <div class="ff-box tall">Перечислите: что ученик ОБЯЗАН знать ДО этой темы? (5–7 пунктов)</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой II · Диагностика: 5–7 диагностических вопросов</span>
+        <div class="ff-box xtall">Вопрос | Верный ответ | Типичная ошибка (таблицей или списком)</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой III · Интуиция: неформальное объяснение через образ / аналогию</span>
+        <div class="ff-box tall">Как бы вы объяснили ЭТО без формул 8-летнему ребёнку? 2–4 предложения.</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой IV · Объяснение: конспект урока / текст лекции</span>
+        <div class="ff-box tall">Прикрепите отдельным файлом или опишите ключевые блоки здесь</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой V · Формализация: официальные определения и формулы</span>
+        <div class="ff-box tall">Перепишите точные определения и правила (можно фото учебника)</div>
+      </div>
+    </div>
+    <div>
+      <div class="ff">
+        <span class="ff-label">Слой VI · Разбор: 4–6 решённых примеров с комментарием «почему»</span>
+        <div class="ff-box xtall">Пример 1 (лёгкий): задача + пошаговое решение + комментарий к каждому шагу<br><br>Пример 2…</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой VII · Тренажёр: задачи с ответами по уровням Л / С / Т</span>
+        <div class="ff-box xtall">Л: задача → ответ (10–15 шт.)<br>С: задача → ответ → подсказка (10–15 шт.)<br>Т: задача → ответ → подсказка (5–10 шт.)</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой VIII · Сценарий: 5–7 жизненных ситуаций с контекстом</span>
+        <div class="ff-box tall">Ситуация 1: «…» → Задача: «…» → Правильный ответ: «…»</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой IX · Ловушки: типичные ошибки учеников</span>
+        <div class="ff-box tall">Ошибка | Пример неверного ответа | Почему возникает | Правильный подход</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой X · Объясни сам: что ученик должен уметь объяснить своими словами</span>
+        <div class="ff-box">Эталонное объяснение для 10-летнего + ключевые слова, которые должны быть в ответе</div>
+      </div>
+      <div class="ff">
+        <span class="ff-label">Слой XI · Мастери-чек: 10–15 контрольных вопросов с ответами</span>
+        <div class="ff-box tall">Вопрос | Ответ | Уровень (Л/С/Т) | Уровень Блума</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAGE 12 · ЧЕК-ЛИСТ
+═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph">
+    <span class="ph-brand">FEMO · Методический гайд</span>
+    <span class="ph-right">11 · Чек-лист учителя-разработчика</span>
+  </div>
+
+  <div class="tag-label">Раздел 11</div>
+  <h2>Чек-лист перед отправкой материалов</h2>
+
+  <div class="g2">
+    <div>
+      <p class="cl-section">Подготовка</p>
+      <ul class="cl">
+        <li>Я получил и прочитал этот методический гайд полностью</li>
+        <li>Я понимаю назначение всех 11 слоёв капсулы</li>
+        <li>Я поделился/поделилась своим КТП с командой FEMO</li>
+        <li>Мы согласовали список атомарных тем (капсул)</li>
+      </ul>
+
+      <p class="cl-section" style="margin-top:8px;">Для каждой темы: содержание (Слои I–VI)</p>
+      <ul class="cl">
+        <li>Хук: 2–3 идеи (факт / парадокс / ситуация)</li>
+        <li>Диагностика: 5–7 вопросов с ответами и типичными ошибками</li>
+        <li>Интуиция: неформальное объяснение через образ или аналогию</li>
+        <li>Объяснение: полный конспект или лекция (текст, слайды, видео)</li>
+        <li>Формализация: официальные определения и формулы из учебника</li>
+        <li>Разбор: 4–6 решённых примеров с комментарием к каждому шагу</li>
+      </ul>
+
+      <p class="cl-section" style="margin-top:8px;">Для каждой темы: практика и контроль (Слои VII–XI)</p>
+      <ul class="cl">
+        <li>Тренажёр: минимум 20 задач с ответами (уровни Л/С/Т)</li>
+        <li>Сценарий: 3–5 жизненных ситуаций с контекстом и вопросом</li>
+        <li>Ловушки: 5+ типичных ошибок с разбором причины</li>
+        <li>Объясни сам: список ключевых концептов + эталонное объяснение</li>
+        <li>Мастери-чек: 10 контрольных вопросов разного уровня с ответами</li>
+      </ul>
+    </div>
+
+    <div>
+      <p class="cl-section">Качество материалов</p>
+      <ul class="cl">
+        <li>Задачи в Тренажёре и Мастери-чеке не копируют друг друга</li>
+        <li>Вопросы Мастери-чека охватывают разные уровни Блума</li>
+        <li>К каждому примеру в Разборе есть объяснение «почему», а не только «что»</li>
+        <li>Ловушки основаны на реальных ошибках ваших учеников</li>
+        <li>Сценарии не формулируют задачу напрямую через тему (задача «скрыта» в контексте)</li>
+      </ul>
+
+      <p class="cl-section" style="margin-top:8px;">Ваши пожелания к платформе</p>
+      <ul class="cl">
+        <li>Я описал(а), какие методы объяснения лучше работают у моих учеников</li>
+        <li>Я указал(а), что хочу видеть в цифровой версии своего урока</li>
+        <li>Я поделился/поделилась методическими находками, которых нет в учебнике</li>
+      </ul>
+
+      <div class="sp-sm"></div>
+      <div class="ibox">
+        <p>
+          <strong>Не беспокойтесь об идеальности.</strong> Если чего-то не хватает или 
+          формулировки неточные — мы обсудим в рабочем чате и совместно доработаем.
+          Главное — начать.
+        </p>
+      </div>
+
+      <div class="sp"></div>
+      <div class="ibox-green ibox">
+        <p>
+          <strong>Ваш опыт — основа FEMO.</strong> Мы не просто «оцифровываем учебник» — мы создаём платформу на основе лучших практик реальных педагогов. Ваше видение, ваши примеры, ваши методические находки — именно это делает FEMO живой и эффективной образовательной системой.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="gold">
+
+  <div class="g3" style="margin-top:4px;">
+    <div class="card card-gold">
+      <h4>Что происходит дальше</h4>
+      <p style="font-size:9pt; color:var(--gold-dark);">
+        После получения ваших материалов команда FEMO приступает к разработке капсулы. 
+        Срок: 2–4 недели на тему. Вы получите ссылку для ревью.
+      </p>
+    </div>
+    <div class="card card-green">
+      <h4 style="color:#166534;">Ваша благодарность</h4>
+      <p style="font-size:9pt; color:#166534;">
+        Ваше имя будет указано как автора капсулы на платформе. 
+        Тысячи учеников будут учиться по вашим материалам.
+      </p>
+    </div>
+    <div class="card card-light">
+      <h4>Поддержка</h4>
+      <p style="font-size:9pt; color:var(--medium);">
+        Если какой-то слой вызывает затруднение — пропустите и пометьте. 
+        Мы разберёмся совместно на созвоне или в чате.
+      </p>
+    </div>
+  </div>
+
+  <div class="sp-sm"></div>
+  <p class="note txt-center" style="border-top:1px solid var(--border); padding-top:12px; margin-top:4px;">
+    FEMO · Республика Казахстан · 2026 · Методика STRATA — автор: Бурабай Диас
+  </p>
+</div>
+
+</body>
+</html>

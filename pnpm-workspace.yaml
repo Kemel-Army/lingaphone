@@ -1,0 +1,13 @@
+ignoredBuiltDependencies:
+  - '@parcel/watcher'
+  - '@prisma/engines'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - prisma
+  - unrs-resolver
+  - vue-demi
+
+onlyBuiltDependencies:
+  - core-js
+  - sharp
+  - supabase

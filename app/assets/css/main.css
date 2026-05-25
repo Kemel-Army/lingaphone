@@ -1,0 +1,2327 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@import "katex/dist/katex.min.css";
+
+@theme static {
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Manrope', 'Inter', sans-serif;
+
+  /* ============ Lingaphone Brand Palette (light-first) ============ */
+  /* Primary: Sky blue — #0EA5E9 (sky-500) */
+  --color-femo-red-50:  #F0F9FF;
+  --color-femo-red-100: #E0F2FE;
+  --color-femo-red-200: #BAE6FD;
+  --color-femo-red-300: #7DD3FC;
+  --color-femo-red-400: #38BDF8;
+  --color-femo-red-500: #0EA5E9;
+  --color-femo-red-600: #0284C7;
+  --color-femo-red-700: #0369A1;
+  --color-femo-red-800: #075985;
+  --color-femo-red-900: #0C4A6E;
+  --color-femo-red-950: #082F49;
+
+  /* Accent: Cyan */
+  --color-femo-coral-50:  #ECFEFF;
+  --color-femo-coral-100: #CFFAFE;
+  --color-femo-coral-200: #A5F3FC;
+  --color-femo-coral-300: #67E8F9;
+  --color-femo-coral-400: #22D3EE;
+  --color-femo-coral-500: #06B6D4;
+  --color-femo-coral-600: #0891B2;
+  --color-femo-coral-700: #0E7490;
+  --color-femo-coral-800: #155E75;
+  --color-femo-coral-900: #164E63;
+
+  /* Gold: Amber — kept for medals/achievements */
+  --color-femo-amber-50:  #FFFBEB;
+  --color-femo-amber-100: #FEF3C7;
+  --color-femo-amber-200: #FDE68A;
+  --color-femo-amber-300: #FCD34D;
+  --color-femo-amber-400: #FBBF24;
+  --color-femo-amber-500: #F59E0B;
+  --color-femo-amber-600: #D97706;
+  --color-femo-amber-700: #B45309;
+
+  --color-femo-ink-50:  #F8F5F4;
+  --color-femo-ink-100: #EFEAE8;
+  --color-femo-ink-200: #DCD3CF;
+  --color-femo-ink-300: #BFB2AC;
+  --color-femo-ink-400: #998A82;
+  --color-femo-ink-500: #6F635D;
+  --color-femo-ink-600: #524843;
+  --color-femo-ink-700: #3D3531;
+  --color-femo-ink-800: #292321;
+  --color-femo-ink-900: #181513;
+
+  /* ============ Brand radii (large, pill-friendly) ============ */
+  --radius-pill: 9999px;
+  --radius-card: 1.5rem;
+  --radius-card-lg: 2rem;
+  --radius-hero: 2.5rem;
+  --radius-bento: 1.75rem;
+
+  /* ============ Brand shadows ============ */
+  --shadow-soft: 0 1px 2px rgba(2, 132, 199, 0.04), 0 8px 24px rgba(2, 132, 199, 0.06);
+  --shadow-pop:  0 4px 12px rgba(2, 132, 199, 0.10), 0 24px 48px rgba(2, 132, 199, 0.12);
+  --shadow-glow: 0 0 40px rgba(14, 165, 233, 0.30);
+
+  /* ============ Brand gradients (used via background) ============ */
+  --gradient-hero:  linear-gradient(120deg, #0284C7 0%, #0EA5E9 45%, #38BDF8 100%);
+  --gradient-coral: linear-gradient(135deg, #22D3EE 0%, #0EA5E9 100%);
+  --gradient-warm:  linear-gradient(135deg, #E0F2FE 0%, #CFFAFE 100%);
+  --gradient-ink:   linear-gradient(180deg, #FFFFFF 0%, #F0F9FF 100%);
+
+  /* ============ Easings ============ */
+  --ease-out-expo:  cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-out-back:  cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ===== Lingaphone UI baseline overrides ===== */
+
+:root:not(.dark) {
+  --ui-bg: #F8FCFF;
+  --ui-bg-elevated: #FFFFFF;
+  --ui-bg-muted: #EFF8FF;
+  --ui-bg-accented: #DBEAFE;
+
+  --ui-border: #BAE6FD;
+  --ui-border-muted: #E0F2FE;
+  --ui-border-accented: #7DD3FC;
+
+  --ui-text-dimmed: #94A3B8;
+  --ui-text-muted: #64748B;
+  --ui-text-toned: #334155;
+  --ui-text: #1E293B;
+  --ui-text-highlighted: #0F172A;
+}
+
+.dark {
+  /* Deep blue-dark — fits Lingaphone sky identity */
+  --ui-bg: #0A1628;
+  --ui-bg-elevated: #0F1F3D;
+  --ui-bg-muted: #142444;
+  --ui-bg-accented: #1A2E50;
+
+  /* Visible separators */
+  --ui-border: #1E3A5F;
+  --ui-border-muted: #172D4E;
+  --ui-border-accented: #255080;
+
+  /* Text levels — were missing entirely, fell back to UI defaults */
+  --ui-text-dimmed: #3B5E8A;
+  --ui-text-muted: #6B9CC4;
+  --ui-text-toned: #A8C8E8;
+  --ui-text: #D0E8F8;
+  --ui-text-highlighted: #EEF8FF;
+
+  /* Invert the ink palette for dark mode */
+  --color-femo-ink-50:  #0A1628;
+  --color-femo-ink-100: #0F1F3D;
+  --color-femo-ink-200: #172D4E;
+  --color-femo-ink-300: #1E3A5F;
+  --color-femo-ink-400: #524843;
+  --color-femo-ink-500: #998A82;
+  --color-femo-ink-600: #BFB2AC;
+  --color-femo-ink-700: #DCD3CF;
+  --color-femo-ink-800: #EFEAE8;
+  --color-femo-ink-900: #FBF7F3;
+}
+
+/* Hard-coded `white` / `#FFFFFF` card surfaces — repaint to elevated dark */
+.dark .femo-stat-tile,
+.dark .femo-card,
+.dark .femo-bento,
+.dark .femo-bento::after,
+.dark .femo-btn-ghost {
+  background: var(--ui-bg-elevated);
+  border-color: var(--ui-border);
+  color: var(--ui-text);
+}
+
+.dark .femo-btn-ghost:hover {
+  background: var(--ui-bg-muted);
+  border-color: var(--color-femo-coral-400);
+  color: var(--color-femo-coral-300);
+}
+
+/* ===== Lingaphone-specific tokens ===== */
+:root {
+  --linga-primary: #0EA5E9;
+  --linga-primary-dark: #0284C7;
+  --linga-primary-light: #38BDF8;
+  --linga-accent: #06B6D4;
+  --linga-gold: #F59E0B;
+  --linga-gold-soft: rgba(245, 158, 11, 0.15);
+  --linga-whatsapp: #25D366;
+}
+
+.dark .femo-landing,
+.dark .femo-landing > section:nth-of-type(odd) {
+  background-color: var(--ui-bg);
+}
+.dark .femo-landing > section:nth-of-type(even) {
+  background-color: var(--ui-bg-muted);
+}
+
+/* Warm shadows for light mode cards and elevated surfaces */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    --shadow-color: 30 20% 70%;
+  }
+}
+
+:root:not(.dark) {
+  --shadow-warm-sm: 0 1px 3px rgba(14, 31, 22, 0.06), 0 1px 2px rgba(14, 31, 22, 0.04);
+  --shadow-warm-md: 0 4px 12px rgba(14, 31, 22, 0.08), 0 2px 4px rgba(14, 31, 22, 0.05);
+  --shadow-warm-lg: 0 12px 40px rgba(14, 31, 22, 0.12), 0 4px 12px rgba(14, 31, 22, 0.06);
+
+  /* Student dashboard visual tokens */
+  --student-hero-radius: 1.25rem;
+  --student-hero-padding: clamp(1.25rem, 2vw, 2rem);
+  --student-hero-shadow: var(--shadow-warm-lg);
+}
+
+/* ===== Design System Tokens (FEMO Implementation Guide) ===== */
+
+:root {
+  /* --- Backgrounds --- */
+  --color-bg-base: var(--ui-bg);
+  --color-bg-surface: var(--ui-bg-elevated);
+  --color-bg-muted: var(--ui-bg-muted);
+  --color-bg-subtle: var(--ui-bg-accented);
+
+  /* --- Text --- */
+  --color-text-primary: var(--ui-text-highlighted);
+  --color-text-secondary: var(--ui-text);
+  --color-text-muted: var(--ui-text-muted);
+
+  /* --- Borders --- */
+  --color-border-default: var(--ui-border);
+  --color-border-muted: var(--ui-border-muted);
+  --color-border-strong: var(--ui-border-accented);
+
+  /* --- Semantic colors --- */
+  --color-success: #16A34A;
+  --color-success-soft: rgba(22, 163, 74, 0.14);
+  --color-warning: #D97706;
+  --color-warning-soft: rgba(217, 119, 6, 0.12);
+  --color-error: #DC2626;
+  --color-error-soft: rgba(220, 38, 38, 0.12);
+  --color-info: #0EA5E9;
+  --color-info-soft: rgba(14, 165, 233, 0.12);
+
+  /* --- Role colors --- */
+  --color-role-student: #16A34A;
+  --color-role-student-soft: rgba(22, 163, 74, 0.14);
+  --color-role-tutor: #0EA5E9;
+  --color-role-tutor-soft: rgba(14, 165, 233, 0.14);
+  --color-role-parent: #0891B2;
+  --color-role-parent-soft: rgba(8, 145, 178, 0.14);
+  --color-role-admin: #0F766E;
+  --color-role-admin-soft: rgba(15, 118, 110, 0.14);
+
+  /* --- Gamification (student-only) --- */
+  --color-xp: #D97706;
+  --color-xp-soft: rgba(217, 119, 6, 0.1);
+  --color-streak: #EA580C;
+  --color-streak-soft: rgba(234, 88, 12, 0.1);
+  --color-badge: #0D9488;
+  --color-badge-soft: rgba(13, 148, 136, 0.1);
+  --color-level: #7C3AED;
+  --color-level-soft: rgba(124, 58, 237, 0.1);
+
+  /* --- Shadows --- */
+  --shadow-card: 0 1px 3px rgba(120, 90, 50, 0.06), 0 1px 2px rgba(120, 90, 50, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(120, 90, 50, 0.07), 0 2px 4px rgba(120, 90, 50, 0.04);
+  --shadow-modal: 0 12px 40px rgba(120, 90, 50, 0.08), 0 4px 12px rgba(120, 90, 50, 0.04);
+
+  /* --- Spacing & Layout --- */
+  --radius-ui: 0.625rem;
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --container-tight: 32rem;
+  --container-wide: 80rem;
+}
+
+.dark {
+  /* Semantic — were all collapsed to red; restore green success + harmonised set */
+  --color-success: #4ADE80;
+  --color-success-soft: rgba(74, 222, 128, 0.16);
+  --color-warning: #FBBF24;
+  --color-warning-soft: rgba(251, 191, 36, 0.16);
+  --color-error: #F87171;
+  --color-error-soft: rgba(248, 113, 113, 0.16);
+  --color-info: #60A5FA;
+  --color-info-soft: rgba(96, 165, 250, 0.16);
+
+  --color-role-student: #4ADE80;
+  --color-role-student-soft: rgba(74, 222, 128, 0.16);
+  --color-role-tutor: #60A5FA;
+  --color-role-tutor-soft: rgba(96, 165, 250, 0.16);
+  --color-role-parent: #67E8F9;
+  --color-role-parent-soft: rgba(103, 232, 249, 0.16);
+  --color-role-admin: #5EEAD4;
+  --color-role-admin-soft: rgba(94, 234, 212, 0.16);
+
+  --color-xp: #FBBF24;
+  --color-xp-soft: rgba(251, 191, 36, 0.14);
+  --color-streak: #FB923C;
+  --color-streak-soft: rgba(251, 146, 60, 0.14);
+  --color-badge: #2DD4BF;
+  --color-badge-soft: rgba(45, 212, 191, 0.14);
+  --color-level: #A78BFA;
+  --color-level-soft: rgba(167, 139, 250, 0.14);
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.24);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.32);
+
+  --shadow-warm-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-warm-md: 0 6px 16px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.24);
+  --shadow-warm-lg: 0 16px 44px rgba(0, 0, 0, 0.5), 0 6px 14px rgba(0, 0, 0, 0.28);
+}
+
+.student-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--student-hero-radius);
+  padding: var(--student-hero-padding);
+  border: 1px solid color-mix(in oklab, var(--ui-border) 80%, transparent);
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--color-primary-400) 13%, transparent), transparent 45%),
+    radial-gradient(140% 140% at 100% 100%, color-mix(in oklab, var(--color-primary-300) 16%, transparent), transparent 40%),
+    linear-gradient(135deg, var(--ui-bg-elevated) 0%, var(--ui-bg-muted) 100%);
+  box-shadow: var(--student-hero-shadow);
+}
+
+.student-hero-orb {
+  pointer-events: none;
+  position: absolute;
+  right: -7rem;
+  top: -6rem;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-primary-400) 18%, transparent);
+  filter: blur(50px);
+}
+
+.student-hero-grid {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  align-items: center;
+}
+
+.student-hero-kicker {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-primary-500) 32%, transparent);
+  background: color-mix(in oklab, var(--color-primary-500) 10%, transparent);
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: color-mix(in oklab, var(--color-primary-700) 82%, black);
+  text-transform: uppercase;
+}
+
+.student-hero-title {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ui-text-highlighted);
+}
+
+.student-hero-subtitle {
+  max-width: 64ch;
+  font-size: 0.95rem;
+  color: var(--ui-text-toned);
+}
+
+.student-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .student-hero-grid {
+    grid-template-columns: minmax(0, 1.2fr) auto;
+    gap: 1.5rem;
+  }
+
+  .student-hero-cta {
+    justify-content: flex-end;
+  }
+}
+
+.dark .student-hero {
+  border-color: color-mix(in oklab, var(--ui-border) 75%, transparent);
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--color-primary-500) 16%, transparent), transparent 48%),
+    radial-gradient(140% 140% at 100% 100%, color-mix(in oklab, var(--color-primary-400) 14%, transparent), transparent 40%),
+    linear-gradient(135deg, var(--ui-bg-elevated) 0%, color-mix(in oklab, var(--ui-bg) 90%, black) 100%);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.34);
+}
+
+.dark .student-hero-kicker {
+  color: color-mix(in oklab, var(--color-primary-300) 82%, white);
+}
+
+.dark .student-hero-subtitle {
+  color: var(--ui-text-muted);
+}
+
+.femo-dashboard-shell {
+  position: relative;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1200px 500px at 10% -5%, color-mix(in oklab, var(--color-primary-500) 12%, transparent), transparent 60%),
+    radial-gradient(900px 400px at 90% 0%, color-mix(in oklab, var(--color-primary-400) 10%, transparent), transparent 65%),
+    var(--ui-bg);
+}
+
+.femo-dashboard-glow {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(560px 240px at 100% 100%, color-mix(in oklab, var(--color-primary-500) 10%, transparent), transparent 70%),
+    radial-gradient(520px 220px at 0% 100%, color-mix(in oklab, var(--color-primary-400) 9%, transparent), transparent 72%);
+}
+
+.femo-dashboard-shell .u-app,
+.femo-dashboard-shell .u-dashboard-group,
+.femo-dashboard-panel {
+  position: relative;
+  z-index: 1;
+}
+
+.femo-dashboard-content {
+  position: relative;
+}
+
+/* Soft brand mesh overlay over dashboard background (per role) */
+.femo-dashboard-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.femo-dashboard-shell[data-role="parent"] .femo-dashboard-mesh   { filter: hue-rotate(-20deg); }
+.femo-dashboard-shell[data-role="tutor"]  .femo-dashboard-mesh   { filter: hue-rotate(15deg) saturate(0.85); }
+.femo-dashboard-shell[data-role="admin"]  .femo-dashboard-mesh   { filter: hue-rotate(-40deg) saturate(0.7); }
+
+/* Brand pin in sidebar header */
+.femo-sidebar-brand {
+  text-decoration: none;
+}
+
+/* ── Sidebar rail layout fix: overflow scroll for tall screens ── */
+/* UDashboardSidebar sets flex layout; ensure main items scroll */
+[data-slot="sidebar-default"],
+.femo-rail {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+}
+[data-slot="sidebar-default"]::-webkit-scrollbar,
+.femo-rail::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Dark mode: sidebar items - sidebar uses Nuxt UI theming via CSS vars */
+
+/* ============ Navbar bell with pulse ============ */
+.femo-bell {
+  position: relative;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-femo-ink-700);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-out-expo);
+  border: none;
+}
+
+/* ───── Nav-mode segmented switch (bottom-dock vs sidebar) ───── */
+
+/* In bottom-nav mode: hide the auto-injected "Open sidebar" collapse button from UDashboardNavbar */
+.femo-navbar--bottom [aria-label="Open sidebar"],
+.femo-navbar--bottom [data-slot="navbar-toggle"] {
+  display: none !important;
+}
+
+.femo-nav-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0.25rem;
+  border-radius: 0.85rem;
+  background: var(--color-femo-ink-50);
+  border: 1px solid var(--color-femo-ink-100);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.femo-nav-switch-indicator {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  width: calc(50% - 0.25rem);
+  border-radius: 0.65rem;
+  background: var(--gradient-hero);
+  box-shadow: 0 4px 10px -2px rgba(220, 38, 38, 0.4);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 0;
+}
+.femo-nav-switch-indicator.is-side {
+  transform: translateX(100%);
+}
+
+.femo-nav-switch-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--color-femo-ink-600);
+  cursor: pointer;
+  border-radius: 0.65rem;
+  transition: color 0.3s var(--ease-out-expo);
+  z-index: 1;
+  white-space: nowrap;
+}
+.femo-nav-switch-btn:hover:not(.is-active) {
+  color: var(--color-femo-red-700);
+}
+.femo-nav-switch-btn.is-active {
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .femo-nav-switch-label { display: none; }
+  .femo-nav-switch-btn { padding: 0.4rem 0.55rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .femo-nav-switch-indicator { transition: none; }
+}
+
+.femo-bell:hover {
+  background: var(--color-femo-red-50);
+  color: var(--color-femo-red-700);
+}
+
+.femo-bell--has { color: var(--color-femo-red-700); }
+
+.femo-bell-badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-hero);
+  color: white;
+  font-size: 0.62rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
+  box-shadow: 0 4px 8px -2px rgba(220, 38, 38, 0.45);
+  z-index: 1;
+}
+
+.femo-bell-pulse {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-femo-red-500);
+  opacity: 0.55;
+  animation: femo-bell-pulse 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes femo-bell-pulse {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .femo-bell-pulse { animation: none; }
+}
+
+
+
+/* ============ Landing section primitives (global) ============ */
+.femo-section {
+  position: relative;
+  padding: clamp(2.5rem, 5vw, 4.5rem) 0;
+}
+
+/* ============ Landing — section rhythm (alt bg + hairline dividers) ============ */
+.femo-landing {
+  background: #FFFFFF;
+}
+
+/* Baseline alternating background — sections with their own `background:` gradient
+   keep their gradient (it sits above bg-color); sections without bg get visible tint. */
+.femo-landing > section:nth-of-type(odd)  { background-color: #FFFFFF; }
+.femo-landing > section:nth-of-type(even) { background-color: #FFFAF6; }
+
+/* Hairline divider between adjacent sections — always visible regardless of bg */
+.femo-landing > section + section::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: min(80%, 880px);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--color-femo-ink-300) 70%, transparent) 50%,
+    transparent 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+.femo-section-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.femo-section-head {
+  text-align: center;
+  margin: 0 auto 2rem;
+  max-width: 680px;
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+}
+
+.femo-section-title {
+  font-size: clamp(1.7rem, 3.6vw, 2.7rem);
+  color: var(--color-femo-ink-900);
+  margin: 0;
+  text-wrap: balance;
+  line-height: 1.1;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.femo-section-sub {
+  font-size: 0.98rem;
+  color: var(--color-femo-ink-600);
+  line-height: 1.55;
+  max-width: 580px;
+}
+
+/* ============ Role hero (parent / tutor / admin dashboards) ============ */
+
+.femo-role-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card-lg);
+  padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.5rem, 3vw, 2.5rem);
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF7F4 100%);
+  border: 1px solid var(--color-femo-ink-100);
+  box-shadow: var(--shadow-soft);
+}
+
+.femo-role-hero-mesh {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.femo-role-hero--parent { background: linear-gradient(135deg, #FFFFFF 0%, #FFF1F0 60%, #FFE0DD 100%); }
+.femo-role-hero--tutor  { background: linear-gradient(135deg, #FFFFFF 0%, #FFF8EC 60%, #FFEDC9 100%); }
+.femo-role-hero--admin  { background: linear-gradient(135deg, #FFFFFF 0%, #F8F5F4 60%, #EFEAE8 100%); }
+
+/* Shared hero for parent deep tabs (Knowledge / Activity / Plan) — kept for legacy */
+.femo-parent-deep-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card-lg);
+  padding: clamp(1.25rem, 2.5vw, 1.75rem) clamp(1.5rem, 3vw, 2rem);
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF8F6 60%, #FFE9E4 100%);
+  border: 1px solid var(--color-femo-ink-100);
+  box-shadow: var(--shadow-soft);
+}
+.femo-parent-deep-hero-mesh {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Traffic-light status pill (parent dashboard hero) */
+.femo-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+.femo-status-pill-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  animation: femo-pulse-soft 1.8s ease-out infinite;
+}
+.femo-status-pill--good   { background: rgba(34, 197, 94, 0.10);  color: rgb(22, 101, 52);    border-color: rgba(34, 197, 94, 0.25); }
+.femo-status-pill--good .femo-status-pill-dot   { background: rgb(34, 197, 94); }
+.femo-status-pill--ok     { background: rgba(250, 165, 26, 0.12); color: rgb(146, 64, 14);    border-color: rgba(250, 165, 26, 0.30); }
+.femo-status-pill--ok .femo-status-pill-dot     { background: rgb(250, 165, 26); }
+.femo-status-pill--warn   { background: var(--color-femo-red-50); color: var(--color-femo-red-700); border-color: rgba(239, 68, 56, 0.30); }
+.femo-status-pill--warn .femo-status-pill-dot   { background: var(--color-femo-red-600); }
+
+/* Skeleton shimmer used during loading */
+.femo-skeleton {
+  background: linear-gradient(90deg, var(--color-femo-ink-50) 0%, var(--color-femo-ink-100) 50%, var(--color-femo-ink-50) 100%);
+  background-size: 200% 100%;
+  animation: femo-skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+@keyframes femo-skeleton-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .femo-skeleton { animation: none; }
+}
+
+.femo-role-hero--admin .femo-role-hero-mesh { filter: hue-rotate(30deg) saturate(0.6); opacity: 0.3; }
+.femo-role-hero--tutor  .femo-role-hero-mesh { filter: hue-rotate(20deg); opacity: 0.4; }
+
+.femo-role-hero-chip {
+  margin-bottom: 0.75rem;
+}
+
+.femo-role-hero-title {
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  color: var(--color-femo-ink-900);
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.femo-role-hero-sub {
+  margin-top: 0.5rem;
+  color: var(--color-femo-ink-600);
+  font-size: 0.95rem;
+  max-width: 640px;
+}
+
+/* ============ Stat tile (shared, можно использовать в дашбордах) ============ */
+.femo-stat-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--radius-card);
+  background: white;
+  border: 1px solid var(--color-femo-ink-100);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  transition: transform 0.4s var(--ease-out-expo),
+              box-shadow 0.4s var(--ease-out-expo),
+              border-color 0.4s var(--ease-out-expo);
+}
+
+.femo-stat-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-femo-red-200);
+  box-shadow: var(--shadow-pop);
+}
+
+.femo-stat-tile-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-femo-ink-500);
+  font-weight: 700;
+}
+
+.femo-stat-tile-value {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 800;
+  color: var(--color-femo-ink-900);
+  letter-spacing: -0.015em;
+}
+
+
+
+/* ===== Landing V3 (radical redesign) ===== */
+
+.femo-landing-v3-shell {
+  background: linear-gradient(180deg, #FDF8F6 0%, #F9F0ED 40%, #FDF8F6 100%);
+}
+
+.dark .femo-landing-v3-shell {
+  background: linear-gradient(180deg, var(--ui-bg) 0%, var(--ui-bg-muted) 40%, var(--ui-bg) 100%);
+}
+
+.femo-landing-v3-header {
+  border-bottom: 1px solid color-mix(in oklab, var(--ui-border) 82%, transparent);
+  background: rgba(253, 248, 246, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .femo-landing-v3-header {
+  background: color-mix(in oklab, var(--ui-bg-elevated) 94%, black);
+}
+
+.femo-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.femo-landing-v3-nav {
+  font-weight: 600;
+}
+
+.femo-landing-v3-strip {
+  background: color-mix(in oklab, var(--color-primary-500) 7%, var(--ui-bg));
+}
+
+.femo-landing-v3-main {
+  background: transparent;
+}
+
+.femo-landing-v3-footer {
+  background: #F5ECEB;
+}
+
+.dark .femo-landing-v3-footer {
+  background: color-mix(in oklab, var(--ui-bg-muted) 72%, black);
+}
+
+.femo-landing-v3 {
+  position: relative;
+}
+
+.femo-landing-v3 > * {
+  position: relative;
+  border-top: 1px solid color-mix(in oklab, var(--ui-border-muted) 75%, transparent);
+}
+
+.femo-landing-v3 > *:first-child {
+  border-top: none;
+}
+
+.femo-landing-v3 > *:nth-child(even) {
+  background: color-mix(in oklab, var(--ui-bg-muted) 60%, var(--ui-bg));
+}
+
+.dark .femo-landing-v3 > *:nth-child(even) {
+  background: color-mix(in oklab, var(--ui-bg-muted) 40%, black);
+}
+
+.femo-landing-v3 .u-page-section {
+  padding-block: clamp(2.75rem, 6vw, 5rem);
+}
+
+.femo-landing-v3 .u-page-section .u-container {
+  max-width: 76rem;
+}
+
+.femo-landing-v3 .u-card,
+.femo-landing-v3 .bento-card,
+.femo-landing-v3 .stat-glass,
+.femo-landing-v3 .glass-elevated {
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--ui-border) 82%, transparent);
+  background: var(--ui-bg-elevated);
+  box-shadow: 0 4px 16px rgba(180, 80, 60, 0.05);
+}
+
+.dark .femo-landing-v3 .u-card,
+.dark .femo-landing-v3 .bento-card,
+.dark .femo-landing-v3 .stat-glass,
+.dark .femo-landing-v3 .glass-elevated {
+  background: color-mix(in oklab, var(--ui-bg-elevated) 93%, black);
+  box-shadow: none;
+}
+
+.femo-landing-v3 .cursor-glow,
+.femo-landing-v3 .glass-shape,
+.femo-landing-v3 .animate-pulse-glow,
+.femo-landing-v3 .animate-float,
+.femo-landing-v3 .animate-float-delay,
+.femo-landing-v3 .animate-float-slow,
+.femo-landing-v3 .animate-gradient,
+.femo-landing-v3 .animate-shimmer::after {
+  display: none !important;
+  animation: none !important;
+}
+
+.femo-landing-v3 .hover-lift:hover {
+  transform: none;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+}
+
+.femo-hero-v3 {
+  padding-block: clamp(1rem, 3vw, 2rem);
+}
+
+.femo-hero-v3-grid {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.femo-hero-v3-title {
+  max-width: 24ch;
+  font-size: clamp(2rem, 5.2vw, 4.2rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  font-weight: 900;
+}
+
+.femo-hero-v3-aside {
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in oklab, var(--ui-border) 86%, transparent);
+  background: color-mix(in oklab, var(--ui-bg-elevated) 96%, white);
+  padding: clamp(1rem, 2vw, 1.4rem);
+}
+
+.dark .femo-hero-v3-aside {
+  background: color-mix(in oklab, var(--ui-bg-elevated) 96%, black);
+}
+
+.femo-hero-line-card {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--ui-border-muted) 82%, transparent);
+  background: color-mix(in oklab, var(--ui-bg-muted) 70%, white);
+  padding: 0.875rem;
+}
+
+.dark .femo-hero-line-card {
+  background: color-mix(in oklab, var(--ui-bg-muted) 68%, black);
+}
+
+.femo-hero-stat {
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--ui-border-muted) 86%, transparent);
+  background: color-mix(in oklab, var(--ui-bg-elevated) 95%, white);
+  padding: 0.75rem;
+}
+
+.dark .femo-hero-stat {
+  background: color-mix(in oklab, var(--ui-bg-elevated) 95%, black);
+}
+
+@media (min-width: 1024px) {
+  .femo-hero-v3-grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    align-items: start;
+  }
+}
+
+/* ===== Landing page animations ===== */
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes float-slow {
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(2deg);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-float-delay {
+  animation: float 6s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+.animate-shimmer {
+  overflow: hidden;
+  position: relative;
+}
+
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: shimmer 3s infinite;
+}
+
+/* Staggered reveal for grids */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.stagger-item.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 50px rgba(120, 90, 50, 0.12), 0 0 0 1px rgba(220, 38, 38, 0.06);
+}
+
+:root.dark .hover-lift:hover {
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(248, 113, 113, 0.08);
+}
+
+/* Hero title letters — morphing color animation */
+.hero-title {
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.hero-letter {
+  display: inline-block;
+  transition: transform 0.3s ease, filter 0.3s ease, text-shadow 0.3s ease;
+  animation: morphColor 6s ease-in-out infinite;
+  text-shadow: 0 0 40px currentColor;
+}
+
+.hero-letter:hover {
+  transform: translateY(-8px) scale(1.08);
+  filter: brightness(1.4);
+  text-shadow: 0 0 60px currentColor, 0 0 120px currentColor;
+}
+
+@keyframes morphColor {
+
+  0%,
+  100% {
+    color: var(--hero-c1);
+  }
+
+  33% {
+    color: var(--hero-c2);
+  }
+
+  66% {
+    color: var(--hero-c3);
+  }
+}
+
+.hero-letter-a1 {
+  --hero-c1: #DC2626;
+  --hero-c2: #F87171;
+  --hero-c3: #FCA5A5;
+  color: #DC2626;
+}
+
+.hero-letter-r {
+  --hero-c1: #F87171;
+  --hero-c2: #FCA5A5;
+  --hero-c3: #DC2626;
+  color: #F87171;
+  animation-delay: 0.4s;
+}
+
+.hero-letter-n {
+  --hero-c1: #FCA5A5;
+  --hero-c2: #DC2626;
+  --hero-c3: #F87171;
+  color: #FCA5A5;
+  animation-delay: 0.8s;
+}
+
+.hero-letter-a2 {
+  --hero-c1: #DC2626;
+  --hero-c2: #FCA5A5;
+  --hero-c3: #F87171;
+  color: #DC2626;
+  animation-delay: 1.2s;
+}
+
+.hero-letter-t {
+  --hero-c1: #F87171;
+  --hero-c2: #DC2626;
+  --hero-c3: #FCA5A5;
+  color: #F87171;
+  margin-left: 0.15em;
+  animation-delay: 1.6s;
+}
+
+.hero-letter-u {
+  --hero-c1: #FCA5A5;
+  --hero-c2: #F87171;
+  --hero-c3: #DC2626;
+  color: #FCA5A5;
+  animation-delay: 2.0s;
+}
+
+.hero-letter-t2 {
+  --hero-c1: #DC2626;
+  --hero-c2: #F87171;
+  --hero-c3: #FCA5A5;
+  color: #DC2626;
+  animation-delay: 2.4s;
+}
+
+.hero-letter-o {
+  --hero-c1: #F87171;
+  --hero-c2: #FCA5A5;
+  --hero-c3: #DC2626;
+  color: #F87171;
+  animation-delay: 2.8s;
+}
+
+.hero-letter-r2 {
+  --hero-c1: #FCA5A5;
+  --hero-c2: #DC2626;
+  --hero-c3: #F87171;
+  color: #FCA5A5;
+  animation-delay: 3.2s;
+}
+
+@media (min-width: 640px) {
+  .hero-letter-t {
+    margin-left: 0.25em;
+  }
+}
+
+/* Gradient text animation */
+.gradient-text-animated {
+  background: linear-gradient(90deg, #DC2626, #F87171, #FCA5A5, #F87171, #DC2626);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 4s linear infinite;
+}
+
+/* Glowing border hover */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0), rgba(220, 38, 38, 0.3), rgba(220, 38, 38, 0));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+}
+
+.glow-border:hover::before {
+  opacity: 1;
+}
+
+/* Vue Transition: fade */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Vue TransitionGroup: chat messages */
+.chat-msg-enter-active {
+  transition: all 0.4s ease;
+}
+
+.chat-msg-leave-active {
+  transition: all 0.2s ease;
+}
+
+.chat-msg-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.chat-msg-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+/* XP bar fill animation */
+.xp-bar-fill {
+  width: 0;
+  animation: xp-fill 2s ease-out 0.5s forwards;
+}
+
+@keyframes xp-fill {
+  to {
+    width: 82%;
+  }
+}
+
+/* ===== Typography utility classes ===== */
+
+.text-display {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.text-headline {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
+.text-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+}
+
+.text-body {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.text-body-strong {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.text-caption {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.text-overline {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ===== Interactive & animation utility classes ===== */
+
+.card-interactive {
+  transition: transform 200ms var(--ease-smooth), box-shadow 200ms var(--ease-smooth);
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.progress-fill {
+  transition: width 600ms var(--ease-smooth);
+}
+
+/* XP gain float-up animation */
+@keyframes xp-float-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-40px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.9);
+  }
+}
+
+.xp-gain {
+  animation: xp-float-up 1.5s var(--ease-smooth) forwards;
+  pointer-events: none;
+}
+
+/* Badge unlock animation */
+@keyframes badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-15deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.badge-unlock {
+  animation: badge-pop 600ms var(--ease-spring) forwards;
+}
+
+/* Streak fire pulse */
+.streak-counter.active .streak-icon {
+  animation: pulse-glow 2s ease-in-out infinite;
+  color: var(--color-streak);
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-ui);
+  background: var(--color-bg-muted);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* ===== Glassmorphism System ===== */
+
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dark .glass {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.glass-elevated {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+.dark .glass-elevated {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.dark .glass-subtle {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Glassmorphism glow on hover */
+.glass-glow {
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+.glass-glow:hover {
+  box-shadow: 0 0 30px rgba(220, 38, 38, 0.12), 0 0 60px rgba(220, 38, 38, 0.06);
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+.dark .glass-glow:hover {
+  box-shadow: 0 0 30px rgba(248, 113, 113, 0.1), 0 0 60px rgba(248, 113, 113, 0.05);
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+/* Animated gradient border */
+.animated-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.animated-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--border-angle, 0deg), transparent, rgba(220, 38, 38, 0.4), rgba(252, 165, 165, 0.3), rgba(220, 38, 38, 0.4), transparent 40%);
+  animation: border-rotate 4s linear infinite;
+  z-index: -1;
+}
+
+.animated-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  z-index: -1;
+}
+
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-rotate {
+  to { --border-angle: 360deg; }
+}
+
+/* Glow pulse for CTA buttons */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.2), 0 0 40px rgba(220, 38, 38, 0.1); }
+  50% { box-shadow: 0 0 30px rgba(220, 38, 38, 0.35), 0 0 60px rgba(220, 38, 38, 0.15); }
+}
+
+.glow-pulse-green {
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Section reveal — fade up on scroll */
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reveal-scale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* === S8 Phase 2 — layer transitions ===
+ * Между слоями капсулы: исходящий слой 150ms fade+slide-up, входящий 200ms
+ * fade+slide-down с лёгкой scale 0.98→1. Mode out-in (сначала outgoing,
+ * потом incoming) исключает пересечение макетов. */
+.layer-swap-leave-active {
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+}
+.layer-swap-enter-active {
+  transition: opacity 220ms cubic-bezier(0.25, 0.8, 0.4, 1), transform 220ms cubic-bezier(0.25, 0.8, 0.4, 1);
+}
+.layer-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+}
+.layer-swap-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer-swap-leave-active,
+  .layer-swap-enter-active {
+    transition-duration: 0.01ms !important;
+  }
+  .layer-swap-leave-to,
+  .layer-swap-enter-from {
+    transform: none !important;
+  }
+}
+
+/* === S8 Phase 2 — stagger entry для chunks/items ===
+ * Применяется к контейнеру (например к списку chunks в EXPLANATION).
+ * Дети `> *` появляются с задержкой index * 90ms. Делает рендер живым,
+ * а не «вспышка всего сразу». */
+.stagger-fade > * {
+  opacity: 0;
+  animation: stagger-fade-in 0.45s cubic-bezier(0.25, 0.8, 0.4, 1) forwards;
+}
+.stagger-fade > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-fade > *:nth-child(2) { animation-delay: 90ms; }
+.stagger-fade > *:nth-child(3) { animation-delay: 180ms; }
+.stagger-fade > *:nth-child(4) { animation-delay: 270ms; }
+.stagger-fade > *:nth-child(5) { animation-delay: 360ms; }
+.stagger-fade > *:nth-child(6) { animation-delay: 450ms; }
+.stagger-fade > *:nth-child(7) { animation-delay: 540ms; }
+.stagger-fade > *:nth-child(n+8) { animation-delay: 600ms; }
+
+@keyframes stagger-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-fade > * {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* === S8 Phase 2 — success flash ===
+ * Применяется на правильно отвеченную опцию: pulse зелёной обводки + bg-flash.
+ * 600ms total, не блокирует следующее действие. */
+@keyframes success-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); background-color: rgba(16, 185, 129, 0.0); }
+  30%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.3); background-color: rgba(16, 185, 129, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); background-color: rgba(16, 185, 129, 0.0); }
+}
+.animate-success-flash {
+  animation: success-flash 0.6s ease-out;
+}
+
+/* === S8 Phase 2 — combo bounce ===
+ * Combo-бокс при достижении streak: scale 1 → 1.18 → 1 + glow. */
+@keyframes combo-bounce {
+  0%   { transform: scale(0.4); opacity: 0; }
+  35%  { transform: scale(1.22); opacity: 1; }
+  60%  { transform: scale(0.94); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-combo-bounce {
+  animation: combo-bounce 0.6s cubic-bezier(0.25, 0.8, 0.4, 1.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-success-flash,
+  .animate-combo-bounce {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* === S8 Phase 1 — playful pop on select ===
+ * Применяется на момент тапа по плитке/кнопке выбора. Spring-easing создаёт
+ * ощущение, что элемент «отскочил» от пальца. 280ms — короче, чем reveal,
+ * чтобы не задерживать ребёнка перед следующим действием. */
+@keyframes select-pop {
+  0%   { transform: scale(0.92); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.animate-select-pop {
+  animation: select-pop 0.28s cubic-bezier(0.25, 0.8, 0.4, 1.2);
+}
+
+/* Уважаем prefers-reduced-motion для всех «дофаминовых» вспышек.
+ * Список покрывает кейфреймы из FloatingXp / TrophyDisplay / StreakCounter /
+ * HeartsBar / select-pop. Глушим до 0.01ms (нельзя в `none` чтобы не ломать
+ * @keyframes-зависимые компоненты, ждущие `animationend`). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-select-pop,
+  .animate-pulse,
+  [class*="float"],
+  [class*="pop"],
+  [class*="bob"],
+  [class*="twinkle"],
+  [class*="shimmer"] {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Enhanced floating shapes — glass version */
+.glass-shape {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dark .glass-shape {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Cursor glow for hero (applied via JS) */
+.cursor-glow {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+/* Section gradient backgrounds */
+.section-glow-green {
+  position: relative;
+}
+
+.section-glow-green::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(220, 38, 38, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .section-glow-green::before {
+  background: radial-gradient(ellipse, rgba(248, 113, 113, 0.04) 0%, transparent 70%);
+}
+
+/* Glass card hover transition for landing */
+.glass-card-hover {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgba(220, 38, 38, 0.08), 0 0 0 1px rgba(220, 38, 38, 0.1);
+}
+
+.dark .glass-card-hover:hover {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(248, 113, 113, 0.15);
+}
+
+/* Gradient text utility */
+.text-gradient-green {
+  background: linear-gradient(135deg, #DC2626, #F87171, #FCA5A5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Enhanced hero letter glow */
+.hero-letter {
+  text-shadow: 0 0 40px currentColor;
+}
+
+/* Inner glow for stat cards on landing */
+.stat-glass {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  transition: all 0.35s ease;
+}
+
+.dark .stat-glass {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.stat-glass:hover {
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 30px rgba(220, 38, 38, 0.08);
+  transform: translateY(-2px);
+}
+
+.dark .stat-glass:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 30px rgba(248, 113, 113, 0.06);
+}
+
+/* ===========================================================================
+   CAPSULE-SAFE LAYOUT — фундамент для 11-слойных капсул 2 класса
+   ===========================================================================
+   Любой блок с атрибутом [data-capsule] получает защиту от переполнения:
+   текст переносится, формулы скроллятся, цифры в плитках авто-масштабируются
+   через container queries.
+
+   Применяется к секции контента в CapsuleRunner.vue и обёрткам KidSafeBox.
+   --------------------------------------------------------------------------- */
+
+[data-capsule] {
+  min-width: 0;
+}
+
+[data-capsule] :where(h1, h2, h3, h4, p, span, div, li, label, button) {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+[data-capsule] :where(.katex-display, .katex-html) {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Плитка с цифрой: container query + авто-fit шрифта.
+   Используется внутри KidSafeBox variant="tile" и любой плитки с data-tile. */
+[data-capsule] [data-tile] {
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  overflow: hidden;
+}
+
+[data-capsule] [data-tile-num] {
+  font-size: clamp(1rem, 22cqi, 3rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Опции выбора: жёстко ограничиваем ширину строки и количество строк */
+[data-capsule] [data-option] {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+[data-capsule] [data-option-text] {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Формула: горизонтальный скролл при переполнении, не ломает layout */
+[data-capsule] [data-formula] {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* prose-чанки: переносим длинные слова, ограничиваем картинки */
+[data-capsule] [data-prose] :where(p, li) {
+  overflow-wrap: anywhere;
+}
+
+[data-capsule] [data-prose] :where(img, video, canvas, svg) {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Безопасная утилита line-clamp для заголовков капсул */
+.capsule-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-wrap: balance;
+}
+
+/* ===========================================================================
+   FEMO BRAND UTILITIES — gradient text, mesh-bg, glass, magnetic, tilt
+   =========================================================================== */
+
+.femo-text-gradient {
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.femo-text-coral {
+  background: var(--gradient-coral);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.femo-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  line-height: 0.95;
+  font-weight: 800;
+}
+
+/* Glass — тонкий «матовый» слой для светлой темы */
+.femo-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(140%) blur(20px);
+  -webkit-backdrop-filter: saturate(140%) blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Sticky-glass header при скролле */
+.femo-glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(28px);
+  -webkit-backdrop-filter: saturate(180%) blur(28px);
+  border-bottom: 1px solid rgba(220, 38, 38, 0.08);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 8px 32px -16px rgba(220, 38, 38, 0.10);
+}
+
+/* Mesh-gradient анимированный фон */
+.femo-mesh {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.femo-mesh::before,
+.femo-mesh::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.55;
+  animation: femo-mesh-drift 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+.femo-mesh::before {
+  width: 60vmax;
+  height: 60vmax;
+  left: -10vmax;
+  top: -15vmax;
+  background: radial-gradient(circle at 30% 30%, var(--color-femo-coral-300), transparent 60%);
+}
+
+.femo-mesh::after {
+  width: 55vmax;
+  height: 55vmax;
+  right: -12vmax;
+  top: 10vmax;
+  background: radial-gradient(circle at 60% 40%, var(--color-femo-red-300), transparent 60%);
+  animation-delay: -8s;
+  animation-duration: 28s;
+}
+
+.femo-mesh > .femo-mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  opacity: 0.45;
+  width: 45vmax;
+  height: 45vmax;
+  left: 30vmax;
+  bottom: -15vmax;
+  background: radial-gradient(circle at 50% 50%, var(--color-femo-amber-300), transparent 60%);
+  animation: femo-mesh-drift 26s ease-in-out -14s infinite;
+  will-change: transform;
+}
+
+@keyframes femo-mesh-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(4vmax, 3vmax, 0) scale(1.05); }
+  66%      { transform: translate3d(-3vmax, 2vmax, 0) scale(0.98); }
+}
+
+/* Static, очень мягкая mesh для дашборда (без анимации, дешёвая для тяжелых страниц) */
+.femo-mesh--soft::before,
+.femo-mesh--soft::after,
+.femo-mesh--soft > .femo-mesh-blob {
+  opacity: 0.28;
+  animation: none;
+  filter: blur(140px);
+}
+
+/* Gradient pill button (фирменная CTA) */
+.femo-btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: white;
+  background: var(--gradient-hero);
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+  box-shadow: var(--shadow-pop);
+  transition: transform 0.35s var(--ease-out-expo),
+              box-shadow 0.35s var(--ease-out-expo),
+              background-position 0.6s var(--ease-out-expo);
+  isolation: isolate;
+}
+
+.femo-btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: var(--gradient-hero);
+  filter: blur(18px);
+  opacity: 0.45;
+  z-index: -1;
+  transition: opacity 0.35s var(--ease-out-expo);
+}
+
+.femo-btn-primary:hover {
+  transform: translateY(-2px);
+  background-position: 100% 50%;
+  box-shadow: 0 12px 28px rgba(220, 38, 38, 0.28), 0 24px 48px rgba(250, 165, 26, 0.2);
+}
+
+.femo-btn-primary:hover::before { opacity: 0.8; }
+.femo-btn-primary:active { transform: translateY(0); }
+
+/* Outline-вариант под brand */
+.femo-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-femo-ink-800);
+  background: white;
+  border: 1px solid var(--color-femo-ink-200);
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s var(--ease-out-expo);
+}
+
+.femo-btn-ghost:hover {
+  border-color: var(--color-femo-red-300);
+  color: var(--color-femo-red-700);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.10);
+}
+
+/* Карта (FemoCard база) */
+.femo-card {
+  position: relative;
+  background: white;
+  border: 1px solid var(--color-femo-ink-100);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.4s var(--ease-out-expo),
+              box-shadow 0.4s var(--ease-out-expo),
+              border-color 0.4s var(--ease-out-expo);
+}
+
+.femo-card-hover:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-femo-coral-200);
+  box-shadow: var(--shadow-pop);
+}
+
+/* Bento card с conic glow border (расширение существующего эффекта) */
+.femo-bento {
+  position: relative;
+  border-radius: var(--radius-bento);
+  background: white;
+  border: 1px solid var(--color-femo-ink-100);
+  padding: 1.75rem;
+  overflow: hidden;
+  transition: transform 0.5s var(--ease-out-expo),
+              box-shadow 0.5s var(--ease-out-expo);
+  isolation: isolate;
+}
+
+.femo-bento::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: var(--gradient-hero);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.5s var(--ease-out-expo);
+}
+
+.femo-bento::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: calc(var(--radius-bento) - 1px);
+  background: white;
+  z-index: -1;
+}
+
+.femo-bento:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 30px 60px -20px rgba(220, 38, 38, 0.22);
+}
+
+.femo-bento:hover::before { opacity: 1; }
+
+/* Soft pill chip */
+.femo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.875rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-femo-red-700);
+  background: var(--color-femo-red-50);
+  border: 1px solid var(--color-femo-red-100);
+}
+
+.femo-chip--amber { color: var(--color-femo-amber-700); background: var(--color-femo-amber-50); border-color: var(--color-femo-amber-100); }
+.femo-chip--ink   { color: var(--color-femo-ink-700);   background: var(--color-femo-ink-50);   border-color: var(--color-femo-ink-100); }
+
+/* Tilt контейнер (управляется ref'ом из useTilt) */
+.femo-tilt {
+  transform-style: preserve-3d;
+  transition: transform 0.6s var(--ease-out-expo);
+  will-change: transform;
+}
+
+/* Floating animation (3D-mockup) */
+@keyframes femo-float {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50%      { transform: translateY(-10px) rotate(0.4deg); }
+}
+
+.femo-float { animation: femo-float 6s ease-in-out infinite; }
+.femo-float--delay { animation: femo-float 7s ease-in-out -2s infinite; }
+
+/* Marquee (расширяет существующий) */
+@keyframes femo-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.femo-marquee { animation: femo-marquee 35s linear infinite; }
+.femo-marquee:hover { animation-play-state: paused; }
+
+/* Magnetic hover (применяется через композабл, чисто стилевой fallback) */
+.femo-magnetic { transition: transform 0.45s var(--ease-out-expo); }
+
+/* Sticky-storytelling */
+.femo-sticky { position: sticky; top: var(--ui-header-height, 4rem); }
+
+/* Underline-glow (используется на ссылках в футере / nav при hover) */
+.femo-underline-glow {
+  position: relative;
+  display: inline-block;
+}
+.femo-underline-glow::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gradient-hero);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-out-expo);
+}
+.femo-underline-glow:hover::after { transform: scaleX(1); }
+
+/* Smooth scroll глобально (без Lenis) */
+html { scroll-behavior: smooth; }
+
+/* ── Accessibility: focus-visible ring for keyboard navigation ── */
+.femo-btn-primary:focus-visible,
+.femo-btn-ghost:focus-visible,
+.femo-rail-link:focus-visible,
+.femo-status-pill:focus-visible,
+.femo-child-card:focus-visible,
+.femo-child-switcher-pill:focus-visible {
+  outline: 2px solid var(--color-femo-coral-500);
+  outline-offset: 3px;
+  border-radius: var(--radius-card);
+}
+.femo-rail-link:focus-visible { outline-offset: 2px; }
+.femo-child-switcher-pill:focus-visible { outline-offset: 1px; }
+
+/* Skip-to-content helper for screen readers */
+.femo-skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--color-femo-coral-500);
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: top 0.2s var(--ease-out-expo);
+}
+.femo-skip-link:focus { top: 1rem; }
+
+/* ── Mobile global fixes ── */
+
+/* Prevent horizontal overflow on all pages */
+body, html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Minimum touch target for all interactive elements */
+.femo-btn-primary,
+.femo-btn-ghost {
+  min-height: 2.75rem;
+}
+
+/* Better tap highlight on iOS */
+a, button {
+  -webkit-tap-highlight-color: rgba(14, 165, 233, 0.12);
+}
+
+/* Ensure images/media never overflow containers */
+img, video, iframe {
+  max-width: 100%;
+}
+
+/* Section inner safe padding on small screens */
+@media (max-width: 480px) {
+  .femo-section-inner {
+    padding-inline: 1rem;
+  }
+
+  .femo-section {
+    padding-top: clamp(2rem, 5vw, 3.5rem);
+    padding-bottom: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  .femo-section-head {
+    gap: 0.65rem;
+  }
+}
+
+/* Landing header: compact on small screens */
+@media (max-width: 640px) {
+  .femo-landing-header-inner {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Ensure stats grid is comfortably readable on xs */
+@media (max-width: 400px) {
+  .femo-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Reduced-motion: гасим декоративные анимации */
+@media (prefers-reduced-motion: reduce) {
+  .femo-mesh::before,
+  .femo-mesh::after,
+  .femo-mesh > .femo-mesh-blob,
+  .femo-float,
+  .femo-float--delay,
+  .femo-marquee {
+    animation: none !important;
+  }
+}
+
+/* ===========================================================================
+   FEMO MOTION — student dashboard (Phase 10.5: live UI everywhere)
+   =========================================================================== */
+
+/* Tactile button press — translate+scale on click */
+.femo-press {
+  transition:
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.18s ease-out !important;
+}
+.femo-press:active:not(:disabled) {
+  transform: translateY(2px) scale(0.97) !important;
+  box-shadow: 0 2px 6px -2px rgba(220, 38, 38, 0.25) !important;
+}
+
+/* Slide-fade for tab content swap (mode="out-in") */
+.tab-swap-leave-active {
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+.tab-swap-enter-active {
+  transition: opacity 0.28s cubic-bezier(0.25, 0.8, 0.4, 1), transform 0.28s cubic-bezier(0.25, 0.8, 0.4, 1);
+}
+.tab-swap-leave-to { opacity: 0; transform: translateY(-6px); }
+.tab-swap-enter-from { opacity: 0; transform: translateY(8px); }
+
+/* Page transition (between routes) */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+}
+.page-fade-enter-from { opacity: 0; transform: translateY(8px); }
+.page-fade-leave-to   { opacity: 0; transform: translateY(-4px); }
+
+/* Skeleton shimmer (loading state) */
+@keyframes femo-skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.femo-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-femo-ink-50) 0%,
+    var(--color-femo-ink-100) 50%,
+    var(--color-femo-ink-50) 100%
+  );
+  background-size: 200% 100%;
+  animation: femo-skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.65rem;
+}
+
+/* Floating-bob for icons inside hover-active CTAs */
+@keyframes femo-icon-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+.femo-icon-bob {
+  animation: femo-icon-bob 2.4s ease-in-out infinite;
+}
+
+/* Pulse for "live" badges (NEW, активный таб и т.д.) */
+@keyframes femo-pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); }
+  50%      { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+}
+.femo-pulse-soft {
+  animation: femo-pulse-soft 2.2s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .femo-press,
+  .tab-swap-leave-active,
+  .tab-swap-enter-active,
+  .page-fade-enter-active,
+  .page-fade-leave-active,
+  .femo-skeleton,
+  .femo-icon-bob,
+  .femo-pulse-soft {
+    transition-duration: 0.01ms !important;
+    animation: none !important;
+  }
+}

@@ -1,0 +1,8 @@
+export { default as UserAvatar } from './ui/UserAvatar.vue'
+export { default as UserBadge } from './ui/UserBadge.vue'
+export { useCurrentUser } from './composables/useCurrentUser'
+export { useUsers } from './composables/useUsers'
+export { useAvatarUpload } from './composables/useAvatarUpload'
+export { useProfileSettings } from './composables/useProfileSettings'
+export type { UserProfile, CurrentUser, UserDisplayInfo } from './model/types'
+export type { UserListItem } from './composables/useUsers'
