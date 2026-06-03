@@ -116,7 +116,9 @@ const playAudioPrompt = async () => {
   listenPlayCount.value++
   await speak(q.audio, { rate: 0.85 })
   // Rough timing so the button shows playing state for the right duration
-  setTimeout(() => { isPlayingAudio.value = false }, q.audio.length * 80 + 500)
+  setTimeout(() => {
+    isPlayingAudio.value = false
+  }, q.audio.length * 80 + 500)
 }
 
 const gradeListen = () => {

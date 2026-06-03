@@ -17,7 +17,7 @@ const isProtected = (path: string) =>
 const ROLE_TO_PREFIX: Record<UserRole, string> = {
   [UserRole.STUDENT]: '/student',
   [UserRole.PARENT]: '/parent',
-  [UserRole.TUTOR]: '/teacher',
+  [UserRole.TEACHER]: '/teacher',
   [UserRole.ADMIN]: '/admin'
 }
 
@@ -36,8 +36,7 @@ export default defineNuxtRouteMiddleware((to) => {
   if (!user.value) return
 
   // 2. Authenticated — extract role from JWT claims (with metadata fallback)
-  const role = ((user.value as unknown as { user_role?: string }).user_role
-    ?? (user.value as { user_metadata?: { role?: string } }).user_metadata?.role) as UserRole | undefined
+  const role = (user.value as unknown as { user_role?: string }).user_role as UserRole | undefined
   if (!role) return
 
   // 3. Cross-role: if authenticated as STUDENT and trying to open /admin, send home.

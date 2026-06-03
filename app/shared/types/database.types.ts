@@ -141,7 +141,7 @@ export type Database = {
       MedalKind: 'GOLD' | 'SILVER' | 'BRONZE' | 'NONE'
       NotificationType: 'MEDAL_AWARDED' | 'PAYOUT_RECEIVED' | 'HOMEWORK_CHECKED' | 'LESSON_REMINDER' | 'NEW_MESSAGE' | 'SYSTEM'
       PayoutStatus: 'PENDING' | 'PAID' | 'CANCELLED'
-      UserRole: 'STUDENT' | 'PARENT' | 'TUTOR' | 'ADMIN'
+      UserRole: 'STUDENT' | 'PARENT' | 'TUTOR' | 'TEACHER' | 'ADMIN'
       UserStatus: 'ACTIVE' | 'INACTIVE' | 'BANNED'
       XpActionKind: 'PRACTICE_CARD' | 'PRACTICE_DECK' | 'HOMEWORK_ONTIME' | 'LESSON_ATTENDED' | 'DAILY_QUEST' | 'MANUAL_AWARD' | 'STORY_RETELL' | 'GAME_LEVEL'
     }

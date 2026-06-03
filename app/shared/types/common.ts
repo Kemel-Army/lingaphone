@@ -3,7 +3,7 @@
 export enum UserRole {
   STUDENT = 'STUDENT',
   PARENT = 'PARENT',
-  TUTOR = 'TUTOR',
+  TEACHER = 'TEACHER',
   ADMIN = 'ADMIN'
 }
 
@@ -232,14 +232,14 @@ export const LEVEL_XP_THRESHOLDS = Array.from({ length: 100 }, (_, i) =>
 export const ROLE_HOME_ROUTES: Record<UserRole, string> = {
   [UserRole.STUDENT]: '/student',
   [UserRole.PARENT]: '/parent',
-  [UserRole.TUTOR]: '/teacher',
+  [UserRole.TEACHER]: '/teacher',
   [UserRole.ADMIN]: '/admin'
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.STUDENT]: 'Ученик',
   [UserRole.PARENT]: 'Родитель',
-  [UserRole.TUTOR]: 'Педагог',
+  [UserRole.TEACHER]: 'Педагог',
   [UserRole.ADMIN]: 'Администратор'
 }
 
@@ -280,16 +280,25 @@ export const PARENT_SIDEBAR: SidebarItem[] = [
 ]
 
 export const TEACHER_SIDEBAR: SidebarItem[] = [
-  { label: 'Главная', icon: 'i-lucide-home', to: '/teacher' }
+  { label: 'Главная', icon: 'i-lucide-home', to: '/teacher' },
+  { label: 'Мои группы', icon: 'i-lucide-layers', to: '/teacher/groups' },
+  { label: 'Мои ученики', icon: 'i-lucide-users', to: '/teacher/students' },
+  { label: 'Задания', icon: 'i-lucide-file-text', to: '/teacher/homework' },
+  { label: 'Журнал оценок', icon: 'i-lucide-table', to: '/teacher/grades' },
+  { label: 'Проверка работ', icon: 'i-lucide-inbox', to: '/teacher/submissions' }
 ]
 
 export const ADMIN_SIDEBAR: SidebarItem[] = [
-  { label: 'Главная', icon: 'i-lucide-layout-dashboard', to: '/admin' }
+  { label: 'Дашборд', icon: 'i-lucide-layout-dashboard', to: '/admin' },
+  { label: 'Ученики', icon: 'i-lucide-graduation-cap', to: '/admin/students' },
+  { label: 'Учителя', icon: 'i-lucide-users', to: '/admin/teachers' },
+  { label: 'Группы', icon: 'i-lucide-layout-grid', to: '/admin/groups' },
+  { label: 'Финансы', icon: 'i-lucide-banknote', to: '/admin/finance' }
 ]
 
 export const SIDEBAR_BY_ROLE: Record<UserRole, SidebarItem[]> = {
   [UserRole.STUDENT]: STUDENT_SIDEBAR,
   [UserRole.PARENT]: PARENT_SIDEBAR,
-  [UserRole.TUTOR]: TEACHER_SIDEBAR,
+  [UserRole.TEACHER]: TEACHER_SIDEBAR,
   [UserRole.ADMIN]: ADMIN_SIDEBAR
 }

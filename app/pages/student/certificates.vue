@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { useMockStudent } from '~/shared/mock'
+import { useCurrentUser } from '~/entities/user'
 
 definePageMeta({ layout: 'dashboard' })
 
-const { certificates, profile } = useMockStudent()
+const { fullName } = useCurrentUser()
+const certificates = ref<{
+  id: string
+  title: string
+  subtitle?: string
+  kind: string
+  issuedAt: string
+  accent: string
+}[]>([])
 
 const ACCENT: Record<string, { gradient: string, ring: string, text: string }> = {
   gold: { gradient: 'from-yellow-300 via-amber-400 to-yellow-500', ring: 'ring-yellow-400/40', text: 'text-yellow-800 dark:text-yellow-200' },
@@ -107,7 +115,7 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', {
                   Ученик
                 </p>
                 <p class="text-sm font-bold">
-                  {{ profile.name }} {{ profile.surname }}
+                  {{ fullName }}
                 </p>
               </div>
             </div>

@@ -55,7 +55,7 @@ export const useCurrentUser = () => {
   const currentUser = computed<CurrentUser | null>(() => {
     if (!user.value) return null
     const claims = user.value as unknown as SupabaseUserWithClaims
-    const resolvedRole = (claims.user_role ?? claims.user_metadata?.role ?? UserRole.STUDENT) as UserRole
+    const resolvedRole = (claims.user_role ?? UserRole.STUDENT) as UserRole
     return {
       id: user.value.sub,
       sub: user.value.sub,
@@ -72,6 +72,7 @@ export const useCurrentUser = () => {
 
   const isStudent = computed(() => role.value === UserRole.STUDENT)
   const isParent = computed(() => role.value === UserRole.PARENT)
+  const isTeacher = computed(() => role.value === UserRole.TEACHER)
   const isAdmin = computed(() => role.value === UserRole.ADMIN)
 
   const fullName = computed(() => {
@@ -109,6 +110,7 @@ export const useCurrentUser = () => {
     role,
     isStudent,
     isParent,
+    isTeacher,
     isAdmin,
     fullName,
     initials,

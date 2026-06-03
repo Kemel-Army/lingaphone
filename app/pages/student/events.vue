@@ -1,9 +1,22 @@
 <script setup lang="ts">
-import { useMockStudent, type EventKind } from '~/shared/mock'
-
 definePageMeta({ layout: 'dashboard' })
 
-const { events } = useMockStudent()
+type EventKind = 'CAMP' | 'HOLIDAY' | 'WORKSHOP' | 'CONTEST'
+
+const events = ref<{
+  id: string
+  kind: EventKind
+  title: string
+  description: string
+  posterEmoji: string
+  startsAt: string
+  endsAt: string
+  branchName: string
+  price: number
+  capacity: number
+  registered: number
+  myStatus: 'OPEN' | 'CLOSED' | 'REGISTERED' | 'ATTENDED'
+}[]>([])
 
 const KIND_META: Record<EventKind, { label: string, gradient: string }> = {
   CAMP: { label: 'Лагерь', gradient: 'from-emerald-500 to-teal-600' },
