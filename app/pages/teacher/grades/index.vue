@@ -12,7 +12,7 @@ const { saveGrade } = useGradeStudent()
 
 const { data: groups } = await useAsyncData('teacher-groups-grades', fetchMyGroups)
 
-const selectedGroupId = ref((route.query.groupId as string) ?? '')
+const selectedGroupId = ref<string | null>((route.query.groupId as string) || null)
 
 const { data: journalData, pending, refresh } = useAsyncData(
   'teacher-grades-journal',
@@ -25,7 +25,7 @@ const students = computed(() => journalData.value?.students ?? [])
 const gradeMap = computed(() => journalData.value?.gradeMap ?? {})
 
 const groupOptions = computed(() => [
-  { value: '', label: 'Выберите группу' },
+  { value: null, label: 'Выберите группу' },
   ...(groups.value ?? []).map(g => ({ value: g.id, label: g.name }))
 ])
 

@@ -4,7 +4,7 @@ import { useTeacher } from '~/entities/teacher'
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
-const studentId = route.params.id as string
+const studentId = Array.isArray(route.params.id) ? route.params.id[0]! : route.params.id
 
 const { fetchStudentById } = useTeacher()
 

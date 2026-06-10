@@ -21,7 +21,6 @@ const expanded = ref<string | null>(null)
 const gradeValues = ref<Record<string, number>>({})
 const gradeComments = ref<Record<string, string>>({})
 const saving = ref<string | null>(null)
-const audioPlaying = ref<string | null>(null)
 
 const toggleExpand = (id: string) => {
   expanded.value = expanded.value === id ? null : id

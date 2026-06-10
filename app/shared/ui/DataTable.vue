@@ -13,7 +13,7 @@ interface Column {
 
 interface Props {
   columns: Column[]
-  rows: Record<string, any>[]
+  rows: Record<string, unknown>[]
   loading?: boolean
   emptyText?: string
   emptyIcon?: string
@@ -30,7 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  'row-click': [row: Record<string, any>]
+  'row-click': [row: Record<string, unknown>]
 }>()
 
 // Pagination
@@ -67,7 +67,7 @@ const sortedRows = computed(() => {
   })
 })
 
-function onRowClick(row: Record<string, any>) {
+function onRowClick(row: Record<string, unknown>) {
   emit('row-click', row)
 }
 </script>

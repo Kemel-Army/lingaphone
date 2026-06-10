@@ -233,12 +233,13 @@ useScrollReveal(sectionRef, { stagger: 70 })
                 <p class="femo-aid-msg-text">
                   {{ msg.text }}
                 </p>
-                <!-- eslint-disable-next-line vue/no-v-html -->
+                <!-- eslint-disable vue/no-v-html -->
                 <div
                   v-if="msg.formula"
                   class="femo-aid-formula"
                   v-html="renderFormula(msg.formula)"
                 />
+                <!-- eslint-enable vue/no-v-html -->
                 <div
                   v-if="msg.hint"
                   class="femo-aid-hint"

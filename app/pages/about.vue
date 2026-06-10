@@ -13,6 +13,7 @@ useSeoMeta({ description: t('legal.about.seoDesc') })
       </h1>
 
       <div class="space-y-6 text-muted">
+        <!-- eslint-disable-next-line vue/no-v-html -->
         <p v-html="$t('legal.about.intro')" />
 
         <h2 class="text-2xl font-semibold text-default">
@@ -32,6 +33,7 @@ useSeoMeta({ description: t('legal.about.seoDesc') })
         <h2 class="text-2xl font-semibold text-default">
           {{ $t('legal.about.aiTitle') }}
         </h2>
+        <!-- eslint-disable-next-line vue/no-v-html -->
         <p v-html="$t('legal.about.aiText')" />
 
         <h2 class="text-2xl font-semibold text-default">

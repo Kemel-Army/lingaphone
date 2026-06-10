@@ -28,11 +28,11 @@ export const useCurrentUser = () => {
 
   const { data: profile, refresh: refreshProfile } = useAsyncData(
     'current-user-profile',
-    async (): Promise<{ avatarUrl: string | null, phone: string | null } | null> => {
+    async (): Promise<{ avatarUrl: string | null, phone: string | null, name: string | null, surname: string | null } | null> => {
       if (!user.value) return null
       const { data, error } = await supabase
         .from('User')
-        .select('avatarUrl, phone')
+        .select('avatarUrl, phone, name, surname')
         .eq('authId', user.value.sub)
         .maybeSingle()
       if (error) return null
@@ -61,8 +61,8 @@ export const useCurrentUser = () => {
       sub: user.value.sub,
       email: user.value.email ?? '',
       role: resolvedRole,
-      name: claims.user_name ?? claims.user_metadata?.name ?? '',
-      surname: claims.user_surname ?? claims.user_metadata?.surname ?? ''
+      name: profile.value?.name ?? claims.user_name ?? claims.user_metadata?.name ?? '',
+      surname: profile.value?.surname ?? claims.user_surname ?? claims.user_metadata?.surname ?? ''
     }
   })
 

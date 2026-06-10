@@ -1,8 +1,8 @@
-# CLAUDE.md — FEMO Platform
+# CLAUDE.md — Lingaphone Platform
 
 ## Project Identity
 
-**FEMO** — цифровая образовательная платформа по математике (B2C), построенная на методологии **IAE (Intelligent Adaptive Education)**. Казахстан. Nuxt 4 + Nuxt UI v4 + Supabase (queries + auth + RLS + migrations) + PostgreSQL + TypeScript + pnpm.
+**Lingaphone** — цифровая образовательная платформа по математике (B2C), построенная на методологии **IAE (Intelligent Adaptive Education)**. Казахстан. Nuxt 4 + Nuxt UI v4 + Supabase (queries + auth + RLS + migrations) + PostgreSQL + TypeScript + pnpm.
 
 Архитектура фронтенда: **Feature-Sliced Design (FSD)** — адаптированная под Nuxt 4.
 
@@ -102,7 +102,7 @@ import StudentCard from "~/entities/student/ui/StudentCard.vue";
 ## FSD File Structure (полная)
 
 ```
-femo/
+lingaphone/
 ├── app/
 │   ├── app.vue                         — Root (NuxtLayout + NuxtPage)
 │   ├── app.config.ts                   — UI colors, theme

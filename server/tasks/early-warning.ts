@@ -1,3 +1,4 @@
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Scheduled task: Early Warning System.
  * Runs periodically to detect at-risk students and create notifications.

@@ -70,7 +70,7 @@ export const useUsers = () => {
   }>) => {
     const { error } = await supabase
       .from('User')
-      .update({ ...data, updatedAt: new Date().toISOString() } as any)
+      .update({ ...data, updatedAt: new Date().toISOString() } as Record<string, unknown>)
       .eq('id', userId)
     if (error) throw error
   }

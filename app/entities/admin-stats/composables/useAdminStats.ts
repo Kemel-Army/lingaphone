@@ -37,10 +37,12 @@ interface RawTeacherRow {
   userId: string
   bio: string | null
   yearsOfExperience: number | null
+  specialization: string | null
+  category: string | null
   rating: number
   reviewCount: number
   createdAt: string
-  User: { name: string, surname: string, email: string, avatarUrl: string | null } | null
+  User: { name: string, surname: string, email: string, phone: string | null, avatarUrl: string | null } | null
 }
 
 interface RawGroupRow {
@@ -140,7 +142,89 @@ export const useAdminStats = () => {
     }
   }
 
-  // ─── Students ────────────────────────────────────────────────────────────────
+  // ─── Students (paginated) ─────────────────────────────────────────────────────
+
+  // Normalize Kazakh-specific chars so К↔Қ, О↔Ө, У↔Ү/Ұ, А↔Ә, И/Ы↔І, Н↔Ң
+  const normalizeKz = (s: string) =>
+    s.toLowerCase()
+      .replace(/[қ]/g, 'к')
+      .replace(/[ө]/g, 'о')
+      .replace(/[үұ]/g, 'у')
+      .replace(/[ә]/g, 'а')
+      .replace(/[і]/g, 'и')
+      .replace(/[ң]/g, 'н')
+
+  const fetchStudentsPaged = async (
+    page: number,
+    pageSize: number,
+    search?: string
+  ): Promise<{ students: AdminStudent[], total: number }> => {
+    const from = page * pageSize
+    const to = from + pageSize - 1
+
+    const { data, error, count } = await supabase
+      .from('Student')
+      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin )', { count: 'exact' })
+      .order('createdAt', { ascending: false })
+      .range(from, to) as unknown as { data: RawStudentRow[] | null, error: unknown, count: number | null }
+
+    if (error) throw error
+
+    let rows = data ?? []
+
+    // Client-side Kazakh-aware filtering when search term provided
+    if (search?.trim()) {
+      const q = normalizeKz(search.trim())
+      rows = rows.filter((s) => {
+        const user = pickUser(s)
+        const full = normalizeKz(`${user?.surname ?? ''} ${user?.name ?? ''} ${user?.patronymic ?? ''} ${user?.email ?? ''} ${user?.iin ?? ''} ${s.level}`)
+        return full.includes(q)
+      })
+    }
+
+    const studentIds = rows.map(s => s.id)
+    const countMap: Record<string, number> = {}
+
+    if (studentIds.length > 0) {
+      const { data: gm } = await supabase
+        .from('GroupMember')
+        .select('studentId')
+        .in('studentId', studentIds) as unknown as { data: { studentId: string }[] | null }
+
+      for (const row of gm ?? []) {
+        countMap[row.studentId] = (countMap[row.studentId] ?? 0) + 1
+      }
+    }
+
+    const students = rows.map((s) => {
+      const user = pickUser(s)
+      return {
+        id: s.id,
+        userId: s.userId,
+        name: user?.name ?? '',
+        surname: user?.surname ?? '',
+        patronymic: user?.patronymic ?? null,
+        email: user?.email ?? '',
+        phone: user?.phone ?? null,
+        avatarUrl: user?.avatarUrl ?? null,
+        iin: user?.iin ?? null,
+        birthdate: s.birthdate,
+        level: s.level,
+        schoolGrade: s.schoolGrade,
+        totalXp: s.totalXp,
+        dailyStreak: s.dailyStreak,
+        goldStreak: s.goldStreak,
+        totalEarnings: s.totalEarnings,
+        lastActiveDate: s.lastActiveDate,
+        createdAt: s.createdAt,
+        groupCount: countMap[s.id] ?? 0
+      } as AdminStudent
+    })
+
+    return { students, total: count ?? 0 }
+  }
+
+  // ─── Students (legacy full fetch for exports) ─────────────────────────────────
 
   const fetchStudents = async (): Promise<AdminStudent[]> => {
     const { data, error } = await supabase
@@ -207,12 +291,41 @@ export const useAdminStats = () => {
       .order('month', { ascending: false })
       .limit(12)
 
+    // Fetch all XP logs (no limit) — used for totalXp sum and streak calc
     const { data: xpLogs } = await supabase
       .from('XpLog')
       .select('amount, createdAt')
       .eq('studentId', studentId)
-      .order('createdAt', { ascending: true })
-      .limit(90) as unknown as { data: { amount: number, createdAt: string }[] | null }
+      .order('createdAt', { ascending: true }) as unknown as { data: { amount: number, createdAt: string }[] | null }
+
+    const allLogs = (xpLogs ?? []) as { amount: number, createdAt: string }[]
+
+    // Compute totalXp from XpLog (Student.totalXp is a stale denorm field, never updated)
+    const computedTotalXp = allLogs.reduce((s, r) => s + r.amount, 0)
+
+    // Compute current daily streak (consecutive active days ending today or yesterday)
+    const activityDays = new Set<string>()
+    for (const r of allLogs) activityDays.add(r.createdAt.slice(0, 10))
+    let computedStreak = 0
+    const cursor = new Date()
+    for (let i = 0; i < 365; i++) {
+      const key = cursor.toISOString().slice(0, 10)
+      if (activityDays.has(key)) {
+        computedStreak++
+        cursor.setDate(cursor.getDate() - 1)
+      } else {
+        if (i === 0) {
+          cursor.setDate(cursor.getDate() - 1)
+          continue
+        }
+        break
+      }
+    }
+
+    // Compute goldStreak and totalEarnings from medals (Student fields are never updated)
+    const medalList = (medals ?? []) as { medal: string, payout: number }[]
+    const computedGoldStreak = medalList.filter(m => m.medal === 'GOLD').length
+    const computedTotalEarnings = medalList.reduce((s, m) => s + (m.payout ?? 0), 0)
 
     const user = pickUser(data)
     return {
@@ -229,20 +342,25 @@ export const useAdminStats = () => {
         birthdate: data.birthdate,
         level: data.level,
         schoolGrade: data.schoolGrade,
-        totalXp: data.totalXp,
-        dailyStreak: data.dailyStreak,
-        goldStreak: data.goldStreak,
-        totalEarnings: data.totalEarnings,
+        totalXp: computedTotalXp,
+        dailyStreak: computedStreak,
+        goldStreak: computedGoldStreak,
+        totalEarnings: computedTotalEarnings,
         lastActiveDate: data.lastActiveDate,
         createdAt: data.createdAt,
         groupCount: 0
       } as AdminStudent,
       medals: (medals ?? []) as {
-        id: string; studentId: string; month: string
-        averageGrade: number; medal: string; payout: number
-        confirmedBy: string | null; confirmedAt: string
+        id: string
+        studentId: string
+        month: string
+        averageGrade: number
+        medal: string
+        payout: number
+        confirmedBy: string | null
+        confirmedAt: string
       }[],
-      xpHistory: (xpLogs ?? []).map(l => ({
+      xpHistory: allLogs.map(l => ({
         date: l.createdAt.slice(0, 10),
         xp: l.amount
       })) as XpChartPoint[]
@@ -254,7 +372,7 @@ export const useAdminStats = () => {
   const fetchTeachers = async (): Promise<AdminTeacher[]> => {
     const { data, error } = await supabase
       .from('Teacher')
-      .select('id, userId, bio, yearsOfExperience, rating, reviewCount, createdAt, User!userId ( name, surname, email, avatarUrl )')
+      .select('id, userId, bio, yearsOfExperience, specialization, category, rating, reviewCount, createdAt, User!userId ( name, surname, email, phone, avatarUrl )')
       .order('createdAt', { ascending: false }) as unknown as { data: RawTeacherRow[] | null, error: unknown }
 
     if (error) throw error
@@ -307,9 +425,12 @@ export const useAdminStats = () => {
         name: user?.name ?? '',
         surname: user?.surname ?? '',
         email: user?.email ?? '',
+        phone: user?.phone ?? null,
         avatarUrl: user?.avatarUrl ?? null,
         bio: t.bio,
         yearsOfExperience: t.yearsOfExperience,
+        specialization: t.specialization ?? null,
+        category: t.category ?? null,
         rating: t.rating,
         reviewCount: t.reviewCount,
         groupCount: (groupMap[t.id] ?? []).length,
@@ -488,6 +609,7 @@ export const useAdminStats = () => {
   return {
     fetchKpi,
     fetchStudents,
+    fetchStudentsPaged,
     fetchStudentById,
     fetchTeachers,
     fetchGroups,

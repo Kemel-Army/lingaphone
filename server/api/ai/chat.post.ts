@@ -1,3 +1,4 @@
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import { z } from 'zod'
 import { buildIaeSystemPrompt } from '../../utils/ai-agent'
 import { isAiAvailable, getMockChatResponse } from '../../utils/ai-mock'

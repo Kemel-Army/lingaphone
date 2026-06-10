@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTeacher } from '~/entities/teacher'
+import { useTeacher, type TeacherLesson } from '~/entities/teacher'
 import { useGradeStudent } from '~/features/grade-student'
 
 definePageMeta({ layout: 'dashboard' })
@@ -29,15 +29,21 @@ interface Question {
 }
 const questions = ref<Question[]>([{ question: '', options: ['', '', '', ''], answer: 0 }])
 
-const { data: lessons, refresh: refreshLessons } = useAsyncData(
-  'teacher-lessons-create',
-  () => selectedGroupId.value ? fetchMyLessons(selectedGroupId.value) : Promise.resolve([]),
-  { watch: [selectedGroupId] }
-)
+const lessons = ref<TeacherLesson[]>([])
+const lessonsLoading = ref(false)
 
-watch(selectedGroupId, () => {
+watch(selectedGroupId, async (gid) => {
   selectedLessonId.value = ''
-})
+  if (!gid) { lessons.value = []; return }
+  lessonsLoading.value = true
+  try {
+    lessons.value = await fetchMyLessons(gid)
+  } catch {
+    lessons.value = []
+  } finally {
+    lessonsLoading.value = false
+  }
+}, { immediate: true })
 
 const groupOptions = computed(() => (groups.value ?? []).map(g => ({ value: g.id, label: g.name })))
 const lessonOptions = computed(() =>
@@ -147,11 +153,11 @@ const submit = async () => {
                 v-model="selectedLessonId"
                 :items="lessonOptions"
                 placeholder="Выберите урок"
-                :disabled="!selectedGroupId || !lessonOptions.length"
+                :disabled="!selectedGroupId || lessonsLoading || !lessonOptions.length"
                 class="w-full"
               />
               <p
-                v-if="selectedGroupId && !lessonOptions.length"
+                v-if="selectedGroupId && !lessonsLoading && !lessonOptions.length"
                 class="text-xs text-muted mt-1"
               >
                 В этой группе нет уроков

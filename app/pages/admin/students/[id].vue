@@ -9,7 +9,7 @@ const { fetchStudentById, updateStudent } = useAdminStats()
 
 const { data, pending, refresh } = await useAsyncData(
   `admin-student-${route.params.id}`,
-  () => fetchStudentById(route.params.id as string)
+  () => fetchStudentById(Array.isArray(route.params.id) ? route.params.id[0]! : route.params.id)
 )
 
 const student = computed(() => data.value?.student)
@@ -181,7 +181,7 @@ const computedAge = (birthdate: string | null) => {
               {{ student.surname }} {{ student.name }}<span
                 v-if="student.patronymic"
                 class="font-normal"
-              > {{ student.patronymic }}</span>
+              >&nbsp;{{ student.patronymic }}</span>
             </h2>
             <p class="text-muted text-sm mt-0.5">
               {{ student.email }}
@@ -362,7 +362,7 @@ const computedAge = (birthdate: string | null) => {
       :ui="{ content: 'max-w-xl' }"
     >
       <template #content>
-        <div class="p-6 space-y-5">
+        <div class="p-6 space-y-5 max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between">
             <div>
               <h2 class="text-lg font-bold">

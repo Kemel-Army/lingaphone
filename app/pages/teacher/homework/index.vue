@@ -10,7 +10,7 @@ const [{ data: homework, pending }, { data: groups }] = await Promise.all([
   useAsyncData('teacher-groups-hw', fetchMyGroups)
 ])
 
-const selectedGroup = ref('')
+const selectedGroup = ref<string | null>(null)
 
 const filtered = computed((): TeacherHomework[] => {
   if (!homework.value) return []
@@ -20,7 +20,7 @@ const filtered = computed((): TeacherHomework[] => {
 })
 
 const groupOptions = computed(() => [
-  { value: '', label: 'Все группы' },
+  { value: null, label: 'Все группы' },
   ...(groups.value ?? []).map(g => ({ value: g.id, label: g.name }))
 ])
 

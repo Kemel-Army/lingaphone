@@ -1,3 +1,4 @@
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import { z } from 'zod'
 import { isAiAvailable, getMockOralCheck } from '../../utils/ai-mock'
 

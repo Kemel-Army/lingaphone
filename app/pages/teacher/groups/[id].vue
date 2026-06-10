@@ -1,14 +1,48 @@
 <script setup lang="ts">
-import { useTeacher, type TeacherStudent } from '~/entities/teacher'
+import { useTeacher, type TeacherStudent, type TeacherLesson } from '~/entities/teacher'
+import { useGradeStudent } from '~/features/grade-student'
 
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
-const groupId = route.params.id as string
+const toast = useToast()
+const groupId = Array.isArray(route.params.id) ? route.params.id[0]! : route.params.id
 
-const { fetchGroupById } = useTeacher()
+const { fetchGroupById, fetchAttendanceForLesson, createLesson } = useTeacher()
+const { markAttendance, saveGrade, awardXp, awardMedal } = useGradeStudent()
 
-const { data, pending, error } = await useAsyncData(
+// ── Lesson creation modal ────────────────────────────────────────────────────
+const showCreateLesson = ref(false)
+const lessonForm = ref({ topic: '', startsAt: '', durationMin: 60, meetingUrl: '' })
+const lessonCreating = ref(false)
+
+const canCreateLesson = computed(
+  () => lessonForm.value.topic.trim() && lessonForm.value.startsAt
+)
+
+const submitCreateLesson = async () => {
+  if (!canCreateLesson.value) return
+  lessonCreating.value = true
+  try {
+    await createLesson({
+      groupId,
+      topic: lessonForm.value.topic.trim(),
+      startsAt: new Date(lessonForm.value.startsAt).toISOString(),
+      durationMin: lessonForm.value.durationMin || 60,
+      meetingUrl: lessonForm.value.meetingUrl.trim() || undefined
+    })
+    toast.add({ title: 'Урок создан', color: 'success', icon: 'i-lucide-check-circle' })
+    showCreateLesson.value = false
+    lessonForm.value = { topic: '', startsAt: '', durationMin: 60, meetingUrl: '' }
+    await refresh()
+  } catch (e) {
+    toast.add({ title: 'Ошибка', description: String(e), color: 'error', icon: 'i-lucide-x-circle' })
+  } finally {
+    lessonCreating.value = false
+  }
+}
+
+const { data, pending, error, refresh } = await useAsyncData(
   `teacher-group-${groupId}`,
   () => fetchGroupById(groupId)
 )
@@ -17,6 +51,105 @@ const group = computed(() => data.value?.group ?? null)
 const members = computed(() => data.value?.members ?? [])
 const lessons = computed(() => data.value?.lessons ?? [])
 
+// ── Tabs ────────────────────────────────────────────────────────────────────
+const activeTab = ref('members')
+
+// ── Journal ─────────────────────────────────────────────────────────────────
+const selectedLessonId = ref('')
+const attendance = ref<Record<string, string>>({})
+const attendanceSaving = ref<Record<string, boolean>>({})
+const lessonTopic = ref('')
+const topicSaving = ref(false)
+
+const ATTENDANCE_OPTIONS = [
+  { value: 'PRESENT', label: 'Был', icon: 'i-lucide-check', color: 'text-green-500', bg: 'bg-green-500/10 hover:bg-green-500/20', activeBg: 'bg-green-500 text-white' },
+  { value: 'LATE', label: 'Опоздал', icon: 'i-lucide-clock', color: 'text-amber-500', bg: 'bg-amber-500/10 hover:bg-amber-500/20', activeBg: 'bg-amber-500 text-white' },
+  { value: 'EXCUSED', label: 'Уважит.', icon: 'i-lucide-file-check', color: 'text-blue-500', bg: 'bg-blue-500/10 hover:bg-blue-500/20', activeBg: 'bg-blue-500 text-white' },
+  { value: 'ABSENT', label: 'Прогул', icon: 'i-lucide-x', color: 'text-red-500', bg: 'bg-red-500/10 hover:bg-red-500/20', activeBg: 'bg-red-500 text-white' }
+]
+
+const lessonOptions = computed(() =>
+  lessons.value.map(l => ({
+    value: l.id,
+    label: `${formatDate(l.startsAt)} · ${l.topic}`
+  }))
+)
+
+watch(selectedLessonId, async (id) => {
+  if (!id) return
+  attendance.value = await fetchAttendanceForLesson(id)
+  const lesson = lessons.value.find(l => l.id === id)
+  lessonTopic.value = lesson?.topic ?? ''
+})
+
+const setAttendance = async (studentId: string, status: string) => {
+  if (!selectedLessonId.value) return
+  attendanceSaving.value[studentId] = true
+  try {
+    await markAttendance(selectedLessonId.value, studentId, status as 'PRESENT' | 'ABSENT' | 'LATE')
+    attendance.value[studentId] = status
+  } catch {
+    toast.add({ title: 'Ошибка сохранения', color: 'error', icon: 'i-lucide-x-circle' })
+  } finally {
+    attendanceSaving.value[studentId] = false
+  }
+}
+
+const saveTopic = async () => {
+  if (!selectedLessonId.value || !lessonTopic.value.trim()) return
+  topicSaving.value = true
+  try {
+    const supabase = useTypedSupabaseClient()
+    await supabase.from('Lesson').update({ topic: lessonTopic.value.trim() }).eq('id', selectedLessonId.value)
+    toast.add({ title: 'Тема сохранена', color: 'success', icon: 'i-lucide-check-circle' })
+    await refresh()
+  } catch {
+    toast.add({ title: 'Ошибка сохранения темы', color: 'error', icon: 'i-lucide-x-circle' })
+  } finally {
+    topicSaving.value = false
+  }
+}
+
+// ── XP Awarding ──────────────────────────────────────────────────────────────
+const XP_PRESETS = [
+  { label: 'Крутой ответ', amount: 10, icon: 'i-lucide-zap' },
+  { label: 'Спикинг', amount: 15, icon: 'i-lucide-mic' },
+  { label: 'Помощь другу', amount: 5, icon: 'i-lucide-heart' }
+]
+
+const xpLoading = ref<Record<string, boolean>>({})
+const medalLoading = ref<Record<string, boolean>>({})
+const xpFlash = ref<Record<string, number | null>>({})
+
+const giveXp = async (studentId: string, amount: number, reason: string) => {
+  const key = `${studentId}-${amount}`
+  xpLoading.value[key] = true
+  try {
+    await awardXp(studentId, amount, reason)
+    xpFlash.value[studentId] = amount
+    setTimeout(() => { xpFlash.value[studentId] = null }, 2000)
+    toast.add({ title: `+${amount} XP`, description: `${reason}`, color: 'success', icon: 'i-lucide-zap' })
+    await refresh()
+  } catch {
+    toast.add({ title: 'Ошибка начисления XP', color: 'error', icon: 'i-lucide-x-circle' })
+  } finally {
+    xpLoading.value[key] = false
+  }
+}
+
+const giveMedal = async (student: TeacherStudent) => {
+  medalLoading.value[student.studentId] = true
+  try {
+    await awardMedal(student.studentId, 'Лучший на уроке')
+    toast.add({ title: '🏅 Медаль выдана!', description: `${student.name} ${student.surname}`, color: 'success' })
+  } catch {
+    toast.add({ title: 'Ошибка выдачи медали', color: 'error', icon: 'i-lucide-x-circle' })
+  } finally {
+    medalLoading.value[student.studentId] = false
+  }
+}
+
+// ── Display helpers ──────────────────────────────────────────────────────────
 const levelColor = (level: string): 'info' | 'warning' | 'success' | 'error' | 'neutral' => {
   const map: Record<string, 'info' | 'warning' | 'success' | 'error' | 'neutral'> = {
     A1: 'info', A2: 'info', S1: 'warning', S2: 'warning',
@@ -27,19 +160,13 @@ const levelColor = (level: string): 'info' | 'warning' | 'success' | 'error' | '
 
 const statusColor = (status: string): 'success' | 'warning' | 'error' | 'neutral' | 'info' => {
   const map: Record<string, 'success' | 'warning' | 'error' | 'neutral' | 'info'> = {
-    COMPLETED: 'success',
-    IN_PROGRESS: 'warning',
-    SCHEDULED: 'info',
-    CANCELLED: 'error'
+    COMPLETED: 'success', IN_PROGRESS: 'warning', SCHEDULED: 'info', CANCELLED: 'error'
   }
   return map[status] ?? 'neutral'
 }
 
 const statusLabel: Record<string, string> = {
-  COMPLETED: 'Завершён',
-  IN_PROGRESS: 'Идёт',
-  SCHEDULED: 'Запланирован',
-  CANCELLED: 'Отменён'
+  COMPLETED: 'Завершён', IN_PROGRESS: 'Идёт', SCHEDULED: 'Запланирован', CANCELLED: 'Отменён'
 }
 
 const formatDate = (d: string) =>
@@ -50,29 +177,18 @@ const WEEKDAY_RU: Record<number, string> = {
 }
 
 const formatSchedule = (schedule: unknown): string => {
-  if (!schedule) return '—'
-  if (Array.isArray(schedule) && schedule.length > 0) {
-    const first = schedule[0] as { weekday?: number, startTime?: string, durationMin?: number }
-    const days = schedule
-      .map((s: { weekday?: number }) => s.weekday ? (WEEKDAY_RU[s.weekday] ?? `#${s.weekday}`) : '?')
-      .join(', ')
-    const time = first.startTime ?? ''
-    const dur = first.durationMin ? ` (${first.durationMin} мин)` : ''
-    return time ? `${days} · ${time}${dur}` : days
-  }
-  if (typeof schedule === 'object' && schedule !== null) {
-    const s = schedule as Record<string, unknown>
-    const days = Array.isArray(s.days) ? (s.days as string[]).join(', ') : ''
-    const time = s.time as string ?? ''
-    if (days && time) return `${days} · ${time}`
-    if (days) return days
-  }
-  return '—'
+  if (!schedule || !Array.isArray(schedule) || !schedule.length) return '—'
+  const first = schedule[0] as { weekday?: number, startTime?: string, durationMin?: number }
+  const days = schedule.map((s: { weekday?: number }) => s.weekday ? (WEEKDAY_RU[s.weekday] ?? `#${s.weekday}`) : '?').join(', ')
+  const time = first.startTime ?? ''
+  const dur = first.durationMin ? ` (${first.durationMin} мин)` : ''
+  return time ? `${days} · ${time}${dur}` : days
 }
 </script>
 
 <template>
   <div class="p-6 space-y-6 max-w-5xl mx-auto">
+    <!-- Back nav + title -->
     <div class="flex items-center gap-2">
       <UButton
         to="/teacher/groups"
@@ -134,7 +250,7 @@ const formatSchedule = (schedule: unknown): string => {
               {{ formatSchedule(group.schedule) }}
             </p>
           </div>
-          <div class="ml-auto flex gap-2">
+          <div class="ml-auto flex gap-2 flex-wrap">
             <UButton
               :to="`/teacher/homework/create?groupId=${groupId}`"
               icon="i-lucide-plus"
@@ -148,14 +264,27 @@ const formatSchedule = (schedule: unknown): string => {
               variant="outline"
               size="sm"
             >
-              Журнал
+              Журнал оценок
             </UButton>
           </div>
         </div>
       </UCard>
 
-      <!-- Members -->
-      <UCard :ui="{ body: 'p-0' }">
+      <!-- Tabs -->
+      <UTabs
+        v-model="activeTab"
+        :items="[
+          { label: 'Ученики', value: 'members', icon: 'i-lucide-users' },
+          { label: 'Журнал урока', value: 'journal', icon: 'i-lucide-clipboard-check' },
+          { label: 'Занятия', value: 'lessons', icon: 'i-lucide-calendar' }
+        ]"
+      />
+
+      <!-- Tab: Members -->
+      <UCard
+        v-if="activeTab === 'members'"
+        :ui="{ body: 'p-0' }"
+      >
         <template #header>
           <div class="flex items-center gap-2 font-semibold px-4 py-3">
             <UIcon
@@ -187,22 +316,40 @@ const formatSchedule = (schedule: unknown): string => {
               <th class="px-4 py-3 font-medium">
                 Стрик
               </th>
-              <th class="px-4 py-3" />
+              <th class="px-4 py-3 font-medium">
+                Действия
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="s in (members as TeacherStudent[])"
               :key="s.studentId"
-              class="border-b border-subtle last:border-0 hover:bg-muted/30 transition-colors"
+              class="border-b border-subtle last:border-0 hover:bg-muted/20 transition-colors"
             >
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
-                  <UAvatar
-                    :src="s.avatarUrl ?? undefined"
-                    :alt="`${s.name} ${s.surname}`"
-                    size="sm"
-                  />
+                  <div class="relative">
+                    <UAvatar
+                      :src="s.avatarUrl ?? undefined"
+                      :alt="`${s.name} ${s.surname}`"
+                      size="sm"
+                    />
+                    <!-- XP flash animation -->
+                    <Transition
+                      enter-active-class="transition-all duration-300"
+                      enter-from-class="opacity-0 -translate-y-2"
+                      leave-active-class="transition-all duration-500"
+                      leave-to-class="opacity-0 -translate-y-4"
+                    >
+                      <span
+                        v-if="xpFlash[s.studentId]"
+                        class="absolute -top-4 left-1/2 -translate-x-1/2 text-xs font-black text-green-500 whitespace-nowrap pointer-events-none"
+                      >
+                        +{{ xpFlash[s.studentId] }} XP
+                      </span>
+                    </Transition>
+                  </div>
                   <span class="font-medium">{{ s.name }} {{ s.surname }}</span>
                 </div>
               </td>
@@ -215,7 +362,7 @@ const formatSchedule = (schedule: unknown): string => {
                   {{ s.level }}
                 </UBadge>
               </td>
-              <td class="px-4 py-3 font-mono">
+              <td class="px-4 py-3 font-mono text-sm">
                 {{ s.totalXp.toLocaleString() }}
               </td>
               <td class="px-4 py-3">
@@ -228,12 +375,42 @@ const formatSchedule = (schedule: unknown): string => {
                 </div>
               </td>
               <td class="px-4 py-3">
-                <UButton
-                  :to="`/teacher/students/${s.studentId}`"
-                  icon="i-lucide-eye"
-                  variant="ghost"
-                  size="sm"
-                />
+                <div class="flex items-center gap-1 flex-wrap">
+                  <!-- XP presets -->
+                  <UTooltip
+                    v-for="preset in XP_PRESETS"
+                    :key="preset.label"
+                    :text="`${preset.label} (+${preset.amount} XP)`"
+                  >
+                    <UButton
+                      :icon="preset.icon"
+                      variant="ghost"
+                      size="xs"
+                      color="success"
+                      :loading="xpLoading[`${s.studentId}-${preset.amount}`]"
+                      @click="giveXp(s.studentId, preset.amount, preset.label)"
+                    />
+                  </UTooltip>
+                  <!-- Medal -->
+                  <UTooltip text="Выдать медаль">
+                    <UButton
+                      icon="i-lucide-medal"
+                      variant="ghost"
+                      size="xs"
+                      color="warning"
+                      :loading="medalLoading[s.studentId]"
+                      @click="giveMedal(s)"
+                    />
+                  </UTooltip>
+                  <!-- View profile -->
+                  <UButton
+                    :to="`/teacher/students/${s.studentId}`"
+                    icon="i-lucide-eye"
+                    variant="ghost"
+                    size="xs"
+                    color="neutral"
+                  />
+                </div>
               </td>
             </tr>
             <tr v-if="!members.length">
@@ -248,8 +425,151 @@ const formatSchedule = (schedule: unknown): string => {
         </table>
       </UCard>
 
-      <!-- Lessons -->
-      <UCard :ui="{ body: 'p-0' }">
+      <!-- Tab: Journal -->
+      <div
+        v-if="activeTab === 'journal'"
+        class="space-y-4"
+      >
+        <!-- Lesson selector + topic editor -->
+        <UCard>
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-lucide-clipboard-check"
+                class="size-5 text-primary"
+              />
+              <h3 class="font-semibold">
+                Журнал урока
+              </h3>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3">
+              <UFormField label="Урок">
+                <USelect
+                  v-model="selectedLessonId"
+                  :items="lessonOptions"
+                  placeholder="Выберите урок…"
+                />
+              </UFormField>
+
+              <UFormField
+                v-if="selectedLessonId"
+                label="Тема занятия"
+              >
+                <div class="flex gap-2">
+                  <UInput
+                    v-model="lessonTopic"
+                    placeholder="Введите тему…"
+                    class="flex-1"
+                  />
+                  <UButton
+                    icon="i-lucide-save"
+                    size="sm"
+                    variant="outline"
+                    :loading="topicSaving"
+                    @click="saveTopic"
+                  />
+                </div>
+              </UFormField>
+            </div>
+          </div>
+        </UCard>
+
+        <!-- Attendance grid -->
+        <UCard
+          v-if="selectedLessonId && members.length"
+          :ui="{ body: 'p-0' }"
+        >
+          <template #header>
+            <div class="flex items-center gap-2 font-semibold px-4 py-3">
+              <UIcon
+                name="i-lucide-user-check"
+                class="size-4 text-green-500"
+              />
+              Посещаемость
+              <span class="text-xs text-muted font-normal ml-1">— изменения сохраняются автоматически</span>
+            </div>
+          </template>
+
+          <div class="divide-y divide-subtle">
+            <div
+              v-for="s in (members as TeacherStudent[])"
+              :key="s.studentId"
+              class="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/20 transition-colors"
+            >
+              <UAvatar
+                :src="s.avatarUrl ?? undefined"
+                :alt="`${s.name} ${s.surname}`"
+                size="sm"
+                class="shrink-0"
+              />
+              <p class="font-medium text-sm flex-1 min-w-0 truncate">
+                {{ s.name }} {{ s.surname }}
+              </p>
+
+              <!-- Attendance buttons -->
+              <div class="flex gap-1">
+                <button
+                  v-for="opt in ATTENDANCE_OPTIONS"
+                  :key="opt.value"
+                  :disabled="attendanceSaving[s.studentId]"
+                  class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-all"
+                  :class="attendance[s.studentId] === opt.value ? opt.activeBg : `${opt.bg} ${opt.color}`"
+                  @click="setAttendance(s.studentId, opt.value)"
+                >
+                  <UIcon
+                    :name="opt.icon"
+                    class="size-3"
+                  />
+                  <span class="hidden sm:inline">{{ opt.label }}</span>
+                </button>
+              </div>
+
+              <!-- Live XP award row -->
+              <div class="flex gap-1 ml-2 border-l border-subtle pl-2">
+                <UTooltip
+                  v-for="preset in XP_PRESETS"
+                  :key="preset.label"
+                  :text="`+${preset.amount} XP · ${preset.label}`"
+                >
+                  <UButton
+                    :icon="preset.icon"
+                    variant="ghost"
+                    size="xs"
+                    color="success"
+                    :loading="xpLoading[`${s.studentId}-${preset.amount}`]"
+                    @click="giveXp(s.studentId, preset.amount, preset.label)"
+                  />
+                </UTooltip>
+                <UTooltip text="Медаль">
+                  <UButton
+                    icon="i-lucide-medal"
+                    variant="ghost"
+                    size="xs"
+                    color="warning"
+                    :loading="medalLoading[s.studentId]"
+                    @click="giveMedal(s)"
+                  />
+                </UTooltip>
+              </div>
+            </div>
+          </div>
+        </UCard>
+
+        <UAlert
+          v-if="!selectedLessonId"
+          icon="i-lucide-info"
+          color="neutral"
+          title="Выберите урок выше"
+          description="После выбора урока откроется журнал посещаемости с возможностью начисления XP"
+        />
+      </div>
+
+      <!-- Tab: Lessons -->
+      <UCard
+        v-if="activeTab === 'lessons'"
+        :ui="{ body: 'p-0' }"
+      >
         <template #header>
           <div class="flex items-center gap-2 font-semibold px-4 py-3">
             <UIcon
@@ -264,6 +584,14 @@ const formatSchedule = (schedule: unknown): string => {
             >
               {{ lessons.length }}
             </UBadge>
+            <UButton
+              class="ml-auto"
+              icon="i-lucide-plus"
+              size="xs"
+              @click="showCreateLesson = true"
+            >
+              Создать урок
+            </UButton>
           </div>
         </template>
         <table class="w-full text-sm">
@@ -281,13 +609,14 @@ const formatSchedule = (schedule: unknown): string => {
               <th class="px-4 py-3 font-medium">
                 Длит.
               </th>
+              <th class="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="l in lessons"
+              v-for="l in (lessons as TeacherLesson[])"
               :key="l.id"
-              class="border-b border-subtle last:border-0 hover:bg-muted/30 transition-colors"
+              class="border-b border-subtle last:border-0 hover:bg-muted/20 transition-colors"
             >
               <td class="px-4 py-3 font-medium">
                 {{ l.topic }}
@@ -307,10 +636,19 @@ const formatSchedule = (schedule: unknown): string => {
               <td class="px-4 py-3 text-muted">
                 {{ l.durationMin }} мин
               </td>
+              <td class="px-4 py-3">
+                <UButton
+                  icon="i-lucide-clipboard-check"
+                  variant="ghost"
+                  size="xs"
+                  color="neutral"
+                  @click="selectedLessonId = l.id; activeTab = 'journal'"
+                />
+              </td>
             </tr>
             <tr v-if="!lessons.length">
               <td
-                colspan="4"
+                colspan="5"
                 class="px-4 py-10 text-center text-muted"
               >
                 Занятий пока нет
@@ -321,4 +659,80 @@ const formatSchedule = (schedule: unknown): string => {
       </UCard>
     </template>
   </div>
+
+  <!-- Modal: Create Lesson -->
+  <UModal v-model:open="showCreateLesson">
+    <template #content>
+      <div class="p-6 space-y-5">
+        <div class="flex items-center gap-2">
+          <UIcon
+            name="i-lucide-calendar-plus"
+            class="size-5 text-primary"
+          />
+          <h2 class="text-lg font-bold">
+            Новый урок
+          </h2>
+        </div>
+
+        <UFormField
+          label="Тема урока"
+          required
+        >
+          <UInput
+            v-model="lessonForm.topic"
+            placeholder="Например: Present Simple — вопросы"
+            class="w-full"
+          />
+        </UFormField>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <UFormField
+            label="Дата и время"
+            required
+          >
+            <UInput
+              v-model="lessonForm.startsAt"
+              type="datetime-local"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField label="Длительность (мин)">
+            <UInput
+              v-model="lessonForm.durationMin"
+              type="number"
+              min="15"
+              max="240"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+
+        <UFormField label="Ссылка на конференцию (необязательно)">
+          <UInput
+            v-model="lessonForm.meetingUrl"
+            placeholder="https://zoom.us/j/..."
+            class="w-full"
+          />
+        </UFormField>
+
+        <div class="flex justify-end gap-2 pt-1">
+          <UButton
+            variant="ghost"
+            color="neutral"
+            @click="showCreateLesson = false"
+          >
+            Отмена
+          </UButton>
+          <UButton
+            icon="i-lucide-check"
+            :disabled="!canCreateLesson || lessonCreating"
+            :loading="lessonCreating"
+            @click="submitCreateLesson"
+          >
+            Создать
+          </UButton>
+        </div>
+      </div>
+    </template>
+  </UModal>
 </template>

@@ -358,9 +358,15 @@ export const useTeacher = () => {
         .eq('id', studentId)
         .single() as unknown as {
         data: {
-          id: string; userId: string; level: string; totalXp: number
-          dailyStreak: number; goldStreak: number; totalEarnings: number
-          lastActiveDate: string | null; createdAt: string
+          id: string
+          userId: string
+          level: string
+          totalXp: number
+          dailyStreak: number
+          goldStreak: number
+          totalEarnings: number
+          lastActiveDate: string | null
+          createdAt: string
           User: { name: string, surname: string, email: string, avatarUrl: string | null } | null
         } | null
         error: unknown
@@ -634,6 +640,232 @@ export const useTeacher = () => {
     return { lessons, students, gradeMap }
   }
 
+  // ─── Teacher Profile ─────────────────────────────────────────────────────────
+
+  const fetchTeacherProfile = async () => {
+    const user = useSupabaseUser()
+    const authId = user.value?.sub ?? ''
+
+    const { data: uRow } = await supabase
+      .from('User')
+      .select('id, name, surname, email, avatarUrl')
+      .eq('authId', authId)
+      .maybeSingle() as unknown as {
+      data: { id: string, name: string, surname: string, email: string, avatarUrl: string | null } | null
+    }
+
+    if (!uRow) return null
+
+    const { data: tRow } = await supabase
+      .from('Teacher')
+      .select('id, bio, rating, yearsOfExperience')
+      .eq('userId', uRow.id)
+      .maybeSingle() as unknown as {
+      data: { id: string, bio: string | null, rating: number, yearsOfExperience: number } | null
+    }
+
+    return {
+      ...uRow,
+      teacherId: tRow?.id ?? '',
+      bio: tRow?.bio ?? null,
+      rating: tRow?.rating ?? 0,
+      yearsOfExperience: tRow?.yearsOfExperience ?? 0
+    }
+  }
+
+  const updateTeacherProfile = async (teacherId: string, bio: string, yearsOfExperience: number) => {
+    const { error } = await supabase
+      .from('Teacher')
+      .update({ bio: bio || null, yearsOfExperience })
+      .eq('id', teacherId)
+    if (error) throw error
+  }
+
+  // ─── Attendance ───────────────────────────────────────────────────────────────
+
+  const fetchAttendanceForLesson = async (lessonId: string): Promise<Record<string, string>> => {
+    const { data } = await supabase
+      .from('Attendance')
+      .select('studentId, status')
+      .eq('lessonId', lessonId) as unknown as { data: { studentId: string, status: string }[] | null }
+
+    const map: Record<string, string> = {}
+    for (const row of data ?? []) map[row.studentId] = row.status
+    return map
+  }
+
+  // ─── Weekly Stats ─────────────────────────────────────────────────────────────
+
+  const fetchWeeklyStats = async (): Promise<{ checkedCount: number, attendancePercent: number }> => {
+    const lessonIds = await getLessonIds()
+    if (lessonIds.length === 0) return { checkedCount: 0, attendancePercent: 0 }
+
+    const now = new Date()
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - now.getDay() + 1)
+    weekStart.setHours(0, 0, 0, 0)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 7)
+
+    const { data: hwIds } = await supabase
+      .from('Homework')
+      .select('id')
+      .in('lessonId', lessonIds) as unknown as { data: { id: string }[] | null }
+
+    let checkedCount = 0
+    if (hwIds && hwIds.length > 0) {
+      const { count } = await supabase
+        .from('HomeworkSubmission')
+        .select('*', { count: 'exact', head: true })
+        .in('homeworkId', hwIds.map(h => h.id))
+        .eq('status', 'CHECKED')
+      checkedCount = count ?? 0
+    }
+
+    const { data: weekLessons } = await supabase
+      .from('Lesson')
+      .select('id')
+      .in('id', lessonIds)
+      .gte('startsAt', weekStart.toISOString())
+      .lt('startsAt', weekEnd.toISOString()) as unknown as { data: { id: string }[] | null }
+
+    let attendancePercent = 0
+    if (weekLessons && weekLessons.length > 0) {
+      const { data: attRows } = await supabase
+        .from('Attendance')
+        .select('status')
+        .in('lessonId', weekLessons.map(l => l.id)) as unknown as { data: { status: string }[] | null }
+
+      const total = attRows?.length ?? 0
+      const present = (attRows ?? []).filter(a => a.status === 'PRESENT' || a.status === 'LATE').length
+      attendancePercent = total > 0 ? Math.round((present / total) * 100) : 0
+    }
+
+    return { checkedCount, attendancePercent }
+  }
+
+  // ─── Tests ────────────────────────────────────────────────────────────────────
+
+  const fetchMyTests = async () => {
+    const lessonIds = await getLessonIds()
+    if (lessonIds.length === 0) return []
+
+    const { data: hwRows } = await supabase
+      .from('Homework')
+      .select('id, lessonId, title, dueAt, maxScore, createdAt, Lesson!lessonId ( groupId, topic, Group!groupId ( name ) )')
+      .in('lessonId', lessonIds)
+      .eq('format', 'TEST')
+      .order('createdAt', { ascending: false }) as unknown as { data: RawHomeworkRow[] | null }
+
+    const hwIds = (hwRows ?? []).map(h => h.id)
+    const submittedMap: Record<string, number> = {}
+    const checkedMap: Record<string, number> = {}
+    const scoreMap: Record<string, number[]> = {}
+
+    if (hwIds.length > 0) {
+      const { data: subs } = await supabase
+        .from('HomeworkSubmission')
+        .select('homeworkId, status, aiScore, teacherGrade')
+        .in('homeworkId', hwIds) as unknown as {
+        data: { homeworkId: string, status: string, aiScore: number | null, teacherGrade: number | null }[] | null
+      }
+
+      for (const s of subs ?? []) {
+        if (s.status === 'SUBMITTED') submittedMap[s.homeworkId] = (submittedMap[s.homeworkId] ?? 0) + 1
+        if (s.status === 'CHECKED') {
+          checkedMap[s.homeworkId] = (checkedMap[s.homeworkId] ?? 0) + 1
+          const score = s.teacherGrade ?? s.aiScore ?? null
+          if (score !== null) {
+            if (!scoreMap[s.homeworkId]) scoreMap[s.homeworkId] = []
+            scoreMap[s.homeworkId]!.push(score)
+          }
+        }
+      }
+    }
+
+    return (hwRows ?? []).map((h) => {
+      const lesson = pickRelation(h.Lesson)
+      const group = lesson ? pickRelation(lesson.Group) : null
+      const scores = scoreMap[h.id] ?? []
+      const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null
+      return {
+        id: h.id,
+        lessonId: h.lessonId,
+        lessonTopic: lesson?.topic ?? '',
+        groupId: lesson?.groupId ?? '',
+        groupName: (group as { name: string } | null)?.name ?? '',
+        title: h.title,
+        dueAt: h.dueAt,
+        maxScore: h.maxScore,
+        createdAt: h.createdAt,
+        submittedCount: submittedMap[h.id] ?? 0,
+        checkedCount: checkedMap[h.id] ?? 0,
+        avgScore
+      }
+    })
+  }
+
+  const fetchTestSubmissions = async (homeworkId: string) => {
+    const { data, error } = await supabase
+      .from('HomeworkSubmission')
+      .select('id, studentId, status, aiScore, teacherGrade, submittedAt, Student!studentId ( User!userId ( name, surname ) )')
+      .eq('homeworkId', homeworkId)
+      .order('submittedAt', { ascending: false }) as unknown as {
+      data: {
+        id: string
+        studentId: string
+        status: string
+        aiScore: number | null
+        teacherGrade: number | null
+        submittedAt: string | null
+        Student: { User: { name: string, surname: string } | null } | null
+      }[] | null
+      error: unknown
+    }
+
+    if (error) throw error
+
+    return (data ?? []).map((s) => {
+      const student = pickRelation(s.Student)
+      const user = student ? pickRelation(student.User) : null
+      return {
+        id: s.id,
+        studentId: s.studentId,
+        studentName: (user as { name: string } | null)?.name ?? '',
+        studentSurname: (user as { surname: string } | null)?.surname ?? '',
+        status: s.status,
+        aiScore: s.aiScore,
+        teacherGrade: s.teacherGrade,
+        score: s.teacherGrade ?? s.aiScore,
+        submittedAt: s.submittedAt
+      }
+    })
+  }
+
+  const resetTestSubmission = async (submissionId: string) => {
+    const { error } = await supabase
+      .from('HomeworkSubmission')
+      .update({ status: 'ASSIGNED', teacherGrade: null, teacherComment: null, aiScore: null, aiFeedback: null, submittedAt: null })
+      .eq('id', submissionId)
+    if (error) throw error
+  }
+
+  // ─── Lesson creation ──────────────────────────────────────────────────────────
+
+  const createLesson = async (payload: {
+    groupId: string
+    topic: string
+    startsAt: string
+    durationMin?: number
+    meetingUrl?: string
+  }): Promise<TeacherLesson> => {
+    const data = await $fetch<TeacherLesson>('/api/teacher/lessons', {
+      method: 'POST',
+      body: payload
+    })
+    return data
+  }
+
   return {
     fetchKpi,
     fetchMyGroups,
@@ -644,6 +876,14 @@ export const useTeacher = () => {
     fetchMyHomework,
     fetchSubmissions,
     fetchGradesForGroup,
+    fetchTeacherProfile,
+    updateTeacherProfile,
+    fetchAttendanceForLesson,
+    fetchWeeklyStats,
+    fetchMyTests,
+    fetchTestSubmissions,
+    resetTestSubmission,
+    createLesson,
     getGroupIds,
     getLessonIds
   }

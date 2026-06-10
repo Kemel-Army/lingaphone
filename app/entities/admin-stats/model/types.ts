@@ -37,9 +37,12 @@ export interface AdminTeacher {
   name: string
   surname: string
   email: string
+  phone: string | null
   avatarUrl: string | null
   bio: string | null
   yearsOfExperience: number | null
+  specialization: string | null
+  category: string | null
   rating: number
   reviewCount: number
   groupCount: number

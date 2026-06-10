@@ -1,7 +1,7 @@
 import type { Database } from '~/shared/types/database.types'
 import { PRACTICE_DECKS } from '~/shared/mock'
 import type { StudentCertificate, SchoolEvent } from '~/shared/mock'
-import type { StudentGroup, FlatTeacher, Classmate } from '../model/types'
+import type { StudentGroup, Classmate } from '../model/types'
 
 type Tables = Database['public']['Tables']
 type TeacherRow = Tables['Teacher']['Row']

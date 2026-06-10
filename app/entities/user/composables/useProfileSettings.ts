@@ -38,7 +38,7 @@ export const useProfileSettings = () => {
         toast.error('Не удалось сохранить', error.message)
         return false
       }
-      toast.success('Профиль обновлён', 'Имя обновится после перезахода')
+      toast.success('Профиль обновлён')
       return true
     } finally {
       saving.value = false

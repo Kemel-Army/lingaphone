@@ -65,10 +65,12 @@ const isUser = computed(() => props.role === 'user')
 
     <!-- Bubble -->
     <div class="femo-msg-bubble">
+      <!-- eslint-disable vue/no-v-html -->
       <div
         class="femo-msg-content"
         v-html="renderContent"
       />
+      <!-- eslint-enable vue/no-v-html -->
 
       <span
         v-if="isStreaming"

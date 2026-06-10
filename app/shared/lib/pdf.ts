@@ -129,6 +129,7 @@ export const generateStudentReport = async (data: {
     ...tableStyles
   })
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   y = (doc as any).lastAutoTable.finalY + 16
 
   doc.setFont(PDF_FONT, 'bold')
@@ -194,6 +195,7 @@ export const generateDiagnosticReport = async (data: {
     ...tableStyles
   })
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   y = (doc as any).lastAutoTable.finalY + 16
 
   doc.setFont(PDF_FONT, 'bold')

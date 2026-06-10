@@ -285,7 +285,10 @@ export const TEACHER_SIDEBAR: SidebarItem[] = [
   { label: 'Мои ученики', icon: 'i-lucide-users', to: '/teacher/students' },
   { label: 'Задания', icon: 'i-lucide-file-text', to: '/teacher/homework' },
   { label: 'Журнал оценок', icon: 'i-lucide-table', to: '/teacher/grades' },
-  { label: 'Проверка работ', icon: 'i-lucide-inbox', to: '/teacher/submissions' }
+  { label: 'Проверка работ', icon: 'i-lucide-inbox', to: '/teacher/submissions' },
+  { label: 'Тестирование', icon: 'i-lucide-clipboard-list', to: '/teacher/testing' },
+  { label: 'Расписание', icon: 'i-lucide-calendar-days', to: '/teacher/schedule' },
+  { label: 'Профиль', icon: 'i-lucide-user-circle', to: '/teacher/profile' }
 ]
 
 export const ADMIN_SIDEBAR: SidebarItem[] = [
@@ -293,7 +296,10 @@ export const ADMIN_SIDEBAR: SidebarItem[] = [
   { label: 'Ученики', icon: 'i-lucide-graduation-cap', to: '/admin/students' },
   { label: 'Учителя', icon: 'i-lucide-users', to: '/admin/teachers' },
   { label: 'Группы', icon: 'i-lucide-layout-grid', to: '/admin/groups' },
-  { label: 'Финансы', icon: 'i-lucide-banknote', to: '/admin/finance' }
+  { label: 'Тестирование', icon: 'i-lucide-clipboard-list', to: '/admin/testing' },
+  { label: 'Расписание', icon: 'i-lucide-calendar-days', to: '/admin/schedule' },
+  { label: 'Финансы', icon: 'i-lucide-banknote', to: '/admin/finance' },
+  { label: 'Настройки', icon: 'i-lucide-settings', to: '/admin/settings' }
 ]
 
 export const SIDEBAR_BY_ROLE: Record<UserRole, SidebarItem[]> = {

@@ -125,10 +125,48 @@ export const useGradeStudent = () => {
     return data?.id ?? null
   }
 
+  const awardXp = async (studentId: string, amount: number, reason: string) => {
+    const { data: st } = await supabase
+      .from('Student')
+      .select('totalXp')
+      .eq('id', studentId)
+      .maybeSingle() as unknown as { data: { totalXp: number } | null }
+
+    const { error } = await supabase
+      .from('Student')
+      .update({ totalXp: (st?.totalXp ?? 0) + amount })
+      .eq('id', studentId)
+    if (error) throw error
+
+    await supabase.from('XpLog').insert({
+      studentId,
+      amount,
+      action: 'LESSON_ATTENDED',
+      description: reason,
+      earnedAt: new Date().toISOString()
+    })
+  }
+
+  const awardMedal = async (studentId: string, title: string) => {
+    const now = new Date()
+    const { error } = await supabase
+      .from('Medal')
+      .insert({
+        studentId,
+        title,
+        month: now.getMonth() + 1,
+        year: now.getFullYear(),
+        awardedAt: now.toISOString()
+      })
+    if (error) throw error
+  }
+
   return {
     gradeSubmission,
     saveGrade,
     markAttendance,
-    createHomework
+    createHomework,
+    awardXp,
+    awardMedal
   }
 }

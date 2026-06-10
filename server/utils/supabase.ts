@@ -1,3 +1,4 @@
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Database } from '~/shared/types/database.types'
 
@@ -104,7 +105,7 @@ export const getCurrentStudent = async (event: any): Promise<{ userId: string, s
     .from('User')
     .select('id, role')
     .eq('authId', user.id)
-    .maybeSingle()
+    .maybeSingle() as unknown as { data: { id: string, role: string } | null, error: unknown }
 
   if (userErr || !userRow) {
     throw createError({ statusCode: 403, message: 'User not found' })
@@ -117,7 +118,7 @@ export const getCurrentStudent = async (event: any): Promise<{ userId: string, s
     .from('Student')
     .select('id')
     .eq('userId', userRow.id)
-    .maybeSingle()
+    .maybeSingle() as unknown as { data: { id: string } | null, error: unknown }
 
   if (studentErr || !studentRow) {
     throw createError({ statusCode: 403, message: 'Student profile not found' })
@@ -185,7 +186,7 @@ export const getCurrentInternalUserId = async (event: any): Promise<string> => {
     .from('User')
     .select('id')
     .eq('authId', user.id)
-    .maybeSingle()
+    .maybeSingle() as unknown as { data: { id: string } | null, error: unknown }
   if (error || !data) throw createError({ statusCode: 403, message: 'User not found' })
   return data.id
 }
