@@ -26,7 +26,7 @@ defineProps<{
       <div class="flex items-center gap-2">
         <UIcon
           name="i-lucide-trophy"
-          class="size-5 text-[var(--color-xp)]"
+          class="size-5 text-amber-500 dark:text-amber-400"
         />
         <h3 class="text-title">
           Таблица лидеров
@@ -47,7 +47,7 @@ defineProps<{
 
     <ul
       v-else-if="entries.length"
-      class="divide-y divide-[var(--color-border-muted)]"
+      class="divide-y divide-muted"
     >
       <li
         v-for="entry in entries"
@@ -58,7 +58,7 @@ defineProps<{
         <!-- Rank -->
         <span
           class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-          :class="entry.rank <= 3 ? 'bg-[var(--color-xp-soft)] text-[var(--color-xp)]' : 'text-[var(--color-text-muted)]'"
+          :class="entry.rank <= 3 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'text-muted'"
         >
           {{ entry.rank }}
         </span>
@@ -73,7 +73,7 @@ defineProps<{
 
         <!-- Name -->
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium text-[var(--color-text-primary)]">
+          <p class="truncate text-sm font-medium text-highlighted">
             {{ entry.name }} {{ entry.surname ?? '' }}
           </p>
         </div>
@@ -87,7 +87,7 @@ defineProps<{
         />
 
         <!-- XP -->
-        <span class="shrink-0 text-sm font-semibold text-[var(--color-xp)]">
+        <span class="shrink-0 text-sm font-semibold text-amber-600 dark:text-amber-400">
           {{ entry.xp.toLocaleString('ru-RU') }} XP
         </span>
       </li>

@@ -11,8 +11,8 @@ useHead({
   }
 })
 
-const title = 'FEMO Platform — Олимпиадная математика нового поколения'
-const description = 'Платформа FEMO на базе IAE (Intelligent Adaptive Education): AI-тренер, карта знаний, адаптивная диагностика и персональная траектория.'
+const title = 'Lingaphone — Школа английского языка'
+const description = 'Lingaphone — школа английского языка для детей. Британская методика, AI-тренажёр, адаптивное обучение. Алматы + онлайн по всему миру.'
 
 useSeoMeta({
   title,
@@ -25,6 +25,9 @@ useSeoMeta({
 
 <template>
   <NuxtLayout>
-    <NuxtPage :transition="{ name: 'page-fade', mode: 'out-in' }" />
+    <NuxtPage
+      :key="$route.fullPath"
+      :transition="{ name: 'page-fade', mode: 'out-in' }"
+    />
   </NuxtLayout>
 </template>

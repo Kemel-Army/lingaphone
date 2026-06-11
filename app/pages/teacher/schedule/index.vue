@@ -232,7 +232,7 @@ const openLesson = (lesson: TeacherLesson) => {
         <button
           v-for="(day, i) in weekDays"
           :key="i"
-          class="flex-shrink-0 flex flex-col items-center rounded-xl px-3 py-2 transition-all border"
+          class="shrink-0 flex flex-col items-center rounded-xl px-3 py-2 transition-all border"
           :class="day.toISOString().slice(0, 10) === selectedDay.toISOString().slice(0, 10)
             ? 'bg-primary text-white border-primary'
             : isToday(day)

@@ -41,6 +41,14 @@ export default defineNuxtConfig({
     enabled: true
   },
 
+  vite: {
+    server: {
+      hmr: {
+        overlay: false
+      }
+    }
+  },
+
   css: ['~/assets/css/main.css'],
 
   // SEO

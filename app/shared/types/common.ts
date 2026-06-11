@@ -81,7 +81,13 @@ export enum XPActionType {
   QUEST_WEEKLY = 'QUEST_WEEKLY',
   DAILY_BONUS = 'DAILY_BONUS',
   WEEKLY_BONUS = 'WEEKLY_BONUS',
-  ACHIEVEMENT_REWARD = 'ACHIEVEMENT_REWARD'
+  ACHIEVEMENT_REWARD = 'ACHIEVEMENT_REWARD',
+  GRAMMAR_COMPLETE = 'GRAMMAR_COMPLETE',
+  GRAMMAR_PERFECT = 'GRAMMAR_PERFECT',
+  READING_COMPLETE = 'READING_COMPLETE',
+  READING_PERFECT = 'READING_PERFECT',
+  SONG_COMPLETE = 'SONG_COMPLETE',
+  SONG_PERFECT = 'SONG_PERFECT'
 }
 
 // XP rewards table (matches landing page)
@@ -99,7 +105,13 @@ export const XP_REWARDS: Record<XPActionType, number | [number, number]> = {
   [XPActionType.QUEST_WEEKLY]: [100, 150],
   [XPActionType.DAILY_BONUS]: 50,
   [XPActionType.WEEKLY_BONUS]: 100,
-  [XPActionType.ACHIEVEMENT_REWARD]: [50, 5000]
+  [XPActionType.ACHIEVEMENT_REWARD]: [50, 5000],
+  [XPActionType.GRAMMAR_COMPLETE]: 40,
+  [XPActionType.GRAMMAR_PERFECT]: 90,
+  [XPActionType.READING_COMPLETE]: 30,
+  [XPActionType.READING_PERFECT]: 70,
+  [XPActionType.SONG_COMPLETE]: 25,
+  [XPActionType.SONG_PERFECT]: 60
 }
 
 // ═══════════════════════════════════════════════
@@ -269,6 +281,10 @@ export const STUDENT_SIDEBAR: SidebarItem[] = [
   { label: 'Прогресс', icon: 'i-lucide-line-chart', to: '/student/progress' },
   { label: 'Материалы', icon: 'i-lucide-library', to: '/student/materials' },
   { label: 'Маркет Достижений', icon: 'i-lucide-trophy', to: '/student/achievements' },
+  { label: 'Рейтинг', icon: 'i-lucide-bar-chart-2', to: '/student/leaderboard' },
+  { label: 'Грамматика', icon: 'i-lucide-book-marked', to: '/student/grammar', badge: 'NEW' },
+  { label: 'Чтение', icon: 'i-lucide-book-open-text', to: '/student/reading', badge: 'NEW' },
+  { label: 'Песни', icon: 'i-lucide-music', to: '/student/songs', badge: 'NEW' },
   { label: 'Сертификаты', icon: 'i-lucide-award', to: '/student/certificates' },
   { label: 'Мероприятия', icon: 'i-lucide-party-popper', to: '/student/events' },
   { label: 'Сообщения', icon: 'i-lucide-message-circle', to: '/student/messenger' },

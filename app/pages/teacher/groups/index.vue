@@ -111,7 +111,6 @@ const filtered = computed((): TeacherGroup[] => {
 
 <template>
   <div class="p-4 sm:p-6 space-y-5 max-w-6xl mx-auto">
-
     <!-- ── Header ──────────────────────────────────────────────────────────── -->
     <div class="flex items-center justify-between gap-4 flex-wrap">
       <div>
@@ -179,7 +178,7 @@ const filtered = computed((): TeacherGroup[] => {
             { label: 'Всего групп', value: kpi.total, icon: 'i-lucide-layers', color: 'text-primary', bg: 'bg-primary/10' },
             { label: 'Учеников', value: kpi.totalStudents, icon: 'i-lucide-users', color: 'text-blue-500', bg: 'bg-blue-500/10' },
             { label: 'Ср. заполнение', value: `${kpi.avgFill}%`, icon: 'i-lucide-bar-chart-2', color: 'text-amber-500', bg: 'bg-amber-500/10' },
-            { label: 'Заполнены', value: kpi.fullGroups, icon: 'i-lucide-check-circle', color: 'text-green-500', bg: 'bg-green-500/10' },
+            { label: 'Заполнены', value: kpi.fullGroups, icon: 'i-lucide-check-circle', color: 'text-green-500', bg: 'bg-green-500/10' }
           ]"
           :key="stat.label"
         >
