@@ -25,9 +25,6 @@ useSeoMeta({
 
 <template>
   <NuxtLayout>
-    <NuxtPage
-      :key="$route.fullPath"
-      :transition="{ name: 'page-fade', mode: 'out-in' }"
-    />
+    <NuxtPage :transition="{ name: 'page-fade', mode: 'out-in' }" />
   </NuxtLayout>
 </template>
