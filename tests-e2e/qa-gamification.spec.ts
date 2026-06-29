@@ -20,7 +20,7 @@ const EMAIL = `e2e_gam_${TS}@linga.kz`
 const PW = 'E2eGam!2345'
 
 function svc(path: string, init: RequestInit = {}) {
-  return fetch(`${SUPA}/rest/v1/${path}`, { ...init, headers: { apikey: SVC, Authorization: `Bearer ${SVC}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } })
+  return fetch(`${SUPA}/rest/v1/${path}`, { ...init, headers: { 'apikey': SVC, 'Authorization': `Bearer ${SVC}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } })
 }
 async function login(ctx: BrowserContext, email: string, password: string) {
   const page = await ctx.newPage()
@@ -159,7 +159,7 @@ test.describe('QA · gamification XP path', () => {
     const beforeProg = before.reduce((s: number, q: { progress: number }) => s + q.progress, 0)
     const rpc = await fetch(`${SUPA}/rest/v1/rpc/tick_quest_progress`, {
       method: 'POST',
-      headers: { apikey: SVC, Authorization: `Bearer ${SVC}`, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SVC, 'Authorization': `Bearer ${SVC}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_student_id: studentId, p_quest_type: 'EARN_XP', p_increment: 5 })
     })
     expect(rpc.status, `tick rpc: ${await rpc.text()}`).toBeLessThan(300)

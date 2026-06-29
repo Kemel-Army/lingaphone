@@ -21,7 +21,7 @@ const ACTOR_PW = 'E2eJrnl!2345'
 const emails = { teacher: `e2e_tj_${TS}@linga.kz`, student: `e2e_sj_${TS}@linga.kz` }
 
 function svc(path: string, init: RequestInit = {}) {
-  return fetch(`${SUPA}/rest/v1/${path}`, { ...init, headers: { apikey: SVC, Authorization: `Bearer ${SVC}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } })
+  return fetch(`${SUPA}/rest/v1/${path}`, { ...init, headers: { 'apikey': SVC, 'Authorization': `Bearer ${SVC}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } })
 }
 async function login(ctx: BrowserContext, email: string, password = 'password123') {
   const p = await ctx.newPage()
@@ -117,5 +117,4 @@ test.describe('QA · teacher journal (click-through)', () => {
       return Array.isArray(g) && g.length === 1 ? g[0].value : null
     }, { timeout: 15_000, message: 'grade not saved (Grade RLS / gradedBy FK?)' }).toBe(5)
   })
-
 })

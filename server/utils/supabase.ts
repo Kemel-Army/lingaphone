@@ -127,7 +127,6 @@ export const getCurrentStudent = async (event: any): Promise<{ userId: string, s
   return { userId: userRow.id, studentId: studentRow.id }
 }
 
-
 /**
  * Gate a route to server-internal callers only. The caller must present
  * the `x-internal-token` header matching `runtimeConfig.internalApiKey`.
