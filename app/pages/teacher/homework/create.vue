@@ -34,7 +34,10 @@ const lessonsLoading = ref(false)
 
 watch(selectedGroupId, async (gid) => {
   selectedLessonId.value = ''
-  if (!gid) { lessons.value = []; return }
+  if (!gid) {
+    lessons.value = []
+    return
+  }
   lessonsLoading.value = true
   try {
     lessons.value = await fetchMyLessons(gid)

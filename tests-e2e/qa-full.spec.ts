@@ -99,7 +99,6 @@ const ADMIN_PAGES = [
   '/admin', '/admin/books', '/admin/finance', '/admin/groups', '/admin/schedule',
   '/admin/settings', '/admin/students', '/admin/teachers', '/admin/testing'
 ]
-const PARENT_PAGES = ['/parent']
 
 const ROLE_PAGES: Record<Role, string[]> = {
   student: STUDENT_PAGES, teacher: TEACHER_PAGES, admin: ADMIN_PAGES

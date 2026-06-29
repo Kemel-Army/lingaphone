@@ -9,7 +9,7 @@ const toast = useToast()
 const groupId = String(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id)
 
 const { fetchGroupById, fetchAttendanceForLesson, createLesson } = useTeacher()
-const { markAttendance, saveGrade, awardXp } = useGradeStudent()
+const { markAttendance, awardXp } = useGradeStudent()
 
 // ── Lesson creation modal ────────────────────────────────────────────────────
 const showCreateLesson = ref(false)
@@ -126,7 +126,9 @@ const giveXp = async (studentId: string, amount: number, reason: string) => {
   try {
     await awardXp(studentId, amount, reason)
     xpFlash.value[studentId] = amount
-    setTimeout(() => { xpFlash.value[studentId] = null }, 2000)
+    setTimeout(() => {
+      xpFlash.value[studentId] = null
+    }, 2000)
     toast.add({ title: `+${amount} XP`, description: `${reason}`, color: 'success', icon: 'i-lucide-zap' })
     await refresh()
   } catch {

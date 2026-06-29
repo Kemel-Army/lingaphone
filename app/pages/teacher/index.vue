@@ -30,7 +30,9 @@ onMounted(() => {
       refreshFeed()
     })
     .subscribe()
-  onUnmounted(() => { supabase.removeChannel(channel) })
+  onUnmounted(() => {
+    supabase.removeChannel(channel)
+  })
 })
 
 // ── Next lesson + countdown ──────────────────────────────────────────────────
@@ -47,9 +49,16 @@ const isUrgent = ref(false)
 let cdTimer: ReturnType<typeof setInterval> | null = null
 
 const updateCountdown = () => {
-  if (!nextLesson.value) { countdown.value = ''; return }
+  if (!nextLesson.value) {
+    countdown.value = ''
+    return
+  }
   const diff = new Date(nextLesson.value.startsAt).getTime() - Date.now()
-  if (diff <= 0) { countdown.value = 'Идёт сейчас'; isUrgent.value = true; return }
+  if (diff <= 0) {
+    countdown.value = 'Идёт сейчас'
+    isUrgent.value = true
+    return
+  }
   isUrgent.value = diff < 30 * 60 * 1000
   const h = Math.floor(diff / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
@@ -60,7 +69,9 @@ const updateCountdown = () => {
 onMounted(() => {
   updateCountdown()
   cdTimer = setInterval(updateCountdown, 1000)
-  onUnmounted(() => { if (cdTimer) clearInterval(cdTimer) })
+  onUnmounted(() => {
+    if (cdTimer) clearInterval(cdTimer)
+  })
 })
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

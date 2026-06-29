@@ -51,9 +51,6 @@ const isToday = (day: Date) => day.toISOString().slice(0, 10) === today.toISOStr
 const isPast = (day: Date) => day < today
 
 const WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-const WEEKDAY_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
-
-const dayIndex = (day: Date) => (day.getDay() + 6) % 7 // Mon=0…Sun=6
 
 const formatTime = (d: string) =>
   new Date(d).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })

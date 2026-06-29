@@ -14,7 +14,7 @@ function loadEnv() {
   const get = (k: string) => raw.split('\n').find(l => l.startsWith(`${k}=`))?.slice(k.length + 1).trim().replace(/^"|"$/g, '') ?? ''
   return { URL: get('SUPABASE_URL'), ANON: get('SUPABASE_KEY'), SVC: get('SUPABASE_SERVICE_KEY') }
 }
-const { URL: SUPA, ANON, SVC } = loadEnv()
+const { URL: SUPA, SVC } = loadEnv()
 const TS = String(Date.now()).slice(-9)
 const EMAIL = `e2e_gam_${TS}@linga.kz`
 const PW = 'E2eGam!2345'

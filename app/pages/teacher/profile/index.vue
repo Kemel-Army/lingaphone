@@ -46,8 +46,14 @@ const pwError = ref('')
 
 const changePassword = async () => {
   pwError.value = ''
-  if (pwForm.next.length < 6) { pwError.value = 'Минимум 6 символов'; return }
-  if (pwForm.next !== pwForm.confirm) { pwError.value = 'Пароли не совпадают'; return }
+  if (pwForm.next.length < 6) {
+    pwError.value = 'Минимум 6 символов'
+    return
+  }
+  if (pwForm.next !== pwForm.confirm) {
+    pwError.value = 'Пароли не совпадают'
+    return
+  }
   pwSaving.value = true
   try {
     const { error } = await supabase.auth.updateUser({ password: pwForm.next })

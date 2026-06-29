@@ -80,11 +80,17 @@ const onFileSelect = async (e: Event) => {
   fileError.value = ''
   try {
     for (const file of files) {
-      if (file.size > 10 * 1024 * 1024) { fileError.value = `«${file.name}» больше 10 МБ`; continue }
+      if (file.size > 10 * 1024 * 1024) {
+        fileError.value = `«${file.name}» больше 10 МБ`
+        continue
+      }
       const ext = file.name.split('.').pop() ?? 'bin'
       const path = `${authId}/${homework.value.id}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
       const { error } = await supabaseClient.storage.from('homework-submissions').upload(path, file, { upsert: false })
-      if (error) { fileError.value = error.message; continue }
+      if (error) {
+        fileError.value = error.message
+        continue
+      }
       fileAttachments.value.push({ path, name: file.name })
     }
   } finally {

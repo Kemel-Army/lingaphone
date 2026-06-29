@@ -41,7 +41,10 @@ const openTest = async (id: string) => {
   }
 }
 
-const closeDetail = () => { selectedTestId.value = null; testSubs.value = [] }
+const closeDetail = () => {
+  selectedTestId.value = null
+  testSubs.value = []
+}
 
 const selectedTest = computed(() => tests.value?.find(t => t.id === selectedTestId.value) ?? null)
 
