@@ -1,6 +1,18 @@
 export const useGradeStudent = () => {
   const supabase = useTypedSupabaseClient()
 
+  // Resolve the current user's Teacher.id from their auth id (authId → User → Teacher).
+  // Attendance.markedBy / Grade.gradedBy are FKs to Teacher.id, not User.id.
+  const resolveTeacherId = async (authId: string | null): Promise<string | null> => {
+    if (!authId) return null
+    const { data: uRow } = await supabase
+      .from('User').select('id').eq('authId', authId).maybeSingle() as unknown as { data: { id: string } | null }
+    if (!uRow) return null
+    const { data: tRow } = await supabase
+      .from('Teacher').select('id').eq('userId', uRow.id).maybeSingle() as unknown as { data: { id: string } | null }
+    return tRow?.id ?? null
+  }
+
   const gradeSubmission = async (
     submissionId: string,
     grade: number,
@@ -28,15 +40,8 @@ export const useGradeStudent = () => {
     const user = useSupabaseUser()
     const authId = user.value?.sub ?? null
 
-    let gradedBy: string | null = null
-    if (authId) {
-      const { data: uRow } = await supabase
-        .from('User')
-        .select('id')
-        .eq('authId', authId)
-        .maybeSingle() as unknown as { data: { id: string } | null }
-      gradedBy = uRow?.id ?? null
-    }
+    // Grade.gradedBy is a FK to Teacher.id (not User.id) — resolve it.
+    const gradedBy = await resolveTeacherId(authId)
 
     const { error } = await supabase
       .from('Grade')
@@ -63,15 +68,8 @@ export const useGradeStudent = () => {
     const user = useSupabaseUser()
     const authId = user.value?.sub ?? null
 
-    let markedBy: string | null = null
-    if (authId) {
-      const { data: uRow } = await supabase
-        .from('User')
-        .select('id')
-        .eq('authId', authId)
-        .maybeSingle() as unknown as { data: { id: string } | null }
-      markedBy = uRow?.id ?? null
-    }
+    // Attendance.markedBy is a FK to Teacher.id (not User.id) — resolve it.
+    const markedBy = await resolveTeacherId(authId)
 
     const { error } = await supabase
       .from('Attendance')
@@ -117,7 +115,7 @@ export const useGradeStudent = () => {
         dueAt: payload.dueAt,
         maxScore: payload.maxScore ?? 10,
         payload: hwPayload
-      })
+      } as never)
       .select('id')
       .single()
 
@@ -126,39 +124,13 @@ export const useGradeStudent = () => {
   }
 
   const awardXp = async (studentId: string, amount: number, reason: string) => {
-    const { data: st } = await supabase
-      .from('Student')
-      .select('totalXp')
-      .eq('id', studentId)
-      .maybeSingle() as unknown as { data: { totalXp: number } | null }
-
-    const { error } = await supabase
-      .from('Student')
-      .update({ totalXp: (st?.totalXp ?? 0) + amount })
-      .eq('id', studentId)
-    if (error) throw error
-
-    await supabase.from('XpLog').insert({
-      studentId,
-      amount,
-      action: 'LESSON_ATTENDED',
-      description: reason,
-      earnedAt: new Date().toISOString()
+    // Goes through a server route: a teacher cannot write XpLog /
+    // StudentGameProfile directly (RLS), so the endpoint verifies group
+    // ownership and runs the canonical award_xp_atomic RPC under service role.
+    await $fetch('/api/teacher/award-xp', {
+      method: 'POST',
+      body: { studentId, amount, reason }
     })
-  }
-
-  const awardMedal = async (studentId: string, title: string) => {
-    const now = new Date()
-    const { error } = await supabase
-      .from('Medal')
-      .insert({
-        studentId,
-        title,
-        month: now.getMonth() + 1,
-        year: now.getFullYear(),
-        awardedAt: now.toISOString()
-      })
-    if (error) throw error
   }
 
   return {
@@ -166,7 +138,6 @@ export const useGradeStudent = () => {
     saveGrade,
     markAttendance,
     createHomework,
-    awardXp,
-    awardMedal
+    awardXp
   }
 }

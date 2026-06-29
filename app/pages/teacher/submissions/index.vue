@@ -294,7 +294,7 @@ const answerText = (submission: TeacherSubmission): string => {
             <UTextarea
               v-model="gradeComments[s.id]"
               placeholder="Комментарий учителя (необязательно)..."
-              rows="2"
+              :rows="2"
             />
             <UButton
               :loading="saving === s.id"

@@ -21,6 +21,7 @@ const progressPercent = computed(() =>
 const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ')
 
 const checkAnswer = (answer: string): boolean => {
+  if (!current.value) return false
   const acceptable = current.value.answer.split('|').map(normalize)
   return acceptable.includes(normalize(answer))
 }
@@ -28,7 +29,7 @@ const checkAnswer = (answer: string): boolean => {
 const isCorrect = ref(false)
 
 const submitAnswer = (answer: string) => {
-  if (phase.value === 'feedback') return
+  if (phase.value === 'feedback' || !current.value) return
   const correct = checkAnswer(answer)
   isCorrect.value = correct
   selectedOption.value = answer

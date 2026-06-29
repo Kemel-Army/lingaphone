@@ -108,8 +108,9 @@ watch(activeId, async (convId) => {
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'Message', filter: `conversationId=eq.${convId}` },
       (payload: { new: MessageRow }) => {
-        if (!messages.value.find(m => m.id === payload.new.id)) {
-          messages.value.push(payload.new)
+        const list = messages.value as any[]
+        if (!list.some(m => m.id === payload.new.id)) {
+          list.push(payload.new)
         }
       }
     )

@@ -58,7 +58,7 @@ watch(isTyping, (typing) => {
   if (!typing && typeof window !== 'undefined') {
     phraseTimer = setTimeout(() => {
       phraseIdx.value = (phraseIdx.value + 1) % phrases.length
-      typedSource.value = phrases[phraseIdx.value]
+      typedSource.value = phrases[phraseIdx.value] ?? ''
     }, 2200)
   }
 })

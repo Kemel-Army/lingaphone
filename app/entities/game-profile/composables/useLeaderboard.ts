@@ -1,4 +1,15 @@
-import type { LeaderEntry as ServerLeaderEntry } from '~/server/api/leaderboard/index.get'
+// Mirrors the shape returned by GET /api/leaderboard. The endpoint type cannot
+// be imported directly — `~/server/*` is outside the Nuxt app srcDir alias.
+export interface ServerLeaderEntry {
+  rank: number
+  studentId: string
+  xp: number
+  level: number
+  streak: number
+  name: string
+  surname: string
+  avatarUrl: string | null
+}
 
 export type LeaderboardPeriod = 'school' | 'week' | 'month'
 

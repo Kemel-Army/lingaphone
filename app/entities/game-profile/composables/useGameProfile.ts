@@ -33,7 +33,7 @@ export const useGameProfile = () => {
 
   const fetchXPHistory = async (studentId: string, limit = 20): Promise<XPTransaction[]> => {
     const { data, error } = await supabase
-      .from('XPTransaction')
+      .from('XpLog')
       .select('*')
       .eq('studentId', studentId)
       .order('createdAt', { ascending: false })

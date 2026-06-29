@@ -60,6 +60,8 @@ const levelGroups = [
 ]
 
 const activeGroup = ref(1)
+// Safe accessor for the selected group (avoids possibly-undefined indexing).
+const activeLevel = computed(() => levelGroups[activeGroup.value] ?? levelGroups[0]!)
 
 const sectionRef = useTemplateRef<HTMLElement>('sectionRef')
 useScrollReveal(sectionRef, { stagger: 80 })
@@ -104,41 +106,41 @@ useScrollReveal(sectionRef, { stagger: 80 })
       <!-- Active level detail -->
       <div
         class="ll-detail stagger-item"
-        :style="{ background: levelGroups[activeGroup].bg, borderColor: levelGroups[activeGroup].border }"
+        :style="{ background: activeLevel.bg, borderColor: activeLevel.border }"
       >
         <div class="ll-detail-left">
           <div class="ll-detail-emoji">
-            {{ levelGroups[activeGroup].emoji }}
+            {{ activeLevel.emoji }}
           </div>
           <div>
             <p
               class="ll-detail-code"
-              :style="{ color: levelGroups[activeGroup].color }"
+              :style="{ color: activeLevel.color }"
             >
-              {{ levelGroups[activeGroup].code }}
+              {{ activeLevel.code }}
             </p>
             <p class="ll-detail-label">
-              {{ levelGroups[activeGroup].label }}
+              {{ activeLevel.label }}
             </p>
             <p class="ll-detail-age">
               <UIcon
                 name="i-lucide-users"
                 class="size-3.5"
               />
-              {{ levelGroups[activeGroup].age }}
+              {{ activeLevel.age }}
             </p>
           </div>
         </div>
         <div class="ll-detail-right">
           <p class="ll-detail-desc">
-            {{ levelGroups[activeGroup].desc }}
+            {{ activeLevel.desc }}
           </p>
           <ul class="ll-skills">
             <li
-              v-for="s in levelGroups[activeGroup].skills"
+              v-for="s in activeLevel.skills"
               :key="s"
               class="ll-skill"
-              :style="{ borderColor: levelGroups[activeGroup].border, color: levelGroups[activeGroup].color }"
+              :style="{ borderColor: activeLevel.border, color: activeLevel.color }"
             >
               <UIcon
                 name="i-lucide-check"

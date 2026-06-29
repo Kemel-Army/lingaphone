@@ -177,7 +177,7 @@ const kpiCards = computed(() => [
         <UCard
           v-if="nextLesson"
           class="relative overflow-hidden border-primary/30"
-          :ui="{ ring: 'ring-1 ring-primary/30' }"
+          :ui="({ ring: 'ring-1 ring-primary/30' } as any)"
         >
           <div class="space-y-3">
             <div class="flex items-center gap-2">

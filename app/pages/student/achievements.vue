@@ -374,7 +374,7 @@ const STREAK_MILESTONES = [
                   v-if="paidByMedal.get(m.id)"
                   class="mx-1"
                 >·</span>
-                <span v-if="paidByMedal.get(m.id)">Выплачено {{ new Date(paidByMedal.get(m.id)).toLocaleDateString('ru-RU') }}</span>
+                <span v-if="paidByMedal.get(m.id)">Выплачено {{ new Date(paidByMedal.get(m.id)!).toLocaleDateString('ru-RU') }}</span>
               </p>
             </div>
             <div

@@ -64,12 +64,50 @@ const { isSupported: speechSupported, isListening, error: recError, start: start
 const oralActivePromptId = ref<string | null>(null)
 const isSpeaking = ref(false)
 
+// ── FILE format: upload to the private homework-submissions bucket ─────────
+const supabaseClient = useSupabaseClient<Database>()
+const currentUser = useSupabaseUser()
+const fileAttachments = ref<{ path: string, name: string }[]>([])
+const fileUploading = ref(false)
+const fileError = ref('')
+
+const onFileSelect = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  const authId = currentUser.value?.sub
+  if (!files.length || !homework.value || !authId) return
+  fileUploading.value = true
+  fileError.value = ''
+  try {
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) { fileError.value = `«${file.name}» больше 10 МБ`; continue }
+      const ext = file.name.split('.').pop() ?? 'bin'
+      const path = `${authId}/${homework.value.id}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const { error } = await supabaseClient.storage.from('homework-submissions').upload(path, file, { upsert: false })
+      if (error) { fileError.value = error.message; continue }
+      fileAttachments.value.push({ path, name: file.name })
+    }
+  } finally {
+    fileUploading.value = false
+    if (input) input.value = ''
+  }
+}
+const removeAttachment = async (path: string) => {
+  await supabaseClient.storage.from('homework-submissions').remove([path])
+  fileAttachments.value = fileAttachments.value.filter(f => f.path !== path)
+}
+const openAttachment = async (path: string) => {
+  const { data } = await supabaseClient.storage.from('homework-submissions').createSignedUrl(path, 3600)
+  if (data?.signedUrl && typeof window !== 'undefined') window.open(data.signedUrl, '_blank')
+}
+
 // ── Review-mode reads from saved answers ─────────────────────────────────
 interface SavedAnswers {
   test?: Record<string, string>
   input?: Record<string, string>
   essay?: string
   oral?: OralAttempt[]
+  files?: { path: string, name: string }[]
 }
 const savedAnswers = computed<SavedAnswers>(() => {
   if (!homework.value?.answers) return {}
@@ -77,6 +115,7 @@ const savedAnswers = computed<SavedAnswers>(() => {
   if (Array.isArray(raw)) return { oral: raw as unknown as OralAttempt[] }
   if (typeof raw === 'object' && raw !== null) {
     const obj = raw as Record<string, unknown>
+    if (Array.isArray(obj.files)) return { files: obj.files as { path: string, name: string }[] }
     if (typeof obj.essay === 'string') return { essay: obj.essay }
     if (homework.value.format === 'TEST') return { test: obj as Record<string, string> }
     if (homework.value.format === 'INPUT') return { input: obj as Record<string, string> }
@@ -145,6 +184,7 @@ const canSubmit = computed(() => {
   if (fmt === 'INPUT') return Object.values(inputAnswers.value).filter(v => v && v.trim()).length === inputQuestions.value.length && inputQuestions.value.length > 0
   if (fmt === 'TEXT') return essayWordCount.value >= (textPrompt.value?.minWords ?? 1)
   if (fmt === 'ORAL') return new Set(oralAttempts.value.map(a => a.promptId)).size === oralPrompts.value.length
+  if (fmt === 'FILE') return fileAttachments.value.length > 0
   return false
 })
 
@@ -167,6 +207,8 @@ const submit = async () => {
     } else if (fmt === 'ORAL') {
       answers = oralAttempts.value as unknown as Json
       aiScore = oralAvgScore.value
+    } else if (fmt === 'FILE') {
+      answers = { files: fileAttachments.value } as unknown as Json
     }
     await submitHomework(homework.value.id, answers, aiScore)
     // No local toggling — UI re-renders in review mode automatically once
@@ -600,6 +642,51 @@ const oralReviewFor = (promptId: string) => {
           </article>
         </section>
 
+        <!-- FILE review -->
+        <section
+          v-else-if="homework.format === 'FILE'"
+          class="space-y-3"
+        >
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <UIcon
+              name="i-lucide-paperclip"
+              class="size-5 text-primary"
+            />
+            Загруженные файлы
+          </h2>
+          <ul
+            v-if="savedAnswers.files?.length"
+            class="space-y-2"
+          >
+            <li
+              v-for="f in savedAnswers.files"
+              :key="f.path"
+              class="flex items-center justify-between rounded-md bg-elevated px-3 py-2"
+            >
+              <span class="flex items-center gap-2 min-w-0">
+                <UIcon
+                  name="i-lucide-file"
+                  class="size-4 text-muted shrink-0"
+                />
+                <span class="text-sm truncate">{{ f.name }}</span>
+              </span>
+              <UButton
+                label="Открыть"
+                icon="i-lucide-external-link"
+                size="xs"
+                variant="ghost"
+                @click="openAttachment(f.path)"
+              />
+            </li>
+          </ul>
+          <p
+            v-else
+            class="text-sm text-muted"
+          >
+            Файлы не приложены
+          </p>
+        </section>
+
         <div class="flex justify-end">
           <UButton
             to="/student/homework"
@@ -812,7 +899,65 @@ const oralReviewFor = (promptId: string) => {
           </article>
         </section>
 
-        <!-- FILE / INTERACTIVE -->
+        <!-- FILE upload -->
+        <section
+          v-else-if="hw.format === 'FILE'"
+          class="space-y-3"
+        >
+          <label class="block rounded-2xl border-2 border-dashed border-default p-8 text-center cursor-pointer hover:border-primary/50 transition-colors">
+            <UIcon
+              :name="fileUploading ? 'i-lucide-loader-2' : 'i-lucide-upload-cloud'"
+              :class="['size-9 text-dimmed mx-auto', fileUploading && 'animate-spin']"
+            />
+            <p class="mt-2 font-bold">
+              Загрузите файл
+            </p>
+            <p class="text-xs text-muted mt-1">
+              PDF, изображения, документы (макс. 10 МБ)
+            </p>
+            <input
+              type="file"
+              class="hidden"
+              accept="image/*,application/pdf,.doc,.docx"
+              multiple
+              :disabled="fileUploading"
+              @change="onFileSelect"
+            >
+          </label>
+          <p
+            v-if="fileError"
+            class="text-sm text-error"
+          >
+            {{ fileError }}
+          </p>
+          <ul
+            v-if="fileAttachments.length"
+            class="space-y-2"
+          >
+            <li
+              v-for="f in fileAttachments"
+              :key="f.path"
+              class="flex items-center justify-between rounded-md bg-elevated px-3 py-2"
+            >
+              <span class="flex items-center gap-2 min-w-0">
+                <UIcon
+                  name="i-lucide-file"
+                  class="size-4 text-muted shrink-0"
+                />
+                <span class="text-sm truncate">{{ f.name }}</span>
+              </span>
+              <UButton
+                icon="i-lucide-x"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                @click="removeAttachment(f.path)"
+              />
+            </li>
+          </ul>
+        </section>
+
+        <!-- INTERACTIVE — not built yet -->
         <section
           v-else
           class="rounded-2xl border-2 border-dashed border-default p-10 text-center"

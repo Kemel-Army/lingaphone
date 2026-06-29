@@ -101,8 +101,27 @@ const timeUntil = (iso: string) => {
 }
 
 const WEEKDAY_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
-const formatSchedule = (s: { weekday: number, startTime: string }[]) =>
-  s.map(slot => `${WEEKDAY_SHORT[slot.weekday]} ${slot.startTime}`).join(' · ')
+// Group.schedule is freeform jsonb — tolerate both the legacy array shape
+// ([{ weekday, startTime }]) and the admin-form object shape ({ days, time }).
+const formatSchedule = (schedule: unknown): string => {
+  if (!schedule) return ''
+  if (Array.isArray(schedule)) {
+    return schedule
+      .map((slot: { weekday?: number, startTime?: string }) =>
+        `${WEEKDAY_SHORT[slot.weekday ?? 0] ?? ''} ${slot.startTime ?? ''}`.trim())
+      .filter(Boolean)
+      .join(' · ')
+  }
+  if (typeof schedule === 'object') {
+    const s = schedule as { days?: Array<string | { label?: string, value?: string }>, time?: string }
+    const days = (s.days ?? [])
+      .map(d => typeof d === 'string' ? d : (d.label ?? d.value ?? ''))
+      .filter(Boolean)
+    if (!days.length) return ''
+    return `${days.join(' · ')}${s.time ? ` · ${s.time}` : ''}`
+  }
+  return ''
+}
 
 const goldProgressPct = computed(() => Math.max(0, Math.min(100, ((profile.value?.currentMonthAverage ?? 0) / 5.0) * 100)))
 const goldRemaining = computed(() => Math.max(0, 4.6 - (profile.value?.currentMonthAverage ?? 0)))
@@ -533,7 +552,7 @@ const greeting = computed(() => {
               <div class="flex items-start gap-4">
                 <!-- Teacher avatar -->
                 <div class="size-12 sm:size-14 shrink-0 rounded-2xl bg-linear-to-br from-primary-400 to-sky-700 text-white font-black text-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-                  {{ g.teacher.name.charAt(0) }}{{ g.teacher.surname.charAt(0) }}
+                  {{ g.teacher?.name?.charAt(0) ?? '?' }}{{ g.teacher?.surname?.charAt(0) ?? '' }}
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2 flex-wrap">
@@ -544,8 +563,9 @@ const greeting = computed(() => {
                       size="xs"
                     />
                     <UBadge
-                      :label="g.branch.kind === 'ONLINE' ? '🌐 Online' : '📍 Offline'"
-                      :color="g.branch.kind === 'ONLINE' ? 'info' : 'success'"
+                      v-if="g.branch"
+                      :label="g.branch?.kind === 'ONLINE' ? '🌐 Online' : '📍 Offline'"
+                      :color="g.branch?.kind === 'ONLINE' ? 'info' : 'success'"
                       variant="subtle"
                       size="xs"
                     />
@@ -554,7 +574,9 @@ const greeting = computed(() => {
                     </h3>
                   </div>
                   <p class="text-sm text-muted mt-1">
-                    {{ g.teacher.name }} {{ g.teacher.surname }} · {{ g.branch.name }}
+                    {{ g.teacher ? `${g.teacher.name} ${g.teacher.surname}` : 'Преподаватель не назначен' }}<template v-if="g.branch">
+                      · {{ g.branch.name }}
+                    </template>
                   </p>
                   <p class="text-xs text-muted mt-0.5 font-mono">
                     {{ formatSchedule(g.schedule) }}

@@ -227,7 +227,7 @@ const distribution = computed(() => {
     <USlideover
       :open="!!selectedTestId"
       side="right"
-      :ui="{ width: 'max-w-2xl' }"
+      :ui="({ width: 'max-w-2xl' } as any)"
       @update:open="closeDetail"
     >
       <template #content>

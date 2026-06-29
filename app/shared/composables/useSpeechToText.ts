@@ -63,6 +63,7 @@ export const useSpeechToText = (options: UseSpeechToTextOptions = {}) => {
     if (!SR) return
 
     recognition = new SR()
+    if (!recognition) return
     recognition.lang = lang
     recognition.continuous = continuous
     recognition.interimResults = true

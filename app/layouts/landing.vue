@@ -33,7 +33,7 @@ onBeforeUnmount(() => {
   if (typeof window !== 'undefined') window.removeEventListener('scroll', onScroll)
 })
 
-const links = [
+const links: Array<{ label: string, to: string, icon?: string, highlight?: boolean }> = [
   { label: 'О школе', to: '#results' },
   { label: 'Методика', to: '#method' },
   { label: 'Маркет', to: '#market' },

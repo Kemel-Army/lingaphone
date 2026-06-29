@@ -6,8 +6,8 @@ definePageMeta({ layout: 'dashboard' })
 const { fetchMyHomework, fetchMyGroups } = useTeacher()
 
 const [{ data: homework, pending }, { data: groups }] = await Promise.all([
-  useAsyncData('teacher-homework', fetchMyHomework),
-  useAsyncData('teacher-groups-hw', fetchMyGroups)
+  useAsyncData('teacher-homework', () => fetchMyHomework()),
+  useAsyncData('teacher-groups-hw', () => fetchMyGroups())
 ])
 
 const selectedGroup = ref<string | null>(null)

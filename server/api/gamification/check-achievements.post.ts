@@ -45,48 +45,17 @@ export default defineEventHandler(async (event) => {
     .eq('studentId', studentId)
     .in('status', ['CHECKED', 'SUBMITTED'])
 
-  // Count AI sessions
-  const { count: aiCount } = await supabase
-    .from('AIConversation')
-    .select('*', { count: 'exact', head: true })
-    .eq('studentId', studentId)
-
-  // Count perfect tests (score = maxScore via TestAttempt)
-  const { data: perfectTests } = await supabase
-    .from('TestAttempt')
-    .select('score, Test(maxScore)')
-    .eq('studentId', studentId)
-    .not('score', 'is', null)
-
-  const perfectCount = (perfectTests ?? []).filter((t: any) => {
-    const maxScore = t.Test?.maxScore ?? 100
-    return t.score != null && t.score >= maxScore
-  }).length
-
-  // Count gaps closed: topics that went from <30% to >=80% mastery
-  let gapsClosed = 0
-  const { data: studentModels } = await supabase
-    .from('StudentModel')
-    .select('knowledgeMap')
-    .eq('studentId', studentId)
-
-  if (studentModels?.length) {
-    for (const sm of studentModels as any[]) {
-      const km = sm.knowledgeMap as Record<string, number> | null
-      if (km) {
-        gapsClosed += Object.values(km).filter(v => v >= 80).length
-      }
-    }
-  }
-
+  // AI sessions / perfect tests / gaps-closed depend on the IAE tables
+  // (AIConversation, TestAttempt, StudentModel) which are not part of this
+  // deployment's schema. Those achievement conditions stay at 0 until built.
   const context = {
     xp: p.xp ?? 0,
     level: p.level ?? 1,
     currentStreak: p.currentStreak ?? 0,
     homeworkOnTime: hwCount ?? 0,
-    aiSessions: (aiCount as number) ?? 0,
-    perfectTests: perfectCount,
-    gapsClosed
+    aiSessions: 0,
+    perfectTests: 0,
+    gapsClosed: 0
   }
 
   // 5. Check each achievement
@@ -138,14 +107,14 @@ export default defineEventHandler(async (event) => {
       if (!saError && sa) {
         newlyEarned.push(sa)
 
-        // Award XP for the achievement
+        // Award XP for the achievement. Audit in XpLog (XPTransaction does not
+        // exist in this schema); profile.xp is updated directly below.
         if (a.xpReward > 0) {
-          await supabase.from('XPTransaction').insert({
+          await supabase.from('XpLog').insert({
             studentId,
             amount: a.xpReward,
             action: 'ACHIEVEMENT_REWARD',
-            sourceId: a.id,
-            description: `Достижение: ${a.name}`
+            refId: a.id
           } as never)
 
           p.xp = (p.xp ?? 0) + a.xpReward

@@ -9,7 +9,7 @@ const { fetchStudentById, updateStudent } = useAdminStats()
 
 const { data, pending, refresh } = await useAsyncData(
   `admin-student-${route.params.id}`,
-  () => fetchStudentById(Array.isArray(route.params.id) ? route.params.id[0]! : route.params.id)
+  () => fetchStudentById(String(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id))
 )
 
 const student = computed(() => data.value?.student)
@@ -26,7 +26,7 @@ const editForm = reactive({
   phone: '',
   iin: '',
   birthdate: '',
-  schoolGrade: null as number | null,
+  schoolGrade: undefined as number | undefined,
   level: 'A1'
 })
 
@@ -38,7 +38,7 @@ const openEdit = () => {
   editForm.phone = student.value.phone ?? ''
   editForm.iin = student.value.iin ?? ''
   editForm.birthdate = student.value.birthdate ?? ''
-  editForm.schoolGrade = student.value.schoolGrade
+  editForm.schoolGrade = student.value.schoolGrade ?? undefined
   editForm.level = student.value.level
   showEdit.value = true
 }

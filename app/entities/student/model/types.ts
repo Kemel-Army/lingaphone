@@ -10,13 +10,22 @@ export interface FlatTeacher {
   surname: string
   avatarUrl: string | null
   bio: string | null
-  yearsOfExperience: number
+  yearsOfExperience: number | null
 }
 
-export type StudentGroup = GroupRow & {
+export interface ScheduleSlot {
+  weekday: number
+  startTime: string
+  durationMin: number
+}
+
+export type StudentGroup = Omit<GroupRow, 'schedule'> & {
   teacher: FlatTeacher | null
   branch: BranchRow | null
   studentsCount: number
+  // Group.schedule is freeform jsonb in the DB; the composable normalizes it
+  // to a uniform slot array so every student page can iterate it safely.
+  schedule: ScheduleSlot[]
 }
 
 export interface Classmate {

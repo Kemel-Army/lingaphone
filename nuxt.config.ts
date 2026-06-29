@@ -41,14 +41,6 @@ export default defineNuxtConfig({
     enabled: true
   },
 
-  vite: {
-    server: {
-      hmr: {
-        overlay: false
-      }
-    }
-  },
-
   css: ['~/assets/css/main.css'],
 
   // SEO
@@ -114,6 +106,14 @@ export default defineNuxtConfig({
     scheduledTasks: {
       // Run early warning check daily at 9:00 AM
       '0 9 * * *': ['early-warning']
+    }
+  },
+
+  vite: {
+    server: {
+      hmr: {
+        overlay: false
+      }
     }
   },
 

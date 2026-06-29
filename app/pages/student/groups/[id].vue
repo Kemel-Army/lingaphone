@@ -35,8 +35,20 @@ const lessonGroupMap = computed(() => {
   for (const l of allLessons.value) m.set(l.id, l.groupId)
   return m
 })
+const lessonTopicById = computed(() => {
+  const m = new Map<string, string>()
+  for (const l of allLessons.value) m.set(l.id, l.topic)
+  return m
+})
 const myGrades = computed(() =>
-  gradeHistory.value.filter(g => lessonGroupMap.value.get(g.lessonId) === groupId.value)
+  gradeHistory.value
+    .filter(g => lessonGroupMap.value.get(g.lessonId) === groupId.value)
+    .map(g => ({
+      ...g,
+      id: `${g.lessonId}-${g.gradedAt}`,
+      topic: lessonTopicById.value.get(g.lessonId) ?? 'Урок',
+      date: g.gradedAt
+    }))
 )
 
 const avgGroupGrade = computed(() => {
@@ -133,7 +145,8 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', {
               {{ group.level }}
             </div>
             <UBadge
-              :label="group.branch.kind === 'ONLINE' ? '🌐 Online' : '📍 Offline'"
+              v-if="group.branch"
+              :label="group.branch?.kind === 'ONLINE' ? '🌐 Online' : '📍 Offline'"
               color="neutral"
               variant="solid"
               size="xs"
@@ -146,7 +159,10 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', {
           <p class="text-sm sm:text-base opacity-90 mt-1">
             {{ LEVEL_DESC[group.level] }}
           </p>
-          <p class="text-sm opacity-80 mt-3">
+          <p
+            v-if="group.branch"
+            class="text-sm opacity-80 mt-3"
+          >
             {{ group.branch.name }}<span v-if="group.branch.address"> · {{ group.branch.address }}</span>
           </p>
         </div>
@@ -191,22 +207,25 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', {
       <!-- Teacher -->
       <section class="rounded-2xl border border-default bg-default p-5 flex items-center gap-4">
         <div class="size-16 rounded-2xl bg-linear-to-br from-primary-400 to-sky-700 text-white font-black text-2xl flex items-center justify-center shadow-md">
-          {{ group.teacher.name.charAt(0) }}{{ group.teacher.surname.charAt(0) }}
+          {{ group.teacher?.name?.charAt(0) ?? '?' }}{{ group.teacher?.surname?.charAt(0) ?? '' }}
         </div>
         <div class="min-w-0 flex-1">
           <p class="text-[10px] uppercase tracking-wider text-muted font-bold">
             Твой педагог
           </p>
           <p class="text-lg font-bold truncate">
-            {{ group.teacher.name }} {{ group.teacher.surname }}
+            {{ group.teacher ? `${group.teacher.name} ${group.teacher.surname}` : 'Не назначен' }}
           </p>
           <p
-            v-if="group.teacher.bio"
+            v-if="group.teacher?.bio"
             class="text-sm text-muted line-clamp-1"
           >
             {{ group.teacher.bio }}
           </p>
-          <p class="text-xs text-muted">
+          <p
+            v-if="group.teacher"
+            class="text-xs text-muted"
+          >
             {{ group.teacher.yearsOfExperience }} лет опыта
           </p>
         </div>

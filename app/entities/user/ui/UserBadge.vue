@@ -13,6 +13,7 @@ const props = defineProps<Props>()
 const colorMap: Record<UserRole, string> = {
   [UserRole.STUDENT]: 'primary',
   [UserRole.PARENT]: 'info',
+  [UserRole.TEACHER]: 'success',
   [UserRole.ADMIN]: 'error'
 }
 </script>

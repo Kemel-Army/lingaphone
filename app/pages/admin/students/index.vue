@@ -55,13 +55,13 @@ const gradeOptions = Array.from({ length: 12 }, (_, i) => ({
 
 const form = reactive({
   name: '', surname: '', patronymic: '', email: '', password: '',
-  phone: '', birthdate: '', schoolGrade: null as number | null,
+  phone: '', birthdate: '', schoolGrade: undefined as number | undefined,
   iin: '', level: 'A1' as string
 })
 
 const resetForm = () => Object.assign(form, {
   name: '', surname: '', patronymic: '', email: '', password: '',
-  phone: '', birthdate: '', schoolGrade: null, iin: '', level: 'A1'
+  phone: '', birthdate: '', schoolGrade: undefined as number | undefined, iin: '', level: 'A1'
 })
 
 const canCreate = computed(() =>
@@ -114,7 +114,7 @@ const editTarget = ref<AdminStudent | null>(null)
 const editSaving = ref(false)
 const editForm = reactive({
   name: '', surname: '', patronymic: '', phone: '',
-  iin: '', birthdate: '', schoolGrade: null as number | null, level: 'A1'
+  iin: '', birthdate: '', schoolGrade: undefined as number | undefined, level: 'A1'
 })
 
 const openEdit = (s: AdminStudent) => {
@@ -125,7 +125,7 @@ const openEdit = (s: AdminStudent) => {
   editForm.phone = s.phone ?? ''
   editForm.iin = s.iin ?? ''
   editForm.birthdate = s.birthdate ?? ''
-  editForm.schoolGrade = s.schoolGrade
+  editForm.schoolGrade = s.schoolGrade ?? undefined
   editForm.level = s.level
   showEdit.value = true
 }

@@ -6,10 +6,10 @@ definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
 const toast = useToast()
-const groupId = Array.isArray(route.params.id) ? route.params.id[0]! : route.params.id
+const groupId = String(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id)
 
 const { fetchGroupById, fetchAttendanceForLesson, createLesson } = useTeacher()
-const { markAttendance, saveGrade, awardXp, awardMedal } = useGradeStudent()
+const { markAttendance, saveGrade, awardXp } = useGradeStudent()
 
 // ── Lesson creation modal ────────────────────────────────────────────────────
 const showCreateLesson = ref(false)
@@ -118,7 +118,6 @@ const XP_PRESETS = [
 ]
 
 const xpLoading = ref<Record<string, boolean>>({})
-const medalLoading = ref<Record<string, boolean>>({})
 const xpFlash = ref<Record<string, number | null>>({})
 
 const giveXp = async (studentId: string, amount: number, reason: string) => {
@@ -134,18 +133,6 @@ const giveXp = async (studentId: string, amount: number, reason: string) => {
     toast.add({ title: 'Ошибка начисления XP', color: 'error', icon: 'i-lucide-x-circle' })
   } finally {
     xpLoading.value[key] = false
-  }
-}
-
-const giveMedal = async (student: TeacherStudent) => {
-  medalLoading.value[student.studentId] = true
-  try {
-    await awardMedal(student.studentId, 'Лучший на уроке')
-    toast.add({ title: '🏅 Медаль выдана!', description: `${student.name} ${student.surname}`, color: 'success' })
-  } catch {
-    toast.add({ title: 'Ошибка выдачи медали', color: 'error', icon: 'i-lucide-x-circle' })
-  } finally {
-    medalLoading.value[student.studentId] = false
   }
 }
 
@@ -391,15 +378,14 @@ const formatSchedule = (schedule: unknown): string => {
                       @click="giveXp(s.studentId, preset.amount, preset.label)"
                     />
                   </UTooltip>
-                  <!-- Medal -->
-                  <UTooltip text="Выдать медаль">
+                  <!-- Medal — disabled: monthly-medal flow not wired yet -->
+                  <UTooltip text="Медали — в разработке">
                     <UButton
                       icon="i-lucide-medal"
                       variant="ghost"
                       size="xs"
                       color="warning"
-                      :loading="medalLoading[s.studentId]"
-                      @click="giveMedal(s)"
+                      disabled
                     />
                   </UTooltip>
                   <!-- View profile -->
@@ -541,14 +527,13 @@ const formatSchedule = (schedule: unknown): string => {
                     @click="giveXp(s.studentId, preset.amount, preset.label)"
                   />
                 </UTooltip>
-                <UTooltip text="Медаль">
+                <UTooltip text="Медали — в разработке">
                   <UButton
                     icon="i-lucide-medal"
                     variant="ghost"
                     size="xs"
                     color="warning"
-                    :loading="medalLoading[s.studentId]"
-                    @click="giveMedal(s)"
+                    disabled
                   />
                 </UTooltip>
               </div>

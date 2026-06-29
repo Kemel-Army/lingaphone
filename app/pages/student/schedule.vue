@@ -230,7 +230,7 @@ const offlineCount = computed(() => totalUpcoming.value - onlineCount.value)
                   </p>
                   <p class="text-xs text-muted mt-0.5 truncate">
                     {{ groupById[l.groupId]?.name }} ·
-                    {{ groupById[l.groupId]?.teacher.name }} {{ groupById[l.groupId]?.teacher.surname }} ·
+                    {{ groupById[l.groupId]?.teacher?.name }} {{ groupById[l.groupId]?.teacher?.surname }} ·
                     {{ groupById[l.groupId]?.branch?.name }}
                   </p>
                 </div>

@@ -4,7 +4,7 @@ definePageMeta({ layout: 'dashboard' })
 const route = useRoute()
 const toast = useToast()
 const supabase = useTypedSupabaseClient()
-const groupId = Array.isArray(route.params.id) ? route.params.id[0]! : route.params.id
+const groupId = String(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id)
 
 // ─── Fetch group ──────────────────────────────────────────────────────────────
 

@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
       isRead: false
     }))
 
-    const { error } = await supabase.from('Notification').insert(batch)
+    const { error } = await supabase.from('Notification').insert(batch as never)
     if (!error) totalInserted += batch.length
   }
 

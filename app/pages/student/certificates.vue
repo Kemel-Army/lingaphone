@@ -73,12 +73,12 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU', {
           v-for="c in certificates"
           :key="c.id"
           class="group relative rounded-3xl overflow-hidden ring-1 transition-all hover:scale-[1.02] hover:shadow-2xl"
-          :class="ACCENT[c.accent].ring"
+          :class="ACCENT[c.accent]?.ring"
         >
           <!-- Inner certificate "paper" -->
           <div
             class="relative p-6 sm:p-7 bg-linear-to-br"
-            :class="ACCENT[c.accent].gradient"
+            :class="ACCENT[c.accent]?.gradient"
           >
             <!-- Decorative seal -->
             <div class="absolute top-4 right-4 size-14 rounded-full bg-white/25 backdrop-blur flex items-center justify-center group-hover:rotate-12 transition-transform">

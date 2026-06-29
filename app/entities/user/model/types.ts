@@ -27,6 +27,8 @@ export interface CurrentUser {
   role: UserRole
   name: string
   surname: string
+  phone?: string | null
+  avatarUrl?: string | null
 }
 
 /**

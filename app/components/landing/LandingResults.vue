@@ -1,5 +1,14 @@
 <script setup lang="ts">
-const stats = [
+interface Stat {
+  value: number
+  suffix: string
+  label: string
+  sub: string
+  icon: string
+  accent: string
+  decimals?: number
+}
+const stats: Stat[] = [
   {
     value: 5000,
     suffix: '+',

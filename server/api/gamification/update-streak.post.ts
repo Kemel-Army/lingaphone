@@ -88,13 +88,14 @@ export default defineEventHandler(async (event) => {
   if (milestones.includes(newStreak)) {
     bonusXP = newStreak >= 100 ? 200 : newStreak >= 30 ? 100 : 50
 
+    // Audit in the canonical XP log (XPTransaction does not exist in this schema).
     await supabase
-      .from('XPTransaction')
+      .from('XpLog')
       .insert({
         studentId,
         amount: bonusXP,
         action: 'STREAK_BONUS',
-        description: `Streak ${newStreak} дней`
+        refId: `streak-${newStreak}`
       } as never)
 
     // Streak gem rewards

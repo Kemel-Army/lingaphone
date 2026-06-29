@@ -9,11 +9,13 @@ import { ref, watch } from 'vue'
  *   <LevelUpModal v-model:open="showLevelUp" :level="newLevel" :xp="xp" />
  */
 const props = withDefaults(defineProps<{
-  open: boolean
-  level: number
+  open?: boolean
+  level?: number
   xp?: number
   reward?: string
 }>(), {
+  open: true,
+  level: 1,
   xp: 0,
   reward: ''
 })

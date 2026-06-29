@@ -127,32 +127,6 @@ export const getCurrentStudent = async (event: any): Promise<{ userId: string, s
   return { userId: userRow.id, studentId: studentRow.id }
 }
 
-/**
- * Verify that the caller is the host of a given BattleSession.
- * Throws 403 otherwise. Lenient for legacy rows where hostUserId IS NULL
- * (allows the operation but doesn't elevate privileges elsewhere).
- */
-export const requireBattleHost = async (event: any, sessionId: string): Promise<{
-  userId: string
-  hostUserId: string | null
-}> => {
-  const userId = await getCurrentInternalUserId(event)
-  const supabase = serverSupabaseServiceRole<Database>(event)
-
-  const { data, error } = await supabase
-    .from('BattleSession')
-    .select('hostUserId')
-    .eq('id', sessionId)
-    .maybeSingle()
-  if (error) throw createError({ statusCode: 500, message: error.message })
-  if (!data) throw createError({ statusCode: 404, message: 'Session not found' })
-
-  const hostUserId = (data as { hostUserId: string | null }).hostUserId
-  if (hostUserId && hostUserId !== userId) {
-    throw createError({ statusCode: 403, message: 'Only the host can perform this action' })
-  }
-  return { userId, hostUserId }
-}
 
 /**
  * Gate a route to server-internal callers only. The caller must present

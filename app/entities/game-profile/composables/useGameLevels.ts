@@ -134,7 +134,7 @@ export const useGameLevels = () => {
       totalCount,
       scorePct,
       passed
-    })
+    } as never)
 
     if (insertError) {
       console.error('[useGameLevels] attempt insert failed', insertError)

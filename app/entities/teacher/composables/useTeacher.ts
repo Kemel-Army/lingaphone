@@ -540,7 +540,7 @@ export const useTeacher = () => {
       .limit(200)
 
     if (opts?.status) {
-      query = query.eq('status', opts.status)
+      query = query.eq('status', opts.status as never)
     }
 
     if (opts?.homeworkId) {

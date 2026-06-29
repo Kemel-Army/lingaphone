@@ -79,8 +79,9 @@ const formatDateTime = (iso: string) => new Date(iso).toLocaleString('ru-RU', {
                   {{ g.level }}
                 </div>
                 <UBadge
-                  :label="g.branch.kind === 'ONLINE' ? '🌐 Online' : '📍 Offline'"
-                  :color="g.branch.kind === 'ONLINE' ? 'info' : 'success'"
+                  v-if="g.branch"
+                  :label="g.branch?.kind === 'ONLINE' ? '🌐 Online' : '📍 Offline'"
+                  :color="g.branch?.kind === 'ONLINE' ? 'info' : 'success'"
                   variant="subtle"
                   size="sm"
                 />
@@ -96,16 +97,19 @@ const formatDateTime = (iso: string) => new Date(iso).toLocaleString('ru-RU', {
             <!-- Teacher card -->
             <div class="flex items-center gap-4 rounded-2xl bg-elevated p-4">
               <div class="size-14 shrink-0 rounded-2xl bg-linear-to-br from-primary-400 to-sky-700 text-white font-black text-xl flex items-center justify-center shadow-md group-hover:rotate-3 transition-transform">
-                {{ g.teacher.name.charAt(0) }}{{ g.teacher.surname.charAt(0) }}
+                {{ g.teacher?.name?.charAt(0) ?? '?' }}{{ g.teacher?.surname?.charAt(0) ?? '' }}
               </div>
               <div class="min-w-0 flex-1">
                 <p class="text-[10px] uppercase tracking-wider text-muted font-bold">
                   Твой педагог
                 </p>
                 <p class="font-bold truncate">
-                  {{ g.teacher.name }} {{ g.teacher.surname }}
+                  {{ g.teacher ? `${g.teacher.name} ${g.teacher.surname}` : 'Не назначен' }}
                 </p>
-                <p class="text-xs text-muted">
+                <p
+                  v-if="g.teacher"
+                  class="text-xs text-muted"
+                >
                   {{ g.teacher.yearsOfExperience }} лет опыта
                 </p>
               </div>
@@ -113,7 +117,10 @@ const formatDateTime = (iso: string) => new Date(iso).toLocaleString('ru-RU', {
 
             <!-- Branch + capacity -->
             <div class="grid grid-cols-2 gap-3">
-              <div class="rounded-xl bg-elevated p-3">
+              <div
+                v-if="g.branch"
+                class="rounded-xl bg-elevated p-3"
+              >
                 <p class="text-[10px] uppercase tracking-wider text-muted font-bold">
                   Филиал
                 </p>

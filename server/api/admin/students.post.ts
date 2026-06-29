@@ -19,8 +19,7 @@ export default defineEventHandler(async (event) => {
   const caller = await serverSupabaseUser(event)
   if (!caller) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
-  // @ts-expect-error custom claim
-  const role = caller.user_role ?? caller.app_metadata?.role
+  const role = (caller as unknown as { user_role?: string }).user_role ?? caller.app_metadata?.role
   if (role !== 'ADMIN') throw createError({ statusCode: 403, message: 'Forbidden' })
 
   const body = await readValidatedBody(event, bodySchema.parse)
