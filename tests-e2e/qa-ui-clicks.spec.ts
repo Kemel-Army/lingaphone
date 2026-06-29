@@ -124,4 +124,56 @@ test.describe('QA · admin UI mutations (click-through)', () => {
       return Array.isArray(r) && r.length === 1 && !!r[0].teacherId
     }, { timeout: 15_000, message: 'group row never appeared with a teacher' }).toBe(true)
   })
+
+  test('edit student via modal (PATCH) → surname updated in DB', async () => {
+    const newSurname = `UIEDIT_${TS}`
+    await page.goto('/admin/students', { waitUntil: 'networkidle' })
+    // find the created student by email
+    await page.getByPlaceholder(/ФИО, email/).fill(created.studentEmail)
+    await expect(page.getByText(created.studentEmail).first()).toBeVisible({ timeout: 10_000 })
+    // open the row edit modal (pencil)
+    await page.getByRole('button', { name: /Редактировать|Изменить/ }).first().click().catch(async () => {
+      // fall back to the pencil icon button in the row
+      await page.locator('button:has([class*="pencil"])').first().click()
+    })
+    const d = page.getByRole('dialog')
+    await expect(d).toBeVisible()
+    await d.getByRole('textbox', { name: /Фамилия/ }).fill(newSurname)
+    await d.getByRole('button', { name: 'Сохранить' }).click()
+    await expect.poll(async () => {
+      const u = await (await svc(`User?email=eq.${created.studentEmail}&select=surname`)).json()
+      return Array.isArray(u) && u[0]?.surname
+    }, { timeout: 15_000, message: 'student surname not updated via PATCH' }).toBe(newSurname)
+  })
+
+  test('add + remove a group member via the group detail modal', async () => {
+    // resolve ids of the created group + student
+    const grp = await (await svc(`Group?name=eq.${created.groupName}&select=id`)).json()
+    const groupId = grp[0].id
+    const usr = await (await svc(`User?email=eq.${created.studentEmail}&select=id`)).json()
+    const stu = await (await svc(`Student?userId=eq.${usr[0].id}&select=id`)).json()
+    const studentId = stu[0].id
+
+    await page.goto(`/admin/groups/${groupId}`, { waitUntil: 'networkidle' })
+    await page.getByRole('button', { name: 'Добавить', exact: true }).first().click()
+    const d = page.getByRole('dialog')
+    await expect(d).toBeVisible()
+    // search the created student (surname was changed to UIEDIT_ in the prior test)
+    await d.getByPlaceholder(/Поиск по ФИО/).fill('UIEDIT')
+    await d.locator('label').filter({ hasText: 'UIEDIT' }).first().click()
+    await d.getByRole('button', { name: /Добавить/ }).click()
+    await expect.poll(async () => {
+      const m = await (await svc(`GroupMember?groupId=eq.${groupId}&studentId=eq.${studentId}&select=studentId`)).json()
+      return Array.isArray(m) ? m.length : 0
+    }, { timeout: 15_000, message: 'member not added' }).toBe(1)
+
+    // remove the member (icon-only button in the member's row, revealed on hover)
+    const row = page.locator('tbody tr').filter({ hasText: 'UIEDIT' }).first()
+    await row.hover()
+    await row.getByRole('button').last().click()
+    await expect.poll(async () => {
+      const m = await (await svc(`GroupMember?groupId=eq.${groupId}&studentId=eq.${studentId}&select=studentId`)).json()
+      return Array.isArray(m) ? m.length : 99
+    }, { timeout: 15_000, message: 'member not removed' }).toBe(0)
+  })
 })

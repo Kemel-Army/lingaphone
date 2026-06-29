@@ -101,4 +101,21 @@ test.describe('QA · teacher journal (click-through)', () => {
     }, { timeout: 15_000, message: 'XP not written' }).toBeGreaterThan(0)
   })
 
+  test('teacher saves a grade in the journal grid → Grade row (RLS + gradedBy FK)', async () => {
+    await page.goto('/teacher/grades', { waitUntil: 'networkidle' })
+    // select the group via the USelect combobox
+    await page.getByRole('combobox').first().click()
+    await page.getByRole('option', { name: /JG_/ }).first().click()
+    // grid renders → click the empty grade cell ("—") to enter edit mode
+    await expect(page.getByRole('button', { name: '—' }).first()).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('button', { name: '—' }).first().click()
+    await page.locator('input[type="number"]').first().fill('5')
+    // save: in edit mode the only table buttons are the ✓ (save) then ✗ (cancel)
+    await page.locator('table').getByRole('button').first().click()
+    await expect.poll(async () => {
+      const g = await (await svc(`Grade?lessonId=eq.${ids.lessonId}&studentId=eq.${ids.studentId}&select=value,gradedBy`)).json()
+      return Array.isArray(g) && g.length === 1 ? g[0].value : null
+    }, { timeout: 15_000, message: 'grade not saved (Grade RLS / gradedBy FK?)' }).toBe(5)
+  })
+
 })
