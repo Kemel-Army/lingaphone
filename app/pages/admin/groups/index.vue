@@ -4,13 +4,23 @@ import { useAdminStats, type AdminGroup } from '~/entities/admin-stats'
 definePageMeta({ layout: 'dashboard' })
 
 const toast = useToast()
-const { fetchGroups, fetchStudents, fetchTeachers } = useAdminStats()
+const {
+  fetchGroups, fetchStudents, fetchTeachers,
+  fetchOccupiedStudentIds, setGroupArchived, deleteGroup
+} = useAdminStats()
 
 const { data: groups, pending, refresh } = await useAsyncData('admin-groups', fetchGroups)
 const { data: students } = await useAsyncData('admin-groups-students', fetchStudents)
 const { data: teachers } = await useAsyncData('admin-groups-teachers', fetchTeachers)
+const { data: occupiedIds, refresh: refreshOccupied } = await useAsyncData(
+  'admin-groups-occupied',
+  fetchOccupiedStudentIds,
+  { default: () => new Set<string>() }
+)
 
 const search = ref('')
+const showArchived = ref(false)
+
 const filtered = computed((): AdminGroup[] => {
   if (!groups.value) return []
   const q = search.value.toLowerCase().trim()
@@ -19,6 +29,71 @@ const filtered = computed((): AdminGroup[] => {
     `${g.name} ${g.teacherName} ${g.level}`.toLowerCase().includes(q)
   )
 })
+
+const activeGroups = computed(() => filtered.value.filter(g => !g.archivedAt))
+const archivedGroups = computed(() => filtered.value.filter(g => g.archivedAt))
+const visibleGroups = computed(() =>
+  showArchived.value ? [...activeGroups.value, ...archivedGroups.value] : activeGroups.value
+)
+
+// ─── Archive / delete ───────────────────────────────────────────────────────
+
+const busyGroupId = ref<string | null>(null)
+
+const archiveGroup = async (g: AdminGroup) => {
+  busyGroupId.value = g.id
+  try {
+    await setGroupArchived(g.id, true)
+    toast.add({ title: `Группа «${g.name}» в архиве`, color: 'success', icon: 'i-lucide-archive' })
+    await Promise.all([refresh(), refreshOccupied()])
+  } catch (e: unknown) {
+    const msg = (e as { data?: { message?: string } })?.data?.message ?? String(e)
+    toast.add({ title: 'Ошибка', description: msg, color: 'error', icon: 'i-lucide-x' })
+  } finally {
+    busyGroupId.value = null
+  }
+}
+
+const unarchiveGroup = async (g: AdminGroup) => {
+  busyGroupId.value = g.id
+  try {
+    await setGroupArchived(g.id, false)
+    toast.add({ title: `Группа «${g.name}» восстановлена`, color: 'success', icon: 'i-lucide-archive-restore' })
+    await Promise.all([refresh(), refreshOccupied()])
+  } catch (e: unknown) {
+    const msg = (e as { data?: { message?: string } })?.data?.message ?? String(e)
+    toast.add({ title: 'Ошибка', description: msg, color: 'error', icon: 'i-lucide-x' })
+  } finally {
+    busyGroupId.value = null
+  }
+}
+
+const showDeleteModal = ref(false)
+const groupToDelete = ref<AdminGroup | null>(null)
+const deleting = ref(false)
+
+const removeGroup = (g: AdminGroup) => {
+  groupToDelete.value = g
+  showDeleteModal.value = true
+}
+
+const confirmDeleteGroup = async () => {
+  const g = groupToDelete.value
+  if (!g) return
+  deleting.value = true
+  try {
+    await deleteGroup(g.id)
+    toast.add({ title: `Группа «${g.name}» удалена`, color: 'success', icon: 'i-lucide-trash-2' })
+    showDeleteModal.value = false
+    groupToDelete.value = null
+    await Promise.all([refresh(), refreshOccupied()])
+  } catch (e: unknown) {
+    const msg = (e as { data?: { message?: string } })?.data?.message ?? String(e)
+    toast.add({ title: 'Не удалось удалить', description: msg, color: 'error', icon: 'i-lucide-x' })
+  } finally {
+    deleting.value = false
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -39,8 +114,24 @@ const occupancyColor = (count: number, max: number) => {
   return 'bg-green-500'
 }
 
+const WD_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+
 const formatSchedule = (schedule: Record<string, unknown>): string => {
-  if (!schedule || !schedule.days) return 'Нет расписания'
+  if (!schedule) return 'Нет расписания'
+
+  // Current shape: per-day slots.
+  const slots = schedule.slots as { weekday: number, time: string }[] | undefined
+  if (Array.isArray(slots) && slots.length) {
+    const sorted = [...slots].sort((a, b) => a.weekday - b.weekday)
+    const times = new Set(sorted.map(s => s.time))
+    if (times.size === 1) {
+      return `${sorted.map(s => WD_LABELS[s.weekday]).join(', ')} ${sorted[0]!.time}`.trim()
+    }
+    return sorted.map(s => `${WD_LABELS[s.weekday]} ${s.time}`).join(', ')
+  }
+
+  // Legacy shape: shared time across days.
+  if (!schedule.days) return 'Нет расписания'
   const raw = schedule.days as (string | { label?: string, value?: string })[]
   const days = raw.map(d => (typeof d === 'object' ? (d.value ?? d.label ?? '') : d)).filter(Boolean)
   if (!days.length) return 'Нет расписания'
@@ -78,8 +169,11 @@ const form = reactive({
   teacherId: '',
   maxStudents: 12,
   selectedStudentIds: [] as string[],
+  scheduleMode: 'single' as 'single' | 'perday',
   scheduleDays: [] as string[],
-  scheduleTime: ''
+  scheduleTime: '',
+  scheduleDuration: 60,
+  dayTimes: {} as Record<string, string>
 })
 
 const resetForm = () => {
@@ -88,9 +182,39 @@ const resetForm = () => {
   form.teacherId = ''
   form.maxStudents = 12
   form.selectedStudentIds = []
+  form.scheduleMode = 'single'
   form.scheduleDays = []
   form.scheduleTime = ''
+  form.scheduleDuration = 60
+  form.dayTimes = {}
 }
+
+const RU_WEEKDAY: Record<string, number> = { Вс: 0, Пн: 1, Вт: 2, Ср: 3, Чт: 4, Пт: 5, Сб: 6 }
+
+// Days kept in calendar order regardless of pick order.
+const orderedScheduleDays = computed(() =>
+  [...form.scheduleDays].sort((a, b) => (RU_WEEKDAY[a] ?? 0) - (RU_WEEKDAY[b] ?? 0))
+)
+
+// Build the slot list sent to the API: one entry per day with its own time.
+const buildScheduleSlots = () => {
+  return orderedScheduleDays.value
+    .map((d) => {
+      const time = form.scheduleMode === 'perday'
+        ? (form.dayTimes[d] || form.scheduleTime)
+        : form.scheduleTime
+      if (!time) return null
+      return { weekday: RU_WEEKDAY[d] ?? 0, time, durationMin: form.scheduleDuration || 60 }
+    })
+    .filter((s): s is { weekday: number, time: string, durationMin: number } => !!s)
+}
+
+const schedulePreview = computed(() => {
+  const slots = buildScheduleSlots()
+  if (!slots.length) return ''
+  const labelByNum = Object.fromEntries(Object.entries(RU_WEEKDAY).map(([k, v]) => [v, k]))
+  return slots.map(s => `${labelByNum[s.weekday]} в ${s.time}`).join(', ')
+})
 
 const teacherOptions = computed(() =>
   (teachers.value ?? []).map(t => ({
@@ -103,6 +227,8 @@ const studentSearchQ = ref('')
 const studentOptions = computed(() => {
   const q = studentSearchQ.value.toLowerCase()
   return (students.value ?? [])
+    // Only students not already in an active group can be added.
+    .filter(s => !occupiedIds.value.has(s.id))
     .filter(s => !q || `${s.surname} ${s.name} ${s.level}`.toLowerCase().includes(q))
     .map(s => ({
       label: `${s.surname} ${s.name} — ${s.level}`,
@@ -131,16 +257,13 @@ const submitCreate = async () => {
         teacherId: form.teacherId,
         maxStudents: form.maxStudents,
         studentIds: form.selectedStudentIds,
-        schedule: {
-          days: form.scheduleDays,
-          time: form.scheduleTime
-        }
+        schedule: { slots: buildScheduleSlots() }
       }
     })
     toast.add({ title: 'Группа создана', color: 'success', icon: 'i-lucide-check' })
     showCreate.value = false
     resetForm()
-    await refresh()
+    await Promise.all([refresh(), refreshOccupied()])
   } catch (e: unknown) {
     const msg = (e as { data?: { message?: string } })?.data?.message ?? String(e)
     toast.add({ title: 'Ошибка', description: msg, color: 'error', icon: 'i-lucide-x' })
@@ -159,7 +282,7 @@ const submitCreate = async () => {
           Группы
         </h1>
         <p class="text-sm text-muted mt-0.5">
-          {{ groups?.length ?? 0 }} активных групп
+          {{ activeGroups.length }} активных групп<span v-if="archivedGroups.length"> · {{ archivedGroups.length }} в архиве</span>
         </p>
       </div>
       <div class="flex items-center gap-3">
@@ -169,6 +292,15 @@ const submitCreate = async () => {
           placeholder="Поиск по названию или учителю..."
           class="w-64"
         />
+        <UButton
+          v-if="archivedGroups.length"
+          :icon="showArchived ? 'i-lucide-eye-off' : 'i-lucide-archive'"
+          variant="ghost"
+          color="neutral"
+          @click="showArchived = !showArchived"
+        >
+          {{ showArchived ? 'Скрыть архив' : `Архив (${archivedGroups.length})` }}
+        </UButton>
         <UButton
           icon="i-lucide-plus"
           @click="showCreate = true"
@@ -191,13 +323,14 @@ const submitCreate = async () => {
 
     <!-- Card Grid -->
     <div
-      v-else-if="filtered.length"
+      v-else-if="visibleGroups.length"
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
     >
       <UCard
-        v-for="g in filtered"
+        v-for="g in visibleGroups"
         :key="g.id"
-        class="hover:ring-1 hover:ring-primary/20 transition-all"
+        class="transition-all"
+        :class="g.archivedAt ? 'opacity-60 ring-1 ring-amber-300/40' : 'hover:ring-1 hover:ring-primary/20'"
       >
         <!-- Card header -->
         <template #header>
@@ -213,6 +346,15 @@ const submitCreate = async () => {
                   size="xs"
                 >
                   {{ g.level }}
+                </UBadge>
+                <UBadge
+                  v-if="g.archivedAt"
+                  color="warning"
+                  variant="subtle"
+                  size="xs"
+                  icon="i-lucide-archive"
+                >
+                  В архиве
                 </UBadge>
               </div>
             </div>
@@ -266,7 +408,38 @@ const submitCreate = async () => {
         </div>
 
         <template #footer>
-          <div class="flex justify-end">
+          <div class="flex items-center justify-between gap-1">
+            <div class="flex items-center gap-0.5">
+              <UButton
+                v-if="!g.archivedAt"
+                icon="i-lucide-archive"
+                variant="ghost"
+                size="sm"
+                color="warning"
+                title="В архив"
+                :loading="busyGroupId === g.id"
+                @click="archiveGroup(g)"
+              />
+              <UButton
+                v-else
+                icon="i-lucide-archive-restore"
+                variant="ghost"
+                size="sm"
+                color="success"
+                title="Восстановить"
+                :loading="busyGroupId === g.id"
+                @click="unarchiveGroup(g)"
+              />
+              <UButton
+                icon="i-lucide-trash-2"
+                variant="ghost"
+                size="sm"
+                color="error"
+                title="Удалить навсегда"
+                :loading="busyGroupId === g.id"
+                @click="removeGroup(g)"
+              />
+            </div>
             <UButton
               :to="`/admin/groups/${g.id}`"
               variant="ghost"
@@ -385,21 +558,50 @@ const submitCreate = async () => {
           </UFormField>
 
           <!-- Расписание -->
-          <div class="space-y-1">
+          <div class="space-y-3">
             <p class="text-xs font-bold uppercase tracking-wider text-muted">
               Расписание (необязательно)
             </p>
-            <div class="grid grid-cols-2 gap-3">
-              <UFormField label="Дни недели">
-                <USelectMenu
-                  v-model="form.scheduleDays"
-                  :items="dayOptions"
-                  multiple
-                  value-key="value"
-                  placeholder="Выберите дни..."
-                  class="w-full"
-                />
-              </UFormField>
+
+            <UFormField label="Дни недели">
+              <USelectMenu
+                v-model="form.scheduleDays"
+                :items="dayOptions"
+                multiple
+                value-key="value"
+                placeholder="Выберите дни..."
+                class="w-full"
+              />
+            </UFormField>
+
+            <!-- Mode toggle -->
+            <div
+              v-if="form.scheduleDays.length"
+              class="flex rounded-lg border border-subtle overflow-hidden w-fit"
+            >
+              <button
+                type="button"
+                class="px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="form.scheduleMode === 'single' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
+                @click="form.scheduleMode = 'single'"
+              >
+                Единое время
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="form.scheduleMode === 'perday' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
+                @click="form.scheduleMode = 'perday'"
+              >
+                Разное время
+              </button>
+            </div>
+
+            <!-- Single time -->
+            <div
+              v-if="form.scheduleMode === 'single'"
+              class="grid grid-cols-2 gap-3"
+            >
               <UFormField label="Время">
                 <UInput
                   v-model="form.scheduleTime"
@@ -407,7 +609,57 @@ const submitCreate = async () => {
                   class="w-full"
                 />
               </UFormField>
+              <UFormField label="Длительность (мин)">
+                <UInput
+                  v-model.number="form.scheduleDuration"
+                  type="number"
+                  :min="15"
+                  :max="240"
+                  :step="15"
+                  class="w-full"
+                />
+              </UFormField>
             </div>
+
+            <!-- Per-day times -->
+            <div
+              v-else
+              class="space-y-2"
+            >
+              <div
+                v-for="d in orderedScheduleDays"
+                :key="d"
+                class="flex items-center gap-3"
+              >
+                <span class="w-10 text-sm font-semibold shrink-0">{{ d }}</span>
+                <UInput
+                  v-model="form.dayTimes[d]"
+                  type="time"
+                  class="flex-1"
+                />
+              </div>
+              <UFormField label="Длительность (мин)">
+                <UInput
+                  v-model.number="form.scheduleDuration"
+                  type="number"
+                  :min="15"
+                  :max="240"
+                  :step="15"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <p
+              v-if="schedulePreview"
+              class="text-xs text-muted flex items-start gap-1.5 pt-1"
+            >
+              <UIcon
+                name="i-lucide-calendar-check"
+                class="size-3.5 text-primary shrink-0 mt-0.5"
+              />
+              <span>Уроки на 12 недель вперёд создадутся автоматически: {{ schedulePreview }}</span>
+            </p>
           </div>
 
           <!-- Ученики -->
@@ -466,6 +718,77 @@ const submitCreate = async () => {
               @click="submitCreate"
             >
               Создать группу
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- ─── Delete Group Confirm ────────────────────────────────────────────── -->
+    <UModal
+      v-model:open="showDeleteModal"
+      :ui="{ content: 'max-w-md' }"
+    >
+      <template #content>
+        <div class="p-6 space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="size-10 shrink-0 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <UIcon
+                name="i-lucide-trash-2"
+                class="size-5 text-red-600 dark:text-red-400"
+              />
+            </div>
+            <div class="min-w-0">
+              <h2 class="text-lg font-bold leading-tight">
+                Удалить группу?
+              </h2>
+              <p class="text-sm text-muted mt-0.5 truncate">
+                «{{ groupToDelete?.name }}»
+              </p>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/50 p-3 text-sm space-y-2">
+            <p class="font-semibold text-red-700 dark:text-red-300 flex items-center gap-1.5">
+              <UIcon
+                name="i-lucide-alert-triangle"
+                class="size-4 shrink-0"
+              />
+              Все данные группы будут потеряны
+            </p>
+            <ul class="text-xs text-red-700/80 dark:text-red-300/80 space-y-0.5 pl-5 list-disc">
+              <li>уроки, посещаемость, оценки</li>
+              <li>домашние задания и расписание</li>
+              <li>переписка группы</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-200 dark:border-emerald-800/50 p-3 text-sm flex items-start gap-2">
+            <UIcon
+              name="i-lucide-users"
+              class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
+            />
+            <p class="text-emerald-700 dark:text-emerald-300">
+              <span class="font-semibold">Ученики не удаляются</span> — их просто исключат из группы, и они станут свободными для зачисления в другую.
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-1">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              :disabled="deleting"
+              @click="showDeleteModal = false"
+            >
+              Отмена
+            </UButton>
+            <UButton
+              color="error"
+              icon="i-lucide-trash-2"
+              :loading="deleting"
+              @click="confirmDeleteGroup"
+            >
+              Удалить навсегда
             </UButton>
           </div>
         </div>

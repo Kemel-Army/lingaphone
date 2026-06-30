@@ -92,52 +92,51 @@ const formatDate = (d: string | null) =>
         :to="`/teacher/students/${s.studentId}`"
         class="block group"
       >
-        <div class="rounded-2xl border border-default bg-default overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 h-full">
-          <!-- Top band with level -->
+        <div class="rounded-2xl border border-default bg-default overflow-hidden hover:shadow-lg hover:-translate-y-1 hover:border-primary/40 transition-all duration-200 h-full flex flex-col">
+          <!-- Thin level accent -->
           <div
-            class="h-2 bg-linear-to-r"
+            class="h-1.5 bg-linear-to-r shrink-0"
             :class="levelGradient(s.level)"
           />
 
-          <div class="p-4 space-y-3">
-            <!-- Avatar + Name -->
+          <div class="p-4 flex flex-col gap-3 flex-1">
+            <!-- Avatar + name -->
             <div class="flex items-center gap-3">
               <UAvatar
                 :src="s.avatarUrl ?? undefined"
                 :alt="`${s.name} ${s.surname}`"
-                size="md"
+                size="lg"
+                class="shrink-0"
               />
               <div class="min-w-0 flex-1">
-                <p class="font-bold text-sm truncate">
+                <p class="font-bold text-sm truncate group-hover:text-primary transition-colors">
                   {{ s.name }} {{ s.surname }}
                 </p>
                 <p class="text-xs text-muted truncate">
                   {{ s.email }}
                 </p>
               </div>
-              <UBadge
-                size="xs"
-                variant="subtle"
-                color="neutral"
-                class="shrink-0"
+              <span
+                class="shrink-0 inline-flex items-center rounded-full bg-linear-to-r px-2 py-0.5 text-xs font-bold text-white"
+                :class="levelGradient(s.level)"
               >
                 {{ s.level }}
-              </UBadge>
+              </span>
             </div>
 
             <!-- Group -->
-            <div class="flex items-center gap-1.5 text-xs text-muted">
+            <div class="flex items-center gap-1.5 text-xs">
               <UIcon
                 name="i-lucide-layers"
-                class="size-3.5"
+                class="size-3.5 text-muted shrink-0"
               />
-              <span class="truncate">{{ s.groupName || 'Без группы' }}</span>
+              <span class="truncate text-muted">{{ s.groupName || 'Без группы' }}</span>
             </div>
 
             <!-- Stats row -->
-            <div class="grid grid-cols-3 gap-2 pt-1 border-t border-subtle">
+            <div class="grid grid-cols-3 gap-2 mt-auto pt-3 border-t border-subtle">
               <div class="text-center">
-                <p class="text-xs font-black tabular-nums">
+                <p class="text-sm font-black tabular-nums">
                   {{ s.totalXp.toLocaleString() }}
                 </p>
                 <p class="text-[10px] text-muted uppercase tracking-wide">
@@ -148,9 +147,9 @@ const formatDate = (d: string | null) =>
                 <div class="flex items-center justify-center gap-0.5">
                   <UIcon
                     name="i-lucide-flame"
-                    class="size-3 text-orange-400"
+                    class="size-3.5 text-orange-400"
                   />
-                  <p class="text-xs font-black tabular-nums">
+                  <p class="text-sm font-black tabular-nums">
                     {{ s.dailyStreak }}
                   </p>
                 </div>
@@ -159,7 +158,7 @@ const formatDate = (d: string | null) =>
                 </p>
               </div>
               <div class="text-center">
-                <p class="text-xs font-black tabular-nums text-green-600 dark:text-green-400">
+                <p class="text-sm font-black tabular-nums text-green-600 dark:text-green-400">
                   {{ s.totalEarnings > 0 ? s.totalEarnings.toLocaleString() + '₸' : '—' }}
                 </p>
                 <p class="text-[10px] text-muted uppercase tracking-wide">
@@ -170,8 +169,8 @@ const formatDate = (d: string | null) =>
 
             <!-- Last active -->
             <div class="flex items-center justify-between text-xs">
-              <span class="text-muted">Последняя активность</span>
-              <span :class="s.lastActiveDate ? '' : 'text-muted'">{{ formatDate(s.lastActiveDate) }}</span>
+              <span class="text-muted">Активность</span>
+              <span :class="s.lastActiveDate ? 'font-medium' : 'text-muted'">{{ formatDate(s.lastActiveDate) }}</span>
             </div>
           </div>
         </div>

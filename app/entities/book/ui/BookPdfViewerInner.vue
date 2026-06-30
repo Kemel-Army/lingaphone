@@ -108,6 +108,25 @@ const scrollToPage = (n: number) => {
 const prevPage = () => scrollToPage(Math.max(1, currentPage.value - 1))
 const nextPage = () => scrollToPage(Math.min(totalPages.value, currentPage.value + 1))
 
+// ── Jump to a typed page number ───────────────────────────────
+// Mirrors currentPage while scrolling, but is editable so the reader can type
+// a page and jump straight there instead of scrolling.
+const pageInput = ref<number | string>(1)
+watch(currentPage, (n) => {
+  pageInput.value = n
+})
+
+const goToPage = () => {
+  const n = Math.min(Math.max(1, Math.floor(Number(pageInput.value) || 1)), totalPages.value || 1)
+  pageInput.value = n
+  // Render target + neighbours immediately so the jump isn't blank.
+  rendered.add(n)
+  if (n > 1) rendered.add(n - 1)
+  if (n < totalPages.value) rendered.add(n + 1)
+  currentPage.value = n
+  nextTick(() => scrollToPage(n))
+}
+
 // ── Fullscreen ────────────────────────────────────────────────
 const wrapper = ref<HTMLElement | null>(null)
 const isFullscreen = ref(false)
@@ -149,9 +168,18 @@ onBeforeUnmount(() => {
           :disabled="currentPage <= 1"
           @click="prevPage"
         />
-        <span class="min-w-14 text-center text-xs tabular-nums text-muted">
-          {{ currentPage }} / {{ totalPages || '…' }}
-        </span>
+        <div class="flex items-center gap-1 text-xs tabular-nums text-muted">
+          <input
+            v-model="pageInput"
+            type="number"
+            min="1"
+            :max="totalPages || 1"
+            class="w-10 rounded border border-default bg-default px-1 py-0.5 text-center text-default focus:border-primary focus:outline-none"
+            @keyup.enter="goToPage"
+            @blur="goToPage"
+          >
+          <span>/ {{ totalPages || '…' }}</span>
+        </div>
         <UButton
           icon="i-lucide-chevron-down"
           color="neutral"

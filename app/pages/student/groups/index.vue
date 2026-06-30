@@ -63,7 +63,10 @@ const formatDateTime = (iso: string) => new Date(iso).toLocaleString('ru-RU', {
         <article
           v-for="g in myGroups"
           :key="g.id"
-          class="group relative rounded-3xl border border-default bg-default overflow-hidden hover:border-primary-300 hover:shadow-xl transition-all duration-300"
+          class="group relative rounded-3xl border bg-default overflow-hidden transition-all duration-300"
+          :class="g.archivedAt
+            ? 'border-amber-300/60 dark:border-amber-700/50'
+            : 'border-default hover:border-primary-300 hover:shadow-xl'"
         >
           <!-- Decorative ribbon -->
           <div
@@ -71,7 +74,29 @@ const formatDateTime = (iso: string) => new Date(iso).toLocaleString('ru-RU', {
             class="absolute -top-12 -right-12 size-40 rounded-full bg-linear-to-br from-primary-400/20 to-sky-600/20 blur-2xl group-hover:from-primary-400/30 transition-all"
           />
 
-          <div class="relative p-6 space-y-5">
+          <!-- Closed banner -->
+          <div
+            v-if="g.archivedAt"
+            class="relative flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-6 py-3"
+          >
+            <UIcon
+              name="i-lucide-archive"
+              class="size-4 text-amber-600 dark:text-amber-400 shrink-0"
+            />
+            <div>
+              <p class="text-sm font-bold text-amber-700 dark:text-amber-300">
+                Группа закрылась
+              </p>
+              <p class="text-xs text-amber-600/80 dark:text-amber-400/70">
+                Занятия в этой группе завершены. Скоро тебя определят в новую.
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="relative p-6 space-y-5"
+            :class="g.archivedAt ? 'grayscale-[0.4]' : ''"
+          >
             <!-- Header: level + name + badges -->
             <div>
               <div class="flex items-center gap-2 flex-wrap mb-2">

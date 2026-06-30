@@ -316,7 +316,6 @@ export const ADMIN_SIDEBAR: SidebarItem[] = [
   { label: 'Книги', icon: 'i-lucide-book-marked', to: '/admin/books' },
   { label: 'Тестирование', icon: 'i-lucide-clipboard-list', to: '/admin/testing' },
   { label: 'Расписание', icon: 'i-lucide-calendar-days', to: '/admin/schedule' },
-  { label: 'Финансы', icon: 'i-lucide-banknote', to: '/admin/finance' },
   { label: 'Настройки', icon: 'i-lucide-settings', to: '/admin/settings' }
 ]
 

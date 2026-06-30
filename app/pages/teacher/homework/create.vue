@@ -41,6 +41,13 @@ watch(selectedGroupId, async (gid) => {
   lessonsLoading.value = true
   try {
     lessons.value = await fetchMyLessons(gid)
+    // Preselect nearest upcoming lesson (list is sorted ascending) so the
+    // teacher isn't stuck picking from far-future dates.
+    if (!selectedLessonId.value && lessons.value.length) {
+      const now = Date.now()
+      const upcoming = lessons.value.find(l => new Date(l.startsAt).getTime() >= now)
+      selectedLessonId.value = (upcoming ?? lessons.value[lessons.value.length - 1]!).id
+    }
   } catch {
     lessons.value = []
   } finally {
@@ -49,10 +56,16 @@ watch(selectedGroupId, async (gid) => {
 }, { immediate: true })
 
 const groupOptions = computed(() => (groups.value ?? []).map(g => ({ value: g.id, label: g.name })))
+const lessonLabel = (l: TeacherLesson) => {
+  const dt = new Date(l.startsAt).toLocaleString('ru-RU', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+  })
+  return l.topic?.trim() ? `${dt} · ${l.topic}` : dt
+}
 const lessonOptions = computed(() =>
   (lessons.value ?? []).map(l => ({
     value: l.id,
-    label: `${new Date(l.startsAt).toLocaleDateString('ru-RU')} — ${l.topic}`
+    label: lessonLabel(l)
   }))
 )
 

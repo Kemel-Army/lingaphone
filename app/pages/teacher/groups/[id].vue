@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useTeacher, type TeacherStudent, type TeacherLesson } from '~/entities/teacher'
 import { useGradeStudent } from '~/features/grade-student'
+import { useLessonMaterials, type LessonMaterial } from '~/features/lesson-materials'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -10,6 +11,7 @@ const groupId = String(Array.isArray(route.params.id) ? route.params.id[0] : rou
 
 const { fetchGroupById, fetchAttendanceForLesson, createLesson } = useTeacher()
 const { markAttendance, awardXp } = useGradeStudent()
+const { list: listMaterials, upload: uploadMaterial, remove: removeMaterial, downloadUrl, uploading: materialUploading } = useLessonMaterials()
 
 // ── Lesson creation modal ────────────────────────────────────────────────────
 const showCreateLesson = ref(false)
@@ -71,16 +73,107 @@ const ATTENDANCE_OPTIONS = [
 const lessonOptions = computed(() =>
   lessons.value.map(l => ({
     value: l.id,
-    label: `${formatDate(l.startsAt)} · ${l.topic}`
+    label: l.topic?.trim() ? `${formatDate(l.startsAt)} · ${l.topic}` : `${formatDate(l.startsAt)} · Без темы`
   }))
 )
+
+// Nearest lesson = first upcoming (lessons come sorted ascending); else the latest past one.
+const nearestLessonId = computed(() => {
+  const ls = lessons.value
+  if (!ls.length) return ''
+  const now = Date.now()
+  const upcoming = ls.find(l => new Date(l.startsAt).getTime() >= now)
+  return (upcoming ?? ls[ls.length - 1]!).id
+})
+
+// Preselect the nearest lesson once data is loaded so the teacher lands on the
+// current lesson, not whatever the list happens to start with.
+watch(lessons, () => {
+  if (!selectedLessonId.value && nearestLessonId.value) {
+    selectedLessonId.value = nearestLessonId.value
+  }
+}, { immediate: true })
 
 watch(selectedLessonId, async (id) => {
   if (!id) return
   attendance.value = await fetchAttendanceForLesson(id)
   const lesson = lessons.value.find(l => l.id === id)
   lessonTopic.value = lesson?.topic ?? ''
+  loadMaterials(id)
 })
+
+// ── Lesson materials ──────────────────────────────────────────────────────────
+const materials = ref<LessonMaterial[]>([])
+const materialsLoading = ref(false)
+const materialInput = ref<HTMLInputElement | null>(null)
+
+const loadMaterials = async (lessonId: string) => {
+  materialsLoading.value = true
+  try {
+    materials.value = await listMaterials(lessonId)
+  } catch {
+    materials.value = []
+  } finally {
+    materialsLoading.value = false
+  }
+}
+
+const onPickMaterials = () => materialInput.value?.click()
+
+const onMaterialsSelected = async (e: Event) => {
+  const files = (e.target as HTMLInputElement).files
+  if (!files?.length || !selectedLessonId.value) return
+  let ok = 0
+  for (const file of Array.from(files)) {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.add({ title: `«${file.name}» больше 10 МБ`, color: 'error', icon: 'i-lucide-x-circle' })
+      continue
+    }
+    try {
+      await uploadMaterial(selectedLessonId.value, file)
+      ok++
+    } catch (err) {
+      toast.add({ title: `Не удалось загрузить «${file.name}»`, description: String(err), color: 'error', icon: 'i-lucide-x-circle' })
+    }
+  }
+  if (materialInput.value) materialInput.value.value = ''
+  if (ok) {
+    toast.add({ title: ok === 1 ? 'Файл загружен' : `Загружено файлов: ${ok}`, color: 'success', icon: 'i-lucide-check-circle' })
+    await loadMaterials(selectedLessonId.value)
+  }
+}
+
+const openMaterial = async (m: LessonMaterial) => {
+  const url = await downloadUrl(m.path)
+  if (url) window.open(url, '_blank')
+  else toast.add({ title: 'Не удалось открыть файл', color: 'error', icon: 'i-lucide-x-circle' })
+}
+
+const deleteMaterial = async (m: LessonMaterial) => {
+  try {
+    await removeMaterial(m.path)
+    materials.value = materials.value.filter(x => x.path !== m.path)
+    toast.add({ title: 'Материал удалён', color: 'success', icon: 'i-lucide-trash-2' })
+  } catch {
+    toast.add({ title: 'Не удалось удалить', description: 'Примените миграцию documents_delete_policy', color: 'error', icon: 'i-lucide-x-circle' })
+  }
+}
+
+const formatBytes = (b: number): string => {
+  if (!b) return '—'
+  if (b < 1024) return `${b} Б`
+  if (b < 1024 * 1024) return `${Math.round(b / 1024)} КБ`
+  return `${(b / 1024 / 1024).toFixed(1)} МБ`
+}
+
+const materialIcon = (mime: string): string => {
+  if (mime.includes('pdf')) return 'i-lucide-file-text'
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return 'i-lucide-presentation'
+  if (mime.includes('sheet') || mime.includes('excel')) return 'i-lucide-table-2'
+  if (mime.includes('word') || mime.includes('document')) return 'i-lucide-file-type'
+  if (mime.startsWith('image/')) return 'i-lucide-image'
+  return 'i-lucide-file'
+}
 
 const setAttendance = async (studentId: string, status: string) => {
   if (!selectedLessonId.value) return
@@ -176,19 +269,18 @@ const formatSchedule = (schedule: unknown): string => {
 </script>
 
 <template>
-  <div class="p-6 space-y-6 max-w-5xl mx-auto">
-    <!-- Back nav + title -->
-    <div class="flex items-center gap-2">
-      <UButton
-        to="/teacher/groups"
-        variant="ghost"
-        icon="i-lucide-arrow-left"
-        size="sm"
-      />
-      <h1 class="text-2xl font-bold">
-        {{ group?.name ?? 'Группа' }}
-      </h1>
-    </div>
+  <div class="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">
+    <!-- Back nav -->
+    <UButton
+      to="/teacher/groups"
+      variant="ghost"
+      color="neutral"
+      icon="i-lucide-arrow-left"
+      size="sm"
+      class="-ml-2"
+    >
+      Все группы
+    </UButton>
 
     <div
       v-if="pending"
@@ -208,56 +300,70 @@ const formatSchedule = (schedule: unknown): string => {
     />
 
     <template v-else>
-      <!-- Group header -->
-      <UCard>
-        <div class="flex flex-wrap gap-6 items-center">
-          <div>
-            <p class="text-xs text-muted uppercase tracking-wide mb-1">
-              Уровень
-            </p>
-            <UBadge
-              :color="levelColor(group.level)"
-              variant="subtle"
-              size="lg"
-            >
-              {{ group.level }}
-            </UBadge>
+      <!-- Group hero -->
+      <div class="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary-500 to-primary-700 text-white p-6 sm:p-7">
+        <div class="absolute -right-8 -top-10 size-44 rounded-full bg-white/10" />
+        <div class="absolute -right-16 bottom-0 size-32 rounded-full bg-white/5" />
+        <div class="relative flex flex-wrap items-start gap-6">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <UIcon
+                name="i-lucide-layers"
+                class="size-5 opacity-80"
+              />
+              <span class="text-xs font-semibold uppercase tracking-wider opacity-80">Группа</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black leading-tight">
+              {{ group.name }}
+            </h1>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-sm font-semibold">
+                <UIcon
+                  name="i-lucide-bar-chart-3"
+                  class="size-3.5"
+                />
+                {{ group.level }}
+              </span>
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-sm font-semibold">
+                <UIcon
+                  name="i-lucide-users"
+                  class="size-3.5"
+                />
+                {{ group.studentCount }} / {{ group.maxStudents }}
+              </span>
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-sm font-semibold">
+                <UIcon
+                  name="i-lucide-calendar-clock"
+                  class="size-3.5"
+                />
+                {{ formatSchedule(group.schedule) }}
+              </span>
+            </div>
           </div>
-          <div>
-            <p class="text-xs text-muted uppercase tracking-wide mb-1">
-              Учеников
-            </p>
-            <p class="font-semibold">
-              {{ group.studentCount }} / {{ group.maxStudents }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-muted uppercase tracking-wide mb-1">
-              Расписание
-            </p>
-            <p class="font-semibold">
-              {{ formatSchedule(group.schedule) }}
-            </p>
-          </div>
-          <div class="ml-auto flex gap-2 flex-wrap">
+          <div class="flex gap-2 flex-wrap">
             <UButton
               :to="`/teacher/homework/create?groupId=${groupId}`"
               icon="i-lucide-plus"
               size="sm"
+              color="neutral"
+              variant="solid"
+              class="bg-white text-primary-700 hover:bg-white/90"
             >
               Создать ДЗ
             </UButton>
             <UButton
               :to="`/teacher/grades?groupId=${groupId}`"
               icon="i-lucide-table"
-              variant="outline"
               size="sm"
+              color="neutral"
+              variant="solid"
+              class="bg-white/20 text-white ring-1 ring-inset ring-white/50 hover:bg-white/30"
             >
               Журнал оценок
             </UButton>
           </div>
         </div>
-      </UCard>
+      </div>
 
       <!-- Tabs -->
       <UTabs
@@ -543,6 +649,118 @@ const formatSchedule = (schedule: unknown): string => {
           </div>
         </UCard>
 
+        <!-- Lesson materials -->
+        <UCard
+          v-if="selectedLessonId"
+          :ui="{ body: 'p-0' }"
+        >
+          <template #header>
+            <div class="flex items-center gap-2 px-4 py-3">
+              <UIcon
+                name="i-lucide-folder-open"
+                class="size-4 text-primary"
+              />
+              <span class="font-semibold">Материалы урока</span>
+              <UBadge
+                color="neutral"
+                variant="subtle"
+                size="sm"
+              >
+                {{ materials.length }}
+              </UBadge>
+              <UButton
+                class="ml-auto"
+                icon="i-lucide-upload"
+                size="xs"
+                :loading="materialUploading"
+                @click="onPickMaterials"
+              >
+                Загрузить
+              </UButton>
+              <input
+                ref="materialInput"
+                type="file"
+                multiple
+                class="hidden"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,image/*"
+                @change="onMaterialsSelected"
+              >
+            </div>
+          </template>
+
+          <!-- Loading -->
+          <div
+            v-if="materialsLoading"
+            class="flex justify-center py-8"
+          >
+            <UIcon
+              name="i-lucide-loader-2"
+              class="size-5 animate-spin text-muted"
+            />
+          </div>
+
+          <!-- Dropzone / empty -->
+          <button
+            v-else-if="!materials.length"
+            type="button"
+            class="w-full m-4 mt-0 rounded-xl border-2 border-dashed border-default px-4 py-8 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors"
+            style="width: calc(100% - 2rem)"
+            @click="onPickMaterials"
+          >
+            <UIcon
+              name="i-lucide-cloud-upload"
+              class="size-8 text-muted mx-auto"
+            />
+            <p class="mt-2 text-sm font-medium">
+              Загрузите лекции, презентации, файлы
+            </p>
+            <p class="text-xs text-muted mt-0.5">
+              PDF, Word, PowerPoint, Excel, изображения · до 10 МБ
+            </p>
+          </button>
+
+          <!-- List -->
+          <div
+            v-else
+            class="divide-y divide-subtle"
+          >
+            <div
+              v-for="m in materials"
+              :key="m.path"
+              class="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/20 transition-colors"
+            >
+              <div class="size-9 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                <UIcon
+                  :name="materialIcon(m.mimeType)"
+                  class="size-4.5 text-primary"
+                />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium truncate">
+                  {{ m.name }}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ formatBytes(m.size) }}
+                </p>
+              </div>
+              <UButton
+                icon="i-lucide-download"
+                variant="ghost"
+                size="xs"
+                color="neutral"
+                @click="openMaterial(m)"
+              />
+              <UButton
+                icon="i-lucide-trash-2"
+                variant="ghost"
+                size="xs"
+                color="error"
+                @click="deleteMaterial(m)"
+              />
+            </div>
+          </div>
+        </UCard>
+
         <UAlert
           v-if="!selectedLessonId"
           icon="i-lucide-info"
@@ -604,9 +822,22 @@ const formatSchedule = (schedule: unknown): string => {
               v-for="l in (lessons as TeacherLesson[])"
               :key="l.id"
               class="border-b border-subtle last:border-0 hover:bg-muted/20 transition-colors"
+              :class="l.id === nearestLessonId ? 'bg-primary/5' : ''"
             >
               <td class="px-4 py-3 font-medium">
-                {{ l.topic }}
+                <div class="flex items-center gap-2">
+                  <span :class="l.topic?.trim() ? '' : 'text-muted italic font-normal'">
+                    {{ l.topic?.trim() ? l.topic : 'Без темы' }}
+                  </span>
+                  <UBadge
+                    v-if="l.id === nearestLessonId"
+                    color="primary"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    Ближайший
+                  </UBadge>
+                </div>
               </td>
               <td class="px-4 py-3 text-muted">
                 {{ formatDate(l.startsAt) }}
@@ -645,81 +876,81 @@ const formatSchedule = (schedule: unknown): string => {
         </table>
       </UCard>
     </template>
-  </div>
 
-  <!-- Modal: Create Lesson -->
-  <UModal v-model:open="showCreateLesson">
-    <template #content>
-      <div class="p-6 space-y-5">
-        <div class="flex items-center gap-2">
-          <UIcon
-            name="i-lucide-calendar-plus"
-            class="size-5 text-primary"
-          />
-          <h2 class="text-lg font-bold">
-            Новый урок
-          </h2>
-        </div>
+    <!-- Modal: Create Lesson -->
+    <UModal v-model:open="showCreateLesson">
+      <template #content>
+        <div class="p-6 space-y-5">
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="i-lucide-calendar-plus"
+              class="size-5 text-primary"
+            />
+            <h2 class="text-lg font-bold">
+              Новый урок
+            </h2>
+          </div>
 
-        <UFormField
-          label="Тема урока"
-          required
-        >
-          <UInput
-            v-model="lessonForm.topic"
-            placeholder="Например: Present Simple — вопросы"
-            class="w-full"
-          />
-        </UFormField>
-
-        <div class="grid sm:grid-cols-2 gap-4">
           <UFormField
-            label="Дата и время"
+            label="Тема урока"
             required
           >
             <UInput
-              v-model="lessonForm.startsAt"
-              type="datetime-local"
+              v-model="lessonForm.topic"
+              placeholder="Например: Present Simple — вопросы"
               class="w-full"
             />
           </UFormField>
-          <UFormField label="Длительность (мин)">
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            <UFormField
+              label="Дата и время"
+              required
+            >
+              <UInput
+                v-model="lessonForm.startsAt"
+                type="datetime-local"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField label="Длительность (мин)">
+              <UInput
+                v-model="lessonForm.durationMin"
+                type="number"
+                min="15"
+                max="240"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+
+          <UFormField label="Ссылка на конференцию (необязательно)">
             <UInput
-              v-model="lessonForm.durationMin"
-              type="number"
-              min="15"
-              max="240"
+              v-model="lessonForm.meetingUrl"
+              placeholder="https://zoom.us/j/..."
               class="w-full"
             />
           </UFormField>
-        </div>
 
-        <UFormField label="Ссылка на конференцию (необязательно)">
-          <UInput
-            v-model="lessonForm.meetingUrl"
-            placeholder="https://zoom.us/j/..."
-            class="w-full"
-          />
-        </UFormField>
-
-        <div class="flex justify-end gap-2 pt-1">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            @click="showCreateLesson = false"
-          >
-            Отмена
-          </UButton>
-          <UButton
-            icon="i-lucide-check"
-            :disabled="!canCreateLesson || lessonCreating"
-            :loading="lessonCreating"
-            @click="submitCreateLesson"
-          >
-            Создать
-          </UButton>
+          <div class="flex justify-end gap-2 pt-1">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              @click="showCreateLesson = false"
+            >
+              Отмена
+            </UButton>
+            <UButton
+              icon="i-lucide-check"
+              :disabled="!canCreateLesson || lessonCreating"
+              :loading="lessonCreating"
+              @click="submitCreateLesson"
+            >
+              Создать
+            </UButton>
+          </div>
         </div>
-      </div>
-    </template>
-  </UModal>
+      </template>
+    </UModal>
+  </div>
 </template>

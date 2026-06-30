@@ -75,8 +75,6 @@ const generatePassword = () => {
   ).join('')
 }
 
-const lastCreated = ref<{ surname: string, name: string, email: string, password: string } | null>(null)
-
 const submitCreate = async () => {
   if (!canCreate.value) return
   creating.value = true
@@ -95,7 +93,7 @@ const submitCreate = async () => {
       surname: form.surname, name: form.name,
       email: form.email, password: form.password
     }
-    toast.add({ title: 'Ученик создан', color: 'success', icon: 'i-lucide-check' })
+    toast.add({ title: 'Ученик создан. Пароль доступен в экспорте', color: 'success', icon: 'i-lucide-check' })
     showCreate.value = false
     resetForm()
     await refresh()
@@ -163,10 +161,10 @@ const exportCSV = async () => {
   exporting.value = true
   try {
     const all = await fetchStudents()
-    const headers = ['Фамилия', 'Имя', 'Отчество', 'Email', 'Телефон', 'ИИН', 'Уровень', 'Класс', 'XP', 'Стрик', 'Зарегистрирован']
+    const headers = ['Фамилия', 'Имя', 'Отчество', 'Email', 'Пароль', 'Телефон', 'ИИН', 'Уровень', 'Класс', 'XP', 'Стрик', 'Зарегистрирован']
     const rows = all.map(s => [
       s.surname, s.name, s.patronymic ?? '',
-      s.email, s.phone ?? '', s.iin ?? '',
+      s.email, s.initialPassword ?? '—', s.phone ?? '', s.iin ?? '',
       s.level, s.schoolGrade ?? '',
       s.totalXp, s.dailyStreak,
       new Date(s.createdAt).toLocaleDateString('ru-RU')
@@ -191,46 +189,64 @@ const exportCSV = async () => {
   }
 }
 
-// ─── PDF Credentials ──────────────────────────────────────────────────────────
+// ─── PDF Export (full student list) ─────────────────────────────────────────────
 
-const printingPdf = ref(false)
-const showPdfModal = ref(false)
-const pdfStudents = ref<{ surname: string, name: string, email: string, password: string }[]>([])
+const exportingPdf = ref(false)
 
-const printCredentialsPDF = async () => {
-  printingPdf.value = true
+const exportPDF = async () => {
+  exportingPdf.value = true
   try {
     const { default: jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
 
-    const doc = new jsPDF()
-    doc.setFontSize(16)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Lingaphone — Учётные данные учеников', 14, 20)
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Сформировано: ${new Date().toLocaleDateString('ru-RU')}`, 14, 28)
+    const all = await fetchStudents()
 
-    const rows = pdfStudents.value.map(s => [
-      `${s.surname} ${s.name}`, s.email, s.password || '—'
+    // Landscape — full info needs many columns. Roboto font supports Cyrillic
+    // (jsPDF's built-in helvetica renders Cyrillic as blank glyphs).
+    const doc = new jsPDF({ orientation: 'landscape' })
+    await registerPdfFonts(doc)
+
+    doc.setFont(PDF_FONT, 'bold')
+    doc.setFontSize(16)
+    doc.text('Lingaphone — Ученики', 14, 18)
+    doc.setFont(PDF_FONT, 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(120)
+    doc.text(`Сформировано: ${new Date().toLocaleDateString('ru-RU')} · Всего: ${all.length}`, 14, 25)
+    doc.setTextColor(0)
+
+    const head = [[
+      'Фамилия', 'Имя', 'Отчество', 'Email', 'Пароль', 'Телефон', 'ИИН',
+      'Дата рожд.', 'Уровень', 'Класс', 'XP', 'Стрик', 'Голд-стрик',
+      'Заработок', 'Групп', 'Активен', 'Зарегистрирован'
+    ]]
+    const body = all.map(s => [
+      s.surname, s.name, s.patronymic ?? '—',
+      s.email, s.initialPassword ?? '—', s.phone ?? '—', s.iin ?? '—',
+      s.birthdate ? new Date(s.birthdate).toLocaleDateString('ru-RU') : '—',
+      s.level, s.schoolGrade != null ? String(s.schoolGrade) : '—',
+      String(s.totalXp), String(s.dailyStreak), String(s.goldStreak),
+      `${s.totalEarnings.toLocaleString('ru-RU')} ₸`,
+      String(s.groupCount),
+      s.lastActiveDate ? new Date(s.lastActiveDate).toLocaleDateString('ru-RU') : '—',
+      new Date(s.createdAt).toLocaleDateString('ru-RU')
     ])
 
     autoTable(doc, {
-      startY: 35,
-      head: [['ФИО', 'Логин (Email)', 'Пароль']],
-      body: rows.length > 0 ? rows : [['—', 'Нет данных', '—']],
-      styles: { font: 'helvetica', fontSize: 10 },
-      headStyles: { fillColor: [22, 163, 74] }
+      startY: 30,
+      head,
+      body: body.length ? body : [Array(head[0]!.length).fill('—')],
+      theme: 'grid',
+      styles: { font: PDF_FONT, fontStyle: 'normal', fontSize: 7, cellPadding: 1.5 },
+      headStyles: { font: PDF_FONT, fontStyle: 'bold', fillColor: [22, 163, 74], fontSize: 7 }
     })
 
-    doc.save(`credentials_${new Date().toISOString().slice(0, 10)}.pdf`)
-    toast.add({ title: 'PDF сформирован', color: 'success', icon: 'i-lucide-file-text' })
-    pdfStudents.value = []
-    showPdfModal.value = false
+    doc.save(`students_${new Date().toISOString().slice(0, 10)}.pdf`)
+    toast.add({ title: 'PDF экспортирован', color: 'success', icon: 'i-lucide-file-text' })
   } catch {
     toast.add({ title: 'Ошибка PDF', color: 'error', icon: 'i-lucide-x' })
   } finally {
-    printingPdf.value = false
+    exportingPdf.value = false
   }
 }
 
@@ -291,8 +307,9 @@ const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('ru-
           icon="i-lucide-file-text"
           variant="ghost"
           color="neutral"
-          title="Печать доступов"
-          @click="showPdfModal = true"
+          :loading="exportingPdf"
+          title="Экспорт всех учеников в PDF"
+          @click="exportPDF"
         >
           PDF
         </UButton>
@@ -751,105 +768,6 @@ const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('ru-
               @click="submitEdit"
             >
               Сохранить
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
-
-    <!-- ─── PDF Credentials Modal ─────────────────────────────────────────── -->
-    <UModal
-      v-model:open="showPdfModal"
-      :ui="{ content: 'max-w-md' }"
-    >
-      <template #content>
-        <div class="p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-bold">
-              Печать доступов
-            </h2>
-            <UButton
-              icon="i-lucide-x"
-              variant="ghost"
-              color="neutral"
-              size="sm"
-              @click="showPdfModal = false"
-            />
-          </div>
-
-          <p class="text-sm text-muted">
-            Пароли доступны только для вновь созданных в этой сессии учеников. Добавьте их в список ниже.
-          </p>
-
-          <!-- Last created shortcut -->
-          <div
-            v-if="lastCreated"
-            class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
-          >
-            <p class="text-xs font-bold uppercase tracking-wide text-green-700 dark:text-green-400 mb-1">
-              Последний созданный
-            </p>
-            <p class="text-sm font-semibold">
-              {{ lastCreated.surname }} {{ lastCreated.name }}
-            </p>
-            <p class="text-xs text-muted">
-              {{ lastCreated.email }}
-            </p>
-            <p class="font-mono text-sm">
-              {{ lastCreated.password }}
-            </p>
-            <UButton
-              class="mt-2"
-              size="xs"
-              icon="i-lucide-plus"
-              @click="pdfStudents.push(lastCreated!); lastCreated = null"
-            >
-              Добавить в список
-            </UButton>
-          </div>
-
-          <!-- PDF list -->
-          <div
-            v-if="pdfStudents.length"
-            class="space-y-1.5"
-          >
-            <p class="text-xs font-bold uppercase tracking-wider text-muted">
-              В PDF ({{ pdfStudents.length }})
-            </p>
-            <div
-              v-for="(s, i) in pdfStudents"
-              :key="i"
-              class="flex items-center justify-between text-sm bg-muted/10 rounded px-3 py-1.5"
-            >
-              <div>
-                <span class="font-medium">{{ s.surname }} {{ s.name }}</span>
-                <span class="text-muted ml-2 text-xs">{{ s.email }}</span>
-              </div>
-              <UButton
-                icon="i-lucide-trash-2"
-                variant="ghost"
-                size="xs"
-                color="error"
-                @click="pdfStudents.splice(i, 1)"
-              />
-            </div>
-          </div>
-
-          <div class="flex justify-end gap-3">
-            <UButton
-              variant="ghost"
-              color="neutral"
-              @click="showPdfModal = false"
-            >
-              Отмена
-            </UButton>
-            <UButton
-              :loading="printingPdf"
-              :disabled="!pdfStudents.length"
-              icon="i-lucide-file-text"
-              @click="printCredentialsPDF"
-            >
-              Скачать PDF
             </UButton>
           </div>
         </div>

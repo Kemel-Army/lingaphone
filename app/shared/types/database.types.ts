@@ -704,6 +704,7 @@ export type Database = {
       }
       Group: {
         Row: {
+          archivedAt: string | null
           branchId: string | null
           createdAt: string
           id: string
@@ -715,6 +716,7 @@ export type Database = {
           updatedAt: string
         }
         Insert: {
+          archivedAt?: string | null
           branchId?: string | null
           createdAt?: string
           id?: string
@@ -726,6 +728,7 @@ export type Database = {
           updatedAt?: string
         }
         Update: {
+          archivedAt?: string | null
           branchId?: string | null
           createdAt?: string
           id?: string
@@ -1986,6 +1989,7 @@ export type Database = {
           email: string
           id: string
           iin: string | null
+          initialPassword: string | null
           name: string
           patronymic: string | null
           phone: string | null
@@ -2001,6 +2005,7 @@ export type Database = {
           email: string
           id?: string
           iin?: string | null
+          initialPassword?: string | null
           name: string
           patronymic?: string | null
           phone?: string | null
@@ -2016,6 +2021,7 @@ export type Database = {
           email?: string
           id?: string
           iin?: string | null
+          initialPassword?: string | null
           name?: string
           patronymic?: string | null
           phone?: string | null

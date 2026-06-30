@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useAdminStats } from '~/entities/admin-stats'
+
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
 const toast = useToast()
 const supabase = useTypedSupabaseClient()
+const { fetchOccupiedStudentIds } = useAdminStats()
 const groupId = String(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id)
 
 // ─── Fetch group ──────────────────────────────────────────────────────────────
@@ -34,10 +37,10 @@ interface GroupStudent {
 
 interface GroupLesson {
   id: string
-  date: string
+  startsAt: string
   topic: string | null
-  presentCount: number
-  totalCount: number
+  durationMin: number
+  status: string
 }
 
 const { data: group, error: groupError } = await useAsyncData(`group-${groupId}`, async () => {
@@ -125,11 +128,11 @@ const { data: members, refresh: refreshMembers } = await useAsyncData(`group-mem
 const { data: lessons } = await useAsyncData(`group-lessons-${groupId}`, async () => {
   const { data, error } = await supabase
     .from('Lesson')
-    .select('id, date, topic, presentCount, totalCount')
+    .select('id, startsAt, topic, durationMin, status')
     .eq('groupId', groupId)
-    .order('date', { ascending: false })
+    .order('startsAt', { ascending: false })
     .limit(10) as unknown as {
-    data: { id: string, date: string, topic: string | null, presentCount: number, totalCount: number }[] | null
+    data: { id: string, startsAt: string, topic: string | null, durationMin: number, status: string }[] | null
     error: unknown
   }
 
@@ -154,12 +157,20 @@ const { data: allStudents } = await useAsyncData(`all-students-${groupId}`, asyn
   return data ?? []
 })
 
+// Students already ACTIVE in a non-archived group — can't be added to another.
+const { data: occupiedIds, refresh: refreshOccupied } = await useAsyncData(
+  `occupied-students-${groupId}`,
+  fetchOccupiedStudentIds,
+  { default: () => new Set<string>() }
+)
+
 const currentMemberIds = computed(() => new Set((members.value ?? []).map(m => m.id)))
 
 const availableStudents = computed(() => {
   const q = studentSearchQ.value.toLowerCase().trim()
   return (allStudents.value ?? [])
     .filter(s => !currentMemberIds.value.has(s.id))
+    .filter(s => !occupiedIds.value.has(s.id))
     .filter((s) => {
       if (!q) return true
       const user = Array.isArray(s.User) ? s.User[0] : s.User
@@ -187,7 +198,7 @@ const submitAddStudents = async () => {
     if (error) throw error
     toast.add({ title: `Добавлено ${selectedStudentIds.value.length} уч.`, color: 'success', icon: 'i-lucide-check' })
     showAddStudents.value = false
-    await refreshMembers()
+    await Promise.all([refreshMembers(), refreshOccupied()])
   } catch (e: unknown) {
     toast.add({ title: 'Ошибка', description: String((e as { message?: string })?.message ?? e), color: 'error', icon: 'i-lucide-x' })
   } finally {
@@ -208,7 +219,7 @@ const removeStudent = async (studentId: string) => {
       .eq('studentId', studentId)
     if (error) throw error
     toast.add({ title: 'Ученик удалён из группы', color: 'success', icon: 'i-lucide-check' })
-    await refreshMembers()
+    await Promise.all([refreshMembers(), refreshOccupied()])
   } catch {
     toast.add({ title: 'Ошибка', color: 'error', icon: 'i-lucide-x' })
   } finally {
@@ -227,17 +238,33 @@ const levelColor = (level: string): BadgeColor => {
   return map[level] ?? 'neutral'
 }
 
-const attendancePct = (present: number, total: number) =>
-  total > 0 ? Math.round(present / total * 100) : 0
-
-const attendanceColor = (pct: number) => {
-  if (pct >= 85) return 'text-green-600 dark:text-green-400'
-  if (pct >= 65) return 'text-amber-600 dark:text-amber-400'
-  return 'text-red-600 dark:text-red-400'
+const lessonStatusColor = (status: string): BadgeColor => {
+  const map: Record<string, BadgeColor> = {
+    SCHEDULED: 'info', IN_PROGRESS: 'warning', COMPLETED: 'success', CANCELLED: 'error'
+  }
+  return map[status] ?? 'neutral'
 }
 
+const lessonStatusLabel: Record<string, string> = {
+  SCHEDULED: 'Запланирован', IN_PROGRESS: 'Идёт', COMPLETED: 'Завершён', CANCELLED: 'Отменён'
+}
+
+const WD_LABELS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+
 const formatSchedule = (schedule: Record<string, unknown>): string => {
-  if (!schedule?.days) return 'Не указано'
+  if (!schedule) return 'Не указано'
+
+  const slots = schedule.slots as { weekday: number, time: string }[] | undefined
+  if (Array.isArray(slots) && slots.length) {
+    const sorted = [...slots].sort((a, b) => a.weekday - b.weekday)
+    const times = new Set(sorted.map(s => s.time))
+    if (times.size === 1) {
+      return `${sorted.map(s => WD_LABELS[s.weekday]).join(', ')} ${sorted[0]!.time}`.trim()
+    }
+    return sorted.map(s => `${WD_LABELS[s.weekday]} ${s.time}`).join(', ')
+  }
+
+  if (!schedule.days) return 'Не указано'
   const raw = schedule.days as (string | { label?: string, value?: string })[]
   const days = raw.map(d => (typeof d === 'object' ? (d.value ?? d.label ?? '') : d)).filter(Boolean)
   if (!days.length) return 'Не указано'
@@ -471,7 +498,7 @@ const avgXp = computed(() => {
                   Тема
                 </th>
                 <th class="px-4 py-2 text-left text-xs font-semibold text-muted uppercase tracking-wide">
-                  Посещ.
+                  Статус
                 </th>
               </tr>
             </thead>
@@ -482,7 +509,7 @@ const avgXp = computed(() => {
                 class="border-b border-subtle last:border-0 hover:bg-muted/10"
               >
                 <td class="px-4 py-2.5 text-muted whitespace-nowrap">
-                  {{ new Date(l.date).toLocaleDateString('ru-RU') }}
+                  {{ new Date(l.startsAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }}
                 </td>
                 <td class="px-4 py-2.5">
                   <span
@@ -495,13 +522,13 @@ const avgXp = computed(() => {
                   >—</span>
                 </td>
                 <td class="px-4 py-2.5">
-                  <span
-                    class="font-semibold"
-                    :class="attendanceColor(attendancePct(l.presentCount, l.totalCount))"
+                  <UBadge
+                    :color="lessonStatusColor(l.status)"
+                    variant="subtle"
+                    size="xs"
                   >
-                    {{ l.presentCount }}/{{ l.totalCount }}
-                    <span class="text-xs font-normal text-muted">({{ attendancePct(l.presentCount, l.totalCount) }}%)</span>
-                  </span>
+                    {{ lessonStatusLabel[l.status] ?? l.status }}
+                  </UBadge>
                 </td>
               </tr>
             </tbody>

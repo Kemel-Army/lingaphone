@@ -19,6 +19,7 @@ export interface AdminStudent {
   phone: string | null
   avatarUrl: string | null
   iin: string | null
+  initialPassword: string | null
   birthdate: string | null
   level: string
   schoolGrade: number | null
@@ -61,6 +62,7 @@ export interface AdminGroup {
   maxStudents: number
   studentCount: number
   createdAt: string
+  archivedAt: string | null
 }
 
 export interface AdminMedal {

@@ -20,6 +20,18 @@ function normalizeSchedule(raw: unknown): ScheduleSlot[] {
       }))
   }
   if (raw && typeof raw === 'object') {
+    // Current shape: per-day slots, each with its own time.
+    const slots = (raw as { slots?: Array<{ weekday?: number, time?: string, startTime?: string, durationMin?: number }> }).slots
+    if (Array.isArray(slots)) {
+      return slots
+        .filter(s => s && typeof s === 'object')
+        .map(s => ({
+          weekday: s.weekday ?? 0,
+          startTime: s.startTime ?? s.time ?? '',
+          durationMin: s.durationMin ?? 60
+        }))
+    }
+    // Legacy shape: shared time across days.
     const s = raw as { days?: Array<string | { label?: string, value?: string }>, time?: string, durationMin?: number }
     const time = s.time ?? ''
     return (s.days ?? []).map((d) => {

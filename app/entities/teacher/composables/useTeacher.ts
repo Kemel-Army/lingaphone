@@ -244,8 +244,8 @@ export const useTeacher = () => {
         .from('Lesson')
         .select('id, groupId, topic, startsAt, status, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
         .eq('groupId', groupId)
-        .order('startsAt', { ascending: false })
-        .limit(20) as unknown as { data: RawLessonRow[] | null, error: unknown }
+        .order('startsAt', { ascending: true })
+        .limit(200) as unknown as { data: RawLessonRow[] | null, error: unknown }
     ])
 
     if (gErr || !gData) throw new Error('Group not found')
@@ -425,8 +425,8 @@ export const useTeacher = () => {
     let query = supabase
       .from('Lesson')
       .select('id, groupId, topic, startsAt, status, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
-      .order('startsAt', { ascending: false })
-      .limit(50)
+      .order('startsAt', { ascending: true })
+      .limit(200)
 
     if (groupId) {
       query = query.eq('groupId', groupId)
@@ -592,8 +592,8 @@ export const useTeacher = () => {
         .from('Lesson')
         .select('id, topic, startsAt')
         .eq('groupId', groupId)
-        .order('startsAt', { ascending: false })
-        .limit(20) as unknown as { data: { id: string, topic: string, startsAt: string }[] | null },
+        .order('startsAt', { ascending: true })
+        .limit(60) as unknown as { data: { id: string, topic: string, startsAt: string }[] | null },
 
       supabase
         .from('GroupMember')

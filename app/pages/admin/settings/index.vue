@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { useCurrentUser } from '~/entities/user'
+import { useCurrentUser, useProfileSettings, useAvatarUpload } from '~/entities/user'
 
 definePageMeta({ layout: 'dashboard' })
 
 const supabase = useSupabaseClient()
 const toast = useToast()
-const { currentUser } = useCurrentUser()
+const { currentUser, phone, refreshProfile } = useCurrentUser()
+const { updateProfile, updatePassword } = useProfileSettings()
+const { saveAvatarUrl } = useAvatarUpload()
 
 // ─── Profile form ─────────────────────────────────────────────────────────────
 
@@ -22,13 +24,13 @@ const avatarFile = ref<File | null>(null)
 const avatarPreview = ref<string | null>(null)
 const avatarInput = ref<HTMLInputElement | null>(null)
 
-onMounted(() => {
-  if (currentUser.value) {
-    profileForm.name = currentUser.value.name ?? ''
-    profileForm.surname = currentUser.value.surname ?? ''
-    profileForm.phone = currentUser.value.phone ?? ''
-    profileForm.email = currentUser.value.email ?? ''
-  }
+// Prefill once currentUser/profile resolves (both are async via JWT + useAsyncData).
+watchEffect(() => {
+  if (!currentUser.value) return
+  profileForm.name = currentUser.value.name ?? ''
+  profileForm.surname = currentUser.value.surname ?? ''
+  profileForm.phone = phone.value ?? ''
+  profileForm.email = currentUser.value.email ?? ''
 })
 
 const onAvatarChange = (e: Event) => {
@@ -42,38 +44,33 @@ const saveProfile = async () => {
   if (!currentUser.value) return
   profileSaving.value = true
   try {
-    let avatarUrl: string | null = null
+    const authId = currentUser.value.sub
 
-    // Upload avatar if changed
+    // Upload avatar if changed, then persist its URL to the User row.
+    // Storage RLS requires the first path segment to equal auth.uid(), so the
+    // object must live under `${authId}/…` inside the avatars bucket.
     if (avatarFile.value) {
       const ext = avatarFile.value.name.split('.').pop()
-      const path = `avatars/${currentUser.value.id}.${ext}`
+      const path = `${authId}/avatar.${ext}`
       const { error: upErr } = await supabase.storage
         .from('avatars')
         .upload(path, avatarFile.value, { upsert: true })
-      if (!upErr) {
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-        avatarUrl = urlData.publicUrl
-      }
+      if (upErr) throw upErr
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      await saveAvatarUrl(authId, urlData.publicUrl)
     }
 
-    // Update User record
-    const patch: Record<string, unknown> = {
-      name: profileForm.name.trim(),
-      surname: profileForm.surname.trim(),
-      phone: profileForm.phone.trim() || null
-    }
-    if (avatarUrl) patch.avatarUrl = avatarUrl
+    // Update User record (filtered by authId — User.id is NOT the auth UUID).
+    const ok = await updateProfile({
+      name: profileForm.name,
+      surname: profileForm.surname,
+      phone: profileForm.phone
+    })
+    if (!ok) return
 
-    const { error: userErr } = await supabase
-      .from('User')
-      .update(patch)
-      .eq('id', currentUser.value.id)
-
-    if (userErr) throw userErr
-
-    toast.add({ title: 'Профиль обновлён', color: 'success', icon: 'i-lucide-check' })
     avatarFile.value = null
+    avatarPreview.value = null
+    await refreshProfile()
   } catch {
     toast.add({ title: 'Ошибка сохранения', color: 'error', icon: 'i-lucide-x' })
   } finally {
@@ -110,24 +107,11 @@ const savePassword = async () => {
   if (!canSavePw.value) return
   pwSaving.value = true
   try {
-    // Re-authenticate with current password
-    const { error: signInErr } = await supabase.auth.signInWithPassword({
-      email: profileForm.email,
-      password: pwForm.current
-    })
-    if (signInErr) throw new Error('Неверный текущий пароль')
-
-    // Update password
-    const { error: updateErr } = await supabase.auth.updateUser({ password: pwForm.next })
-    if (updateErr) throw updateErr
-
-    toast.add({ title: 'Пароль изменён', color: 'success', icon: 'i-lucide-check' })
+    const ok = await updatePassword(pwForm.current, pwForm.next)
+    if (!ok) return
     pwForm.current = ''
     pwForm.next = ''
     pwForm.confirm = ''
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Ошибка смены пароля'
-    toast.add({ title: 'Ошибка', description: msg, color: 'error', icon: 'i-lucide-x' })
   } finally {
     pwSaving.value = false
   }

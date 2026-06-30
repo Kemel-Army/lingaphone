@@ -56,7 +56,9 @@ export default defineEventHandler(async (event) => {
       patronymic: body.patronymic || null,
       phone: body.phone || null,
       iin: body.iin || null,
-      role: 'STUDENT'
+      role: 'STUDENT',
+      // Stored so admins can reprint login credentials in the export.
+      initialPassword: body.password
     } as never)
     .select('id')
     .single()

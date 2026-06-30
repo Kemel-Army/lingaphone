@@ -1,28 +1,36 @@
 <script setup lang="ts">
+import { useAdminStats } from '~/entities/admin-stats'
+
 definePageMeta({ layout: 'dashboard' })
 
 const supabase = useTypedSupabaseClient()
 const toast = useToast()
+const { fetchGroups } = useAdminStats()
+
+const TZ = 'Asia/Almaty'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ScheduleLesson {
   id: string
-  date: string
-  time: string
+  date: string // KZ date YYYY-MM-DD
+  time: string // KZ HH:MM
+  startsAt: string
+  durationMin: number
   topic: string | null
   status: string
   groupId: string
   groupName: string
   groupLevel: string
-  teacherId: string
   teacherName: string
   teacherAvatar: string | null
-  presentCount: number
-  totalCount: number
   isOnline: boolean
   meetLink: string | null
 }
+
+// Render the KZ-local date/time for a stored UTC timestamp.
+const kzDate = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: TZ })
+const kzTime = (iso: string) => new Date(iso).toLocaleTimeString('ru-RU', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })
 
 // ─── Date navigation ──────────────────────────────────────────────────────────
 
@@ -36,13 +44,15 @@ const weekStart = computed(() => {
   return d
 })
 
-const weekDays = computed(() => {
-  return Array.from({ length: 7 }, (_, i) => {
+const weekDays = computed(() =>
+  Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart.value)
     d.setDate(d.getDate() + i)
     return d
   })
-})
+)
+
+const weekDayKeys = computed(() => weekDays.value.map(d => d.toLocaleDateString('en-CA', { timeZone: TZ })))
 
 const weekLabel = computed(() => {
   const from = weekDays.value[0]!
@@ -55,40 +65,35 @@ const weekLabel = computed(() => {
 const { data: lessons, pending, refresh } = await useAsyncData(
   () => `admin-schedule-${weekOffset.value}`,
   async () => {
-    const from = weekStart.value.toISOString().slice(0, 10)
-    const toDate = new Date(weekStart.value)
-    toDate.setDate(toDate.getDate() + 6)
-    const to = toDate.toISOString().slice(0, 10)
+    // Widen the range by ±1 day so KZ-evening lessons near the week edge are
+    // not lost to the +5h UTC offset; bucketing by KZ date drops the extras.
+    const from = new Date(weekStart.value)
+    from.setDate(from.getDate() - 1)
+    const to = new Date(weekStart.value)
+    to.setDate(to.getDate() + 8)
 
     const { data, error } = await supabase
       .from('Lesson')
       .select(`
-        id, date, time, topic, status, groupId, isOnline, meetLink,
-        presentCount, totalCount,
-        Group!groupId ( name, level, Teacher!teacherId ( id, User!userId ( name, surname, avatarUrl ) ) )
+        id, startsAt, durationMin, topic, status, meetingUrl, groupId,
+        Group!groupId ( name, level, archivedAt, Teacher!teacherId ( User!userId ( name, surname, avatarUrl ) ) )
       `)
-      .gte('date', from)
-      .lte('date', to)
-      .order('date')
-      .order('time') as unknown as {
+      .gte('startsAt', from.toISOString())
+      .lt('startsAt', to.toISOString())
+      .order('startsAt') as unknown as {
       data: {
         id: string
-        date: string
-        time: string
+        startsAt: string
+        durationMin: number
         topic: string | null
         status: string
+        meetingUrl: string | null
         groupId: string
-        isOnline: boolean
-        meetLink: string | null
-        presentCount: number
-        totalCount: number
         Group: {
           name: string
           level: string
-          Teacher: {
-            id: string
-            User: { name: string, surname: string, avatarUrl: string | null } | null
-          } | null
+          archivedAt: string | null
+          Teacher: { User: { name: string, surname: string, avatarUrl: string | null } | null } | null
         } | null
       }[] | null
       error: unknown
@@ -96,29 +101,31 @@ const { data: lessons, pending, refresh } = await useAsyncData(
 
     if (error) return []
 
-    return (data ?? []).map((l) => {
-      const group = Array.isArray(l.Group) ? l.Group[0] : l.Group
-      const teacher = group ? (Array.isArray(group.Teacher) ? group.Teacher[0] : group.Teacher) : null
-      const tUser = teacher ? (Array.isArray(teacher.User) ? teacher.User[0] : teacher.User) : null
-
-      return {
-        id: l.id,
-        date: l.date,
-        time: l.time ?? '00:00',
-        topic: l.topic,
-        status: l.status,
-        groupId: l.groupId,
-        groupName: group?.name ?? '—',
-        groupLevel: group?.level ?? '',
-        teacherId: teacher?.id ?? '',
-        teacherName: tUser ? `${tUser.name} ${tUser.surname}`.trim() : '—',
-        teacherAvatar: tUser?.avatarUrl ?? null,
-        presentCount: l.presentCount ?? 0,
-        totalCount: l.totalCount ?? 0,
-        isOnline: l.isOnline ?? false,
-        meetLink: l.meetLink ?? null
-      } as ScheduleLesson
-    })
+    return (data ?? [])
+      .map((l) => {
+        const group = Array.isArray(l.Group) ? l.Group[0] : l.Group
+        const teacher = group ? (Array.isArray(group.Teacher) ? group.Teacher[0] : group.Teacher) : null
+        const tUser = teacher ? (Array.isArray(teacher.User) ? teacher.User[0] : teacher.User) : null
+        return {
+          id: l.id,
+          date: kzDate(l.startsAt),
+          time: kzTime(l.startsAt),
+          startsAt: l.startsAt,
+          durationMin: l.durationMin ?? 60,
+          topic: l.topic,
+          status: l.status,
+          groupId: l.groupId,
+          groupName: group?.name ?? '—',
+          groupLevel: group?.level ?? '',
+          teacherName: tUser ? `${tUser.name} ${tUser.surname}`.trim() : '—',
+          teacherAvatar: tUser?.avatarUrl ?? null,
+          isOnline: !!l.meetingUrl,
+          meetLink: l.meetingUrl,
+          _archived: !!group?.archivedAt
+        }
+      })
+      // Hide lessons of archived (closed) groups.
+      .filter(l => !l._archived) as unknown as ScheduleLesson[]
   }
 )
 
@@ -126,46 +133,132 @@ watch(weekOffset, () => refresh())
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
-const filterMode = ref<'teacher' | 'group'>('teacher')
 const filterValue = ref<string | null>(null)
-
-const teacherOptions = computed(() => {
-  const seen = new Map<string, string>()
-  for (const l of lessons.value ?? []) {
-    if (l.teacherId) seen.set(l.teacherId, l.teacherName)
-  }
-  return [{ label: 'Все учителя', value: null }, ...[...seen.entries()].map(([id, name]) => ({ label: name, value: id }))]
-})
 
 const groupOptions = computed(() => {
   const seen = new Map<string, string>()
-  for (const l of lessons.value ?? []) {
-    seen.set(l.groupId, l.groupName)
-  }
+  for (const l of lessons.value ?? []) seen.set(l.groupId, l.groupName)
   return [{ label: 'Все группы', value: null }, ...[...seen.entries()].map(([id, name]) => ({ label: name, value: id }))]
 })
 
 const filteredLessons = computed(() => {
-  let list = lessons.value ?? []
-  if (filterValue.value) {
-    if (filterMode.value === 'teacher') list = list.filter(l => l.teacherId === filterValue.value)
-    else list = list.filter(l => l.groupId === filterValue.value)
-  }
-  return list
+  const list = lessons.value ?? []
+  return filterValue.value ? list.filter(l => l.groupId === filterValue.value) : list
 })
 
-// Lessons grouped by day
-const lessonsByDay = computed(() => {
-  const map = new Map<string, ScheduleLesson[]>()
-  for (const day of weekDays.value) {
-    map.set(day.toISOString().slice(0, 10), [])
-  }
-  for (const l of filteredLessons.value) {
-    const bucket = map.get(l.date)
-    if (bucket) bucket.push(l)
-  }
+// ─── Time-grid (rows = start times, columns = days) ────────────────────────────
+
+// Distinct start times present in the week, sorted ascending.
+const timeRows = computed(() => {
+  const set = new Set<string>()
+  for (const l of filteredLessons.value) set.add(l.time)
+  return [...set].sort((a, b) => a.localeCompare(b))
+})
+
+const lessonAt = (dayKey: string, time: string) =>
+  filteredLessons.value.filter(l => l.date === dayKey && l.time === time)
+
+// ─── Per-group colors ──────────────────────────────────────────────────────────
+
+const GROUP_PALETTE = [
+  { dot: 'bg-blue-500', cell: 'bg-blue-500/10 border-blue-400/60 hover:bg-blue-500/20 dark:bg-blue-500/15' },
+  { dot: 'bg-emerald-500', cell: 'bg-emerald-500/10 border-emerald-400/60 hover:bg-emerald-500/20 dark:bg-emerald-500/15' },
+  { dot: 'bg-amber-500', cell: 'bg-amber-500/10 border-amber-400/60 hover:bg-amber-500/20 dark:bg-amber-500/15' },
+  { dot: 'bg-violet-500', cell: 'bg-violet-500/10 border-violet-400/60 hover:bg-violet-500/20 dark:bg-violet-500/15' },
+  { dot: 'bg-rose-500', cell: 'bg-rose-500/10 border-rose-400/60 hover:bg-rose-500/20 dark:bg-rose-500/15' },
+  { dot: 'bg-cyan-500', cell: 'bg-cyan-500/10 border-cyan-400/60 hover:bg-cyan-500/20 dark:bg-cyan-500/15' },
+  { dot: 'bg-fuchsia-500', cell: 'bg-fuchsia-500/10 border-fuchsia-400/60 hover:bg-fuchsia-500/20 dark:bg-fuchsia-500/15' },
+  { dot: 'bg-lime-500', cell: 'bg-lime-500/10 border-lime-400/60 hover:bg-lime-500/20 dark:bg-lime-500/15' }
+]
+
+// Stable palette index per group — keyed off the full group list (not the
+// current week's lessons), so a group keeps its colour across every week.
+const groupColorIndex = computed(() => {
+  const map = new Map<string, number>()
+  const ids = [...(allGroups.value ?? [])].map(g => g.id).sort()
+  ids.forEach((id, i) => map.set(id, i % GROUP_PALETTE.length))
   return map
 })
+
+const groupPalette = (groupId: string) => GROUP_PALETTE[groupColorIndex.value.get(groupId) ?? 0]!
+
+const lessonCellClass = (l: ScheduleLesson) => {
+  if (l.status === 'CANCELLED') return 'bg-red-500/5 border-red-300/50 opacity-60 line-through'
+  return groupPalette(l.groupId).cell
+}
+
+// ─── Add lesson modal ──────────────────────────────────────────────────────────
+
+const showAdd = ref(false)
+const adding = ref(false)
+const addForm = reactive({
+  groupId: '',
+  date: '',
+  time: '',
+  durationMin: 60,
+  topic: '',
+  repeat: 'once' as 'once' | 'weekly'
+})
+
+const RECUR_WEEKS = 12
+
+const { data: allGroups } = await useAsyncData('admin-schedule-groups', fetchGroups)
+const activeGroupItems = computed(() =>
+  (allGroups.value ?? [])
+    .filter(g => !g.archivedAt)
+    .map(g => ({ label: `${g.name} · ${g.level}`, value: g.id }))
+)
+
+const canAdd = computed(() => addForm.groupId && addForm.date && addForm.time)
+
+const openAdd = () => {
+  addForm.groupId = ''
+  addForm.date = ''
+  addForm.time = ''
+  addForm.durationMin = 60
+  addForm.topic = ''
+  addForm.repeat = 'once'
+  showAdd.value = true
+}
+
+// Add 7*i days to a YYYY-MM-DD string, returning YYYY-MM-DD.
+const addDays = (dateStr: string, days: number) => {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y!, (m! - 1), d! + days)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
+const submitAdd = async () => {
+  if (!canAdd.value) return
+  adding.value = true
+  try {
+    const base = {
+      groupId: addForm.groupId,
+      durationMin: addForm.durationMin || 60,
+      topic: addForm.topic.trim() || '',
+      status: 'SCHEDULED' as const
+    }
+    const count = addForm.repeat === 'weekly' ? RECUR_WEEKS : 1
+    const rows = Array.from({ length: count }, (_, i) => ({
+      ...base,
+      startsAt: `${addDays(addForm.date, i * 7)}T${addForm.time}:00+05:00`
+    }))
+
+    const { error } = await supabase.from('Lesson').insert(rows)
+    if (error) throw error
+    toast.add({
+      title: addForm.repeat === 'weekly' ? `Добавлено ${count} уроков (еженедельно)` : 'Урок добавлен',
+      color: 'success',
+      icon: 'i-lucide-check'
+    })
+    showAdd.value = false
+    await refresh()
+  } catch (e: unknown) {
+    toast.add({ title: 'Ошибка', description: String((e as { message?: string })?.message ?? e), color: 'error', icon: 'i-lucide-x' })
+  } finally {
+    adding.value = false
+  }
+}
 
 // ─── Lesson detail modal ──────────────────────────────────────────────────────
 
@@ -200,7 +293,6 @@ const cancelLesson = async () => {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const dayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-
 const isToday = (d: Date) => d.toDateString() === today.toDateString()
 
 type BadgeColor = 'info' | 'warning' | 'success' | 'error' | 'neutral'
@@ -214,22 +306,13 @@ const levelColor = (level: string): BadgeColor => {
 
 const statusColor = (status: string): BadgeColor => {
   const map: Record<string, BadgeColor> = {
-    SCHEDULED: 'info', IN_PROGRESS: 'warning',
-    COMPLETED: 'success', CANCELLED: 'error'
+    SCHEDULED: 'info', IN_PROGRESS: 'warning', COMPLETED: 'success', CANCELLED: 'error'
   }
   return map[status] ?? 'neutral'
 }
 
 const statusLabel: Record<string, string> = {
-  SCHEDULED: 'Запланирован', IN_PROGRESS: 'Идёт',
-  COMPLETED: 'Завершён', CANCELLED: 'Отменён'
-}
-
-const lessonColor = (status: string) => {
-  if (status === 'CANCELLED') return 'border-red-300 bg-red-50 dark:bg-red-900/20 opacity-60'
-  if (status === 'COMPLETED') return 'border-green-300 bg-green-50 dark:bg-green-900/20'
-  if (status === 'IN_PROGRESS') return 'border-amber-300 bg-amber-50 dark:bg-amber-900/20'
-  return 'border-blue-200 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+  SCHEDULED: 'Запланирован', IN_PROGRESS: 'Идёт', COMPLETED: 'Завершён', CANCELLED: 'Отменён'
 }
 </script>
 
@@ -242,11 +325,11 @@ const lessonColor = (status: string) => {
           Расписание
         </h1>
         <p class="text-sm text-muted mt-0.5">
-          Глобальный таймлайн всех групп и учителей
+          Уроки всех групп · время по Алматы
         </p>
       </div>
-      <!-- Week nav -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Week nav -->
         <UButton
           icon="i-lucide-chevron-left"
           variant="ghost"
@@ -254,7 +337,7 @@ const lessonColor = (status: string) => {
           size="sm"
           @click="weekOffset--"
         />
-        <span class="text-sm font-medium w-52 text-center">{{ weekLabel }}</span>
+        <span class="text-sm font-medium w-44 text-center">{{ weekLabel }}</span>
         <UButton
           icon="i-lucide-chevron-right"
           variant="ghost"
@@ -271,44 +354,52 @@ const lessonColor = (status: string) => {
         >
           Сегодня
         </UButton>
+        <UButton
+          icon="i-lucide-plus"
+          @click="openAdd"
+        >
+          Добавить урок
+        </UButton>
       </div>
     </div>
 
-    <!-- Filters -->
+    <!-- Filter + hint -->
     <div class="flex items-center gap-3 flex-wrap">
-      <div class="flex rounded-lg border border-subtle overflow-hidden">
-        <button
-          class="px-3 py-1.5 text-sm font-medium transition-colors"
-          :class="filterMode === 'teacher' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
-          @click="filterMode = 'teacher'; filterValue = ''"
-        >
-          По учителям
-        </button>
-        <button
-          class="px-3 py-1.5 text-sm font-medium transition-colors"
-          :class="filterMode === 'group' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
-          @click="filterMode = 'group'; filterValue = ''"
-        >
-          По группам
-        </button>
-      </div>
-
       <USelect
-        v-if="filterMode === 'teacher'"
-        v-model="filterValue"
-        :items="teacherOptions"
-        class="w-56"
-      />
-      <USelect
-        v-else
         v-model="filterValue"
         :items="groupOptions"
         class="w-56"
+        placeholder="Все группы"
       />
-
       <span class="text-sm text-muted ml-auto">
-        {{ filteredLessons.length }} урок{{ filteredLessons.length === 1 ? '' : filteredLessons.length < 5 ? 'а' : 'ов' }} за неделю
+        {{ filteredLessons.length }} урок(ов) за неделю
       </span>
+    </div>
+
+    <p class="text-xs text-muted flex items-center gap-1.5">
+      <UIcon
+        name="i-lucide-info"
+        class="size-3.5 text-primary shrink-0"
+      />
+      Уроки создаются автоматически при создании группы с расписанием. Здесь можно добавить разовый урок или отменить существующий.
+    </p>
+
+    <!-- Group legend -->
+    <div
+      v-if="!pending && groupOptions.length > 1"
+      class="flex items-center gap-x-4 gap-y-1.5 flex-wrap"
+    >
+      <div
+        v-for="opt in groupOptions.filter(o => o.value)"
+        :key="opt.value!"
+        class="flex items-center gap-1.5 text-xs"
+      >
+        <span
+          class="size-2.5 rounded-full"
+          :class="groupPalette(opt.value!).dot"
+        />
+        <span class="text-muted">{{ opt.label }}</span>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -322,78 +413,214 @@ const lessonColor = (status: string) => {
       />
     </div>
 
-    <!-- Calendar grid -->
+    <!-- Time-grid table -->
     <div
       v-else
-      class="grid grid-cols-7 gap-2"
+      class="overflow-x-auto rounded-2xl border border-default"
     >
-      <!-- Day headers -->
-      <div
-        v-for="(day, i) in weekDays"
-        :key="day.toISOString()"
-        class="text-center"
-      >
-        <p
-          class="text-xs font-semibold uppercase tracking-wide mb-1"
-          :class="isToday(day) ? 'text-primary' : 'text-muted'"
-        >
-          {{ dayLabels[i] }}
-        </p>
-        <p
-          class="text-lg font-bold"
-          :class="isToday(day) ? 'text-primary' : ''"
-        >
-          {{ day.getDate() }}
-        </p>
-      </div>
-
-      <!-- Day columns -->
-      <div
-        v-for="day in weekDays"
-        :key="`col-${day.toISOString()}`"
-        class="min-h-48 space-y-1.5"
-        :class="isToday(day) ? 'bg-primary/5 rounded-xl p-1' : ''"
-      >
-        <div
-          v-for="lesson in lessonsByDay.get(day.toISOString().slice(0, 10)) ?? []"
-          :key="lesson.id"
-          class="rounded-lg border p-2 cursor-pointer transition-colors text-xs"
-          :class="lessonColor(lesson.status)"
-          @click="openLesson(lesson)"
-        >
-          <p class="font-bold leading-tight">
-            {{ lesson.time.slice(0, 5) }}
-          </p>
-          <p class="font-semibold mt-0.5 truncate">
-            {{ lesson.groupName }}
-          </p>
-          <p class="text-muted truncate mt-0.5">
-            {{ lesson.teacherName.split(' ')[0] }}
-          </p>
-          <div class="flex items-center gap-1 mt-1">
-            <UBadge
-              :color="levelColor(lesson.groupLevel)"
-              variant="subtle"
-              size="xs"
+      <div class="min-w-190">
+        <!-- Header: corner + day columns -->
+        <div class="grid grid-cols-[68px_repeat(7,minmax(96px,1fr))] border-b border-default bg-elevated/50">
+          <div class="px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted flex items-end">
+            Время
+          </div>
+          <div
+            v-for="(day, i) in weekDays"
+            :key="day.toISOString()"
+            class="px-2 py-2 text-center border-l border-default"
+            :class="isToday(day) ? 'bg-primary/10' : ''"
+          >
+            <p
+              class="text-[10px] font-semibold uppercase tracking-wide"
+              :class="isToday(day) ? 'text-primary' : 'text-muted'"
             >
-              {{ lesson.groupLevel }}
-            </UBadge>
-            <UIcon
-              v-if="lesson.isOnline"
-              name="i-lucide-video"
-              class="size-3 text-muted"
-            />
+              {{ dayLabels[i] }}
+            </p>
+            <p
+              class="text-base font-bold leading-tight"
+              :class="isToday(day) ? 'text-primary' : ''"
+            >
+              {{ day.getDate() }}
+            </p>
           </div>
         </div>
 
+        <!-- Empty week -->
         <div
-          v-if="!(lessonsByDay.get(day.toISOString().slice(0, 10)) ?? []).length"
-          class="py-4 text-center"
+          v-if="!timeRows.length"
+          class="py-16 text-center text-sm text-muted"
         >
-          <span class="text-xs text-muted/40">—</span>
+          <UIcon
+            name="i-lucide-calendar-x"
+            class="size-8 mx-auto mb-2 opacity-30"
+          />
+          На этой неделе уроков нет
+        </div>
+
+        <!-- Time rows -->
+        <div
+          v-for="time in timeRows"
+          :key="time"
+          class="grid grid-cols-[68px_repeat(7,minmax(96px,1fr))] border-b border-default last:border-0"
+        >
+          <!-- Time label -->
+          <div class="px-2 py-2 text-xs font-mono font-semibold text-muted flex items-start">
+            {{ time }}
+          </div>
+          <!-- Day cells -->
+          <div
+            v-for="(day, i) in weekDays"
+            :key="`${time}-${i}`"
+            class="border-l border-default p-1 space-y-1 min-h-13"
+            :class="isToday(day) ? 'bg-primary/5' : ''"
+          >
+            <button
+              v-for="lesson in lessonAt(weekDayKeys[i]!, time)"
+              :key="lesson.id"
+              type="button"
+              class="w-full text-left rounded-lg border px-2 py-1.5 transition-colors cursor-pointer"
+              :class="lessonCellClass(lesson)"
+              @click="openLesson(lesson)"
+            >
+              <p class="text-xs font-semibold leading-tight truncate">
+                {{ lesson.groupName }}
+              </p>
+              <p class="text-[10px] text-muted truncate">
+                {{ lesson.teacherName.split(' ')[0] }}
+              </p>
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- ─── Add Lesson Modal ──────────────────────────────────────────────────── -->
+    <UModal
+      v-model:open="showAdd"
+      :ui="{ content: 'max-w-md' }"
+    >
+      <template #content>
+        <div class="p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold">
+              Добавить урок
+            </h2>
+            <UButton
+              icon="i-lucide-x"
+              variant="ghost"
+              color="neutral"
+              size="sm"
+              @click="showAdd = false"
+            />
+          </div>
+
+          <UFormField
+            label="Группа"
+            required
+          >
+            <USelect
+              v-model="addForm.groupId"
+              :items="activeGroupItems"
+              placeholder="Выберите группу..."
+              class="w-full"
+            />
+          </UFormField>
+
+          <div class="grid grid-cols-2 gap-3">
+            <UFormField
+              label="Дата"
+              required
+            >
+              <UInput
+                v-model="addForm.date"
+                type="date"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              label="Время"
+              required
+            >
+              <UInput
+                v-model="addForm.time"
+                type="time"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <UFormField label="Длительность (мин)">
+              <UInput
+                v-model.number="addForm.durationMin"
+                type="number"
+                :min="15"
+                :max="240"
+                :step="15"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField label="Тема">
+              <UInput
+                v-model="addForm.topic"
+                placeholder="Необязательно"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+
+          <!-- Repeat -->
+          <UFormField label="Повторение">
+            <div class="flex rounded-lg border border-subtle overflow-hidden w-full">
+              <button
+                type="button"
+                class="flex-1 px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="addForm.repeat === 'once' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
+                @click="addForm.repeat = 'once'"
+              >
+                Единоразово
+              </button>
+              <button
+                type="button"
+                class="flex-1 px-3 py-1.5 text-sm font-medium transition-colors"
+                :class="addForm.repeat === 'weekly' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
+                @click="addForm.repeat = 'weekly'"
+              >
+                Каждую неделю
+              </button>
+            </div>
+          </UFormField>
+          <p
+            v-if="addForm.repeat === 'weekly'"
+            class="text-xs text-muted flex items-center gap-1.5 -mt-1"
+          >
+            <UIcon
+              name="i-lucide-repeat"
+              class="size-3.5 text-primary shrink-0"
+            />
+            Урок создастся на {{ RECUR_WEEKS }} недель вперёд в этот же день и время
+          </p>
+
+          <div class="flex justify-end gap-3 pt-1">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              @click="showAdd = false"
+            >
+              Отмена
+            </UButton>
+            <UButton
+              :disabled="!canAdd || adding"
+              :loading="adding"
+              icon="i-lucide-plus"
+              @click="submitAdd"
+            >
+              Добавить
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
 
     <!-- ─── Lesson Detail Modal ──────────────────────────────────────────────── -->
     <UModal
@@ -405,7 +632,6 @@ const lessonColor = (status: string) => {
         #content
       >
         <div class="p-5 space-y-4">
-          <!-- Header -->
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="flex items-center gap-2 flex-wrap mb-1">
@@ -428,8 +654,8 @@ const lessonColor = (status: string) => {
                 </UBadge>
               </div>
               <p class="text-sm text-muted">
-                {{ new Date(selectedLesson.date).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }) }}
-                в {{ selectedLesson.time.slice(0, 5) }}
+                {{ new Date(selectedLesson.startsAt).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ }) }}
+                в {{ selectedLesson.time }} · {{ selectedLesson.durationMin }} мин
               </p>
             </div>
             <UButton
@@ -444,7 +670,6 @@ const lessonColor = (status: string) => {
           <UDivider />
 
           <div class="space-y-3 text-sm">
-            <!-- Teacher -->
             <div class="flex items-center gap-3">
               <UAvatar
                 :src="selectedLesson.teacherAvatar ?? undefined"
@@ -461,7 +686,6 @@ const lessonColor = (status: string) => {
               </div>
             </div>
 
-            <!-- Topic -->
             <div class="flex items-start gap-2">
               <UIcon
                 name="i-lucide-book-open"
@@ -472,34 +696,11 @@ const lessonColor = (status: string) => {
                   Тема урока
                 </p>
                 <p class="font-medium">
-                  {{ selectedLesson.topic ?? 'Не указана' }}
+                  {{ selectedLesson.topic || 'Не указана' }}
                 </p>
               </div>
             </div>
 
-            <!-- Attendance -->
-            <div class="flex items-center gap-2">
-              <UIcon
-                name="i-lucide-users"
-                class="size-4 text-muted shrink-0"
-              />
-              <div>
-                <p class="text-xs text-muted">
-                  Посещаемость
-                </p>
-                <p class="font-semibold">
-                  {{ selectedLesson.presentCount }} / {{ selectedLesson.totalCount }}
-                  <span
-                    v-if="selectedLesson.totalCount > 0"
-                    class="text-xs font-normal text-muted"
-                  >
-                    ({{ Math.round(selectedLesson.presentCount / selectedLesson.totalCount * 100) }}%)
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <!-- Online link -->
             <div
               v-if="selectedLesson.isOnline && selectedLesson.meetLink"
               class="flex items-center gap-2"
@@ -518,7 +719,6 @@ const lessonColor = (status: string) => {
             </div>
           </div>
 
-          <!-- Actions -->
           <div
             v-if="selectedLesson.status === 'SCHEDULED'"
             class="flex gap-2 pt-1"

@@ -78,8 +78,7 @@ const chartOptions = {
 const navLinks = [
   { to: '/admin/students', icon: 'i-lucide-graduation-cap', label: 'Ученики', color: 'text-blue-500', bg: 'bg-blue-500/10' },
   { to: '/admin/teachers', icon: 'i-lucide-users', label: 'Учителя', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-  { to: '/admin/groups', icon: 'i-lucide-layout-grid', label: 'Группы', color: 'text-green-500', bg: 'bg-green-500/10' },
-  { to: '/admin/finance', icon: 'i-lucide-banknote', label: 'Финансы', color: 'text-orange-500', bg: 'bg-orange-500/10' }
+  { to: '/admin/groups', icon: 'i-lucide-layout-grid', label: 'Группы', color: 'text-green-500', bg: 'bg-green-500/10' }
 ]
 </script>
 
@@ -162,17 +161,6 @@ const navLinks = [
             <span class="text-sm font-bold tabular-nums">{{ medal.count }} уч.</span>
           </div>
         </div>
-        <UDivider class="my-4" />
-        <NuxtLink
-          to="/admin/finance"
-          class="text-sm text-primary font-medium flex items-center gap-1 hover:underline"
-        >
-          Выплаты и медали
-          <UIcon
-            name="i-lucide-arrow-right"
-            class="size-3.5"
-          />
-        </NuxtLink>
       </UCard>
 
       <!-- XP chart -->

@@ -29,6 +29,7 @@ interface RawStudentRow {
     phone: string | null
     avatarUrl: string | null
     iin: string | null
+    initialPassword?: string | null
   } | null
 }
 
@@ -54,6 +55,7 @@ interface RawGroupRow {
   schedule: unknown
   maxStudents: number
   createdAt: string
+  archivedAt: string | null
   Teacher: {
     User: { name: string, surname: string } | null
   } | null
@@ -164,7 +166,7 @@ export const useAdminStats = () => {
 
     const { data, error, count } = await supabase
       .from('Student')
-      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin )', { count: 'exact' })
+      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )', { count: 'exact' })
       .order('createdAt', { ascending: false })
       .range(from, to) as unknown as { data: RawStudentRow[] | null, error: unknown, count: number | null }
 
@@ -208,6 +210,7 @@ export const useAdminStats = () => {
         phone: user?.phone ?? null,
         avatarUrl: user?.avatarUrl ?? null,
         iin: user?.iin ?? null,
+        initialPassword: user?.initialPassword ?? null,
         birthdate: s.birthdate,
         level: s.level,
         schoolGrade: s.schoolGrade,
@@ -229,7 +232,7 @@ export const useAdminStats = () => {
   const fetchStudents = async (): Promise<AdminStudent[]> => {
     const { data, error } = await supabase
       .from('Student')
-      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin )')
+      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )')
       .order('createdAt', { ascending: false }) as unknown as { data: RawStudentRow[] | null, error: unknown }
 
     if (error) throw error
@@ -260,6 +263,7 @@ export const useAdminStats = () => {
         phone: user?.phone ?? null,
         avatarUrl: user?.avatarUrl ?? null,
         iin: user?.iin ?? null,
+        initialPassword: user?.initialPassword ?? null,
         birthdate: s.birthdate,
         level: s.level,
         schoolGrade: s.schoolGrade,
@@ -277,7 +281,7 @@ export const useAdminStats = () => {
   const fetchStudentById = async (studentId: string) => {
     const { data, error } = await supabase
       .from('Student')
-      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin )')
+      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )')
       .eq('id', studentId)
       .single() as unknown as { data: RawStudentRow | null, error: unknown }
 
@@ -339,6 +343,7 @@ export const useAdminStats = () => {
         phone: user?.phone ?? null,
         avatarUrl: user?.avatarUrl ?? null,
         iin: user?.iin ?? null,
+        initialPassword: user?.initialPassword ?? null,
         birthdate: data.birthdate,
         level: data.level,
         schoolGrade: data.schoolGrade,
@@ -445,7 +450,7 @@ export const useAdminStats = () => {
   const fetchGroups = async (): Promise<AdminGroup[]> => {
     const { data, error } = await supabase
       .from('Group')
-      .select('id, name, level, teacherId, branchId, schedule, maxStudents, createdAt, Teacher!teacherId ( User!userId ( name, surname ) )')
+      .select('id, name, level, teacherId, branchId, schedule, maxStudents, createdAt, archivedAt, Teacher!teacherId ( User!userId ( name, surname ) )')
       .order('createdAt', { ascending: false }) as unknown as { data: RawGroupRow[] | null, error: unknown }
 
     if (error) throw error
@@ -457,7 +462,8 @@ export const useAdminStats = () => {
       const { data: members } = await supabase
         .from('GroupMember')
         .select('groupId')
-        .in('groupId', groupIds) as unknown as { data: { groupId: string }[] | null }
+        .in('groupId', groupIds)
+        .eq('status', 'ACTIVE') as unknown as { data: { groupId: string }[] | null }
 
       for (const m of members ?? []) {
         countMap[m.groupId] = (countMap[m.groupId] ?? 0) + 1
@@ -479,9 +485,43 @@ export const useAdminStats = () => {
         schedule: g.schedule as Record<string, unknown>,
         maxStudents: g.maxStudents,
         studentCount: countMap[g.id] ?? 0,
-        createdAt: g.createdAt
+        createdAt: g.createdAt,
+        archivedAt: g.archivedAt ?? null
       }
     })
+  }
+
+  /**
+   * Set of student IDs that are ACTIVE in a non-archived group — i.e. students
+   * who cannot be added to another group. Used to filter the "add students"
+   * pickers so the same student can't be enrolled into multiple groups.
+   */
+  const fetchOccupiedStudentIds = async (): Promise<Set<string>> => {
+    const { data, error } = await supabase
+      .from('GroupMember')
+      .select('studentId, Group!groupId ( archivedAt )')
+      .eq('status', 'ACTIVE') as unknown as {
+      data: { studentId: string, Group: { archivedAt: string | null } | { archivedAt: string | null }[] | null }[] | null
+      error: unknown
+    }
+    if (error) throw error
+    const occupied = new Set<string>()
+    for (const row of data ?? []) {
+      const group = Array.isArray(row.Group) ? row.Group[0] : row.Group
+      if (group && !group.archivedAt) occupied.add(row.studentId)
+    }
+    return occupied
+  }
+
+  const setGroupArchived = async (groupId: string, archived: boolean) => {
+    return await $fetch(`/api/admin/groups/${groupId}`, {
+      method: 'PATCH',
+      body: { archived }
+    })
+  }
+
+  const deleteGroup = async (groupId: string) => {
+    return await $fetch(`/api/admin/groups/${groupId}`, { method: 'DELETE' })
   }
 
   // ─── Medals ──────────────────────────────────────────────────────────────────
@@ -613,6 +653,9 @@ export const useAdminStats = () => {
     fetchStudentById,
     fetchTeachers,
     fetchGroups,
+    fetchOccupiedStudentIds,
+    setGroupArchived,
+    deleteGroup,
     fetchMedals,
     fetchPayouts,
     fetchXpChart,
