@@ -280,7 +280,7 @@ export const STUDENT_SIDEBAR: SidebarItem[] = [
   { label: 'Журнал', icon: 'i-lucide-bar-chart-3', to: '/student/grades' },
   { label: 'Прогресс', icon: 'i-lucide-line-chart', to: '/student/progress' },
   { label: 'Материалы', icon: 'i-lucide-library', to: '/student/materials' },
-  { label: 'Книги', icon: 'i-lucide-book-marked', to: '/student/books', badge: 'NEW' },
+  { label: 'Мой путь', icon: 'i-lucide-map', to: '/student/my-path', badge: 'NEW' },
   { label: 'Маркет Достижений', icon: 'i-lucide-trophy', to: '/student/achievements' },
   { label: 'Рейтинг', icon: 'i-lucide-bar-chart-2', to: '/student/leaderboard' },
   { label: 'Грамматика', icon: 'i-lucide-book-marked', to: '/student/grammar', badge: 'NEW' },
@@ -313,7 +313,7 @@ export const ADMIN_SIDEBAR: SidebarItem[] = [
   { label: 'Ученики', icon: 'i-lucide-graduation-cap', to: '/admin/students' },
   { label: 'Учителя', icon: 'i-lucide-users', to: '/admin/teachers' },
   { label: 'Группы', icon: 'i-lucide-layout-grid', to: '/admin/groups' },
-  { label: 'Книги', icon: 'i-lucide-book-marked', to: '/admin/books' },
+  { label: 'Капсулы', icon: 'i-lucide-sparkles', to: '/admin/capsules' },
   { label: 'Тестирование', icon: 'i-lucide-clipboard-list', to: '/admin/testing' },
   { label: 'Расписание', icon: 'i-lucide-calendar-days', to: '/admin/schedule' },
   { label: 'Настройки', icon: 'i-lucide-settings', to: '/admin/settings' }

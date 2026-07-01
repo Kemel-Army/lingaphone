@@ -61,6 +61,7 @@ export default defineNuxtConfig({
   // Runtime config for server-side secrets
   runtimeConfig: {
     openaiApiKey: process.env.OPENAI_API_KEY ?? '',
+    geminiApiKey: process.env.GEMINI_API_KEY ?? '',
     mailgunApiKey: process.env.MAILGUN_API_KEY ?? '',
     mailgunDomain: process.env.MAILGUN_DOMAIN ?? '',
     paymentApiKey: process.env.PAYMENT_API_KEY ?? '',
@@ -86,7 +87,12 @@ export default defineNuxtConfig({
     '/contact': { isr: 86400 },
     '/privacy': { isr: 86400 },
     '/terms': { isr: 86400 },
-    '/programs/**': { isr: 3600 }
+    '/programs/**': { isr: 3600 },
+    // Old "Книги" module removed → redirect stale links/bookmarks.
+    '/admin/books': { redirect: '/admin/capsules' },
+    '/admin/books/**': { redirect: '/admin/capsules' },
+    '/student/books': { redirect: '/student/my-path' },
+    '/student/books/**': { redirect: '/student/my-path' }
   },
 
   devServer: {

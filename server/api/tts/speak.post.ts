@@ -1,61 +1,63 @@
 import { z } from 'zod'
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts'
 
+/**
+ * POST /api/tts/speak — Femi's voice via Microsoft Edge neural TTS.
+ *
+ * Free, no API key, human-sounding neural voices (incl. natural Russian).
+ * Returns MP3 the browser plays directly. Voice is picked by language:
+ * ru → Svetlana, en → Sonia (British, matches the Access book), kk → Aigul.
+ * On any failure the client falls back to the browser Web Speech API.
+ *
+ * NOTE: Gemini TTS was dropped for the voice — its free preview model does
+ * not synthesise Russian (returns finishReason OTHER). Gemini is still used
+ * for capsule generation (text/vision), which the free tier does support.
+ */
 const bodySchema = z.object({
-  text: z.string().min(1).max(500),
-  voice: z.enum(['nova', 'shimmer', 'alloy', 'echo', 'fable', 'onyx']).default('fable'),
-  speed: z.number().min(0.25).max(4.0).default(1.1),
+  text: z.string().min(1).max(600),
+  lang: z.string().max(10).optional(),
+  voice: z.string().max(60).optional(),
+  speed: z.number().min(0.25).max(4.0).default(1.0),
   emotion: z.string().max(200).optional()
 })
 
-const FEMI_BASE_INSTRUCTIONS = `
-You are Femi — a little cartoon fox, 6 years old, best friend to every child.
-Your voice: high-pitched, sweet, bubbly, full of wonder and giggles. Like a real child voice actor in a cartoon.
-You speak Russian or Kazakh with natural childlike intonation — rising at the end, bouncy rhythm, tiny pauses.
-You are NEVER flat, NEVER robotic, NEVER adult. Always sound like you are about to burst with happiness.
-Every phrase — even short ones like "Молодец!" — must sound alive, warm and full of personality.
-Imagine you are a child voice actor in a beloved cartoon giving it your all.
-`.trim()
+const VOICE_BY_LANG: Record<string, string> = {
+  ru: 'ru-RU-SvetlanaNeural',
+  kk: 'kk-KZ-AigulNeural',
+  kz: 'kk-KZ-AigulNeural',
+  en: 'en-GB-SoniaNeural'
+}
+
+const pickVoice = (lang?: string, explicit?: string): string => {
+  if (explicit) return explicit
+  const key = (lang ?? 'ru').toLowerCase().split('-')[0] ?? 'ru'
+  return VOICE_BY_LANG[key] ?? VOICE_BY_LANG.ru!
+}
 
 export default defineEventHandler(async (event) => {
   await requireAuth(event)
-
   const body = await readValidatedBody(event, bodySchema.parse)
+  const voice = pickVoice(body.lang, body.voice)
 
-  const apiKey = process.env.OPENAI_API_KEY || useRuntimeConfig().openaiApiKey
-  if (!apiKey) throw createError({ statusCode: 500, message: 'OPENAI_API_KEY not configured' })
+  const tts = new MsEdgeTTS()
+  try {
+    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
 
-  const instructions = body.emotion
-    ? `${FEMI_BASE_INSTRUCTIONS}\n\nFor this specific line, deliver it: ${body.emotion}`
-    : FEMI_BASE_INSTRUCTIONS
+    // Gentle, warm, kid-friendly tuning; map speed → relative rate %.
+    const ratePct = Math.round((body.speed - 1) * 100)
+    const rate = `${ratePct >= 0 ? '+' : ''}${ratePct}%`
 
-  // Используем прямой HTTP-запрос вместо SDK — гарантируем что поле
-  // `instructions` не вырезается при сериализации (SDK не знает о нём).
-  const response = await fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini-tts',
-      voice: body.voice,
-      input: body.text,
-      speed: body.speed,
-      instructions,
-      response_format: 'mp3'
-    })
-  })
+    const { audioStream } = tts.toStream(body.text, { pitch: '+6%', rate })
+    const chunks: Buffer[] = []
+    for await (const chunk of audioStream as AsyncIterable<Buffer>) chunks.push(chunk)
+    const mp3 = Buffer.concat(chunks)
+    if (!mp3.length) throw createError({ statusCode: 502, message: 'Empty audio' })
 
-  if (!response.ok) {
-    const err = await response.text()
-    throw createError({ statusCode: response.status, message: err })
+    setResponseHeader(event, 'Content-Type', 'audio/mpeg')
+    setResponseHeader(event, 'Content-Length', mp3.length)
+    setResponseHeader(event, 'Cache-Control', 'private, max-age=86400')
+    return mp3
+  } finally {
+    tts.close()
   }
-
-  const buffer = Buffer.from(await response.arrayBuffer())
-
-  setResponseHeader(event, 'Content-Type', 'audio/mpeg')
-  setResponseHeader(event, 'Content-Length', buffer.length)
-  setResponseHeader(event, 'Cache-Control', 'private, max-age=86400')
-
-  return buffer
 })

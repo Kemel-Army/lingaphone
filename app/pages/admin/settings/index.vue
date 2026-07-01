@@ -44,7 +44,7 @@ const saveProfile = async () => {
   if (!currentUser.value) return
   profileSaving.value = true
   try {
-    const authId = currentUser.value.sub
+    const authId = currentUser.value.id
 
     // Upload avatar if changed, then persist its URL to the User row.
     // Storage RLS requires the first path segment to equal auth.uid(), so the

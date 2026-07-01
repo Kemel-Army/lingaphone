@@ -365,6 +365,65 @@ export type Database = {
         }
         Relationships: []
       }
+      CapsuleLayer: {
+        Row: {
+          accentColor: string
+          completionCriteria: Json
+          content: Json
+          createdAt: string
+          estimatedMinutes: number
+          icon: string
+          id: string
+          layerType: string
+          lessonId: string
+          orderIndex: number
+          subtitle: string | null
+          title: string
+          updatedAt: string
+          xpReward: number
+        }
+        Insert: {
+          accentColor?: string
+          completionCriteria?: Json
+          content?: Json
+          createdAt?: string
+          estimatedMinutes?: number
+          icon?: string
+          id?: string
+          layerType: string
+          lessonId: string
+          orderIndex: number
+          subtitle?: string | null
+          title: string
+          updatedAt?: string
+          xpReward?: number
+        }
+        Update: {
+          accentColor?: string
+          completionCriteria?: Json
+          content?: Json
+          createdAt?: string
+          estimatedMinutes?: number
+          icon?: string
+          id?: string
+          layerType?: string
+          lessonId?: string
+          orderIndex?: number
+          subtitle?: string | null
+          title?: string
+          updatedAt?: string
+          xpReward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'CapsuleLayer_lessonId_fkey'
+            columns: ['lessonId']
+            isOneToOne: false
+            referencedRelation: 'PathLesson'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       Conversation: {
         Row: {
           createdAt: string
@@ -905,6 +964,82 @@ export type Database = {
           }
         ]
       }
+      LayerProgress: {
+        Row: {
+          attempts: number
+          completedAt: string | null
+          createdAt: string
+          id: string
+          interactionData: Json
+          layerId: string
+          lessonId: string
+          maxScore: number | null
+          score: number | null
+          startedAt: string | null
+          status: string
+          studentId: string
+          timeSpentSeconds: number
+          updatedAt: string
+          xpEarned: number
+        }
+        Insert: {
+          attempts?: number
+          completedAt?: string | null
+          createdAt?: string
+          id?: string
+          interactionData?: Json
+          layerId: string
+          lessonId: string
+          maxScore?: number | null
+          score?: number | null
+          startedAt?: string | null
+          status?: string
+          studentId: string
+          timeSpentSeconds?: number
+          updatedAt?: string
+          xpEarned?: number
+        }
+        Update: {
+          attempts?: number
+          completedAt?: string | null
+          createdAt?: string
+          id?: string
+          interactionData?: Json
+          layerId?: string
+          lessonId?: string
+          maxScore?: number | null
+          score?: number | null
+          startedAt?: string | null
+          status?: string
+          studentId?: string
+          timeSpentSeconds?: number
+          updatedAt?: string
+          xpEarned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'LayerProgress_layerId_fkey'
+            columns: ['layerId']
+            isOneToOne: false
+            referencedRelation: 'CapsuleLayer'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'LayerProgress_lessonId_fkey'
+            columns: ['lessonId']
+            isOneToOne: false
+            referencedRelation: 'PathLesson'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'LayerProgress_studentId_fkey'
+            columns: ['studentId']
+            isOneToOne: false
+            referencedRelation: 'Student'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       Lesson: {
         Row: {
           createdAt: string
@@ -1200,6 +1335,172 @@ export type Database = {
             columns: ['userId']
             isOneToOne: true
             referencedRelation: 'User'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      PathLesson: {
+        Row: {
+          createdAt: string
+          difficulty: string
+          durationMinutes: number
+          id: string
+          masteryThreshold: number
+          orderIndex: number
+          pathTopicId: string
+          subtitle: string | null
+          title: string
+          updatedAt: string
+          xpReward: number
+        }
+        Insert: {
+          createdAt?: string
+          difficulty?: string
+          durationMinutes?: number
+          id?: string
+          masteryThreshold?: number
+          orderIndex?: number
+          pathTopicId: string
+          subtitle?: string | null
+          title: string
+          updatedAt?: string
+          xpReward?: number
+        }
+        Update: {
+          createdAt?: string
+          difficulty?: string
+          durationMinutes?: number
+          id?: string
+          masteryThreshold?: number
+          orderIndex?: number
+          pathTopicId?: string
+          subtitle?: string | null
+          title?: string
+          updatedAt?: string
+          xpReward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'PathLesson_pathTopicId_fkey'
+            columns: ['pathTopicId']
+            isOneToOne: false
+            referencedRelation: 'PathTopic'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      PathProgress: {
+        Row: {
+          completedAt: string | null
+          createdAt: string
+          currentLayerIndex: number
+          id: string
+          lastActivityAt: string | null
+          layersCompleted: number
+          masteryAchieved: boolean
+          masteryMaxScore: number | null
+          masteryScore: number | null
+          pathLessonId: string
+          studentId: string
+          updatedAt: string
+          xpEarned: number
+        }
+        Insert: {
+          completedAt?: string | null
+          createdAt?: string
+          currentLayerIndex?: number
+          id?: string
+          lastActivityAt?: string | null
+          layersCompleted?: number
+          masteryAchieved?: boolean
+          masteryMaxScore?: number | null
+          masteryScore?: number | null
+          pathLessonId: string
+          studentId: string
+          updatedAt?: string
+          xpEarned?: number
+        }
+        Update: {
+          completedAt?: string | null
+          createdAt?: string
+          currentLayerIndex?: number
+          id?: string
+          lastActivityAt?: string | null
+          layersCompleted?: number
+          masteryAchieved?: boolean
+          masteryMaxScore?: number | null
+          masteryScore?: number | null
+          pathLessonId?: string
+          studentId?: string
+          updatedAt?: string
+          xpEarned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'PathProgress_pathLessonId_fkey'
+            columns: ['pathLessonId']
+            isOneToOne: false
+            referencedRelation: 'PathLesson'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'PathProgress_studentId_fkey'
+            columns: ['studentId']
+            isOneToOne: false
+            referencedRelation: 'Student'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      PathTopic: {
+        Row: {
+          bookId: string | null
+          color: string
+          createdAt: string
+          description: string | null
+          durationMinutes: number
+          icon: string
+          id: string
+          level: string | null
+          name: string
+          orderIndex: number
+          totalXp: number
+          updatedAt: string
+        }
+        Insert: {
+          bookId?: string | null
+          color?: string
+          createdAt?: string
+          description?: string | null
+          durationMinutes?: number
+          icon?: string
+          id?: string
+          level?: string | null
+          name: string
+          orderIndex?: number
+          totalXp?: number
+          updatedAt?: string
+        }
+        Update: {
+          bookId?: string | null
+          color?: string
+          createdAt?: string
+          description?: string | null
+          durationMinutes?: number
+          icon?: string
+          id?: string
+          level?: string | null
+          name?: string
+          orderIndex?: number
+          totalXp?: number
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'PathTopic_bookId_fkey'
+            columns: ['bookId']
+            isOneToOne: false
+            referencedRelation: 'Book'
             referencedColumns: ['id']
           }
         ]

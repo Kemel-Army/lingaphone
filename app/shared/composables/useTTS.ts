@@ -3,8 +3,8 @@ import { ref, computed, watch } from 'vue'
 /**
  * useTTS — Text-to-Speech для Феми.
  *
- * Основной движок: OpenAI TTS (модель gpt-4o-mini-tts, голос `shimmer`).
- * gpt-4o-mini-tts понимает instructions — Феми звучит как живой мультяшный персонаж.
+ * Основной движок: Microsoft Edge neural TTS (бесплатно, без ключа).
+ * Живой человеческий голос, выбирается по языку на сервере (ru/en/kk).
  * Fallback: Web Speech API (если нет сети / пользователь не авторизован).
  *
  * Кеш: короткие фразы («Молодец!», «Отлично!») сохраняются как Blob URL
@@ -124,14 +124,14 @@ const I18N_TO_BCP47: Record<string, TTSLang> = { ru: 'ru-RU', kz: 'kk-KZ', en: '
 
 /** Получить/закешировать Blob URL для текста через OpenAI TTS.
  *  Если запрос не удался — возвращает null (→ fallback на Web Speech). */
-const fetchAudio = async (text: string, speed: number, emotion?: string): Promise<string | null> => {
-  const cacheKey = `${emotion ?? ''}__${text}__${speed}`
+const fetchAudio = async (text: string, speed: number, emotion?: string, lang?: string): Promise<string | null> => {
+  const cacheKey = `${lang ?? ''}__${emotion ?? ''}__${text}__${speed}`
   if (audioCache.has(cacheKey)) return audioCache.get(cacheKey)!
 
   try {
     const res = await $fetch<Blob>('/api/tts/speak', {
       method: 'POST',
-      body: { text, voice: 'shimmer', speed, ...(emotion ? { emotion } : {}) },
+      body: { text, speed, ...(lang ? { lang } : {}), ...(emotion ? { emotion } : {}) },
       responseType: 'blob'
     })
     const url = URL.createObjectURL(res)
@@ -212,12 +212,13 @@ export function useTTS() {
     const clean = stripMarkdown(text)
     if (!clean) return
 
-    // OpenAI speed ≈ rate (диапазон 0.25–4.0, дефолт 1.0)
+    // speed ≈ rate (диапазон 0.25–4.0, дефолт 1.0)
     const speed = opts?.rate ?? 1.0
     const emotion = opts?.emotion
+    const lang = (opts?.lang as string | undefined) ?? preferredLang.value
 
-    // Пробуем OpenAI → при ошибке Web Speech
-    fetchAudio(clean, speed, emotion).then((url) => {
+    // Пробуем Edge TTS → при ошибке Web Speech
+    fetchAudio(clean, speed, emotion, lang).then((url) => {
       if (muted.value) return
       if (url) {
         playAudio(url)

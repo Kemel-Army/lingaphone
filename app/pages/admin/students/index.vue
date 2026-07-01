@@ -38,6 +38,7 @@ const totalPages = computed(() => Math.ceil(total.value / PAGE_SIZE))
 const showCreate = ref(false)
 const creating = ref(false)
 const showPassword = ref(false)
+const lastCreated = ref<{ surname: string, name: string, email: string, password: string } | null>(null)
 
 const levelOptions = [
   { label: 'A1 — Начальный', value: 'A1' },
