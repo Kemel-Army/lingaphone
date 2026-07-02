@@ -338,6 +338,47 @@ export type Database = {
         }
         Relationships: []
       }
+      BookPage: {
+        Row: {
+          createdAt: string
+          id: string
+          imageHeight: number
+          imageUrl: string
+          imageWidth: number
+          moduleId: string
+          pageNumber: number
+          updatedAt: string
+        }
+        Insert: {
+          createdAt?: string
+          id?: string
+          imageHeight?: number
+          imageUrl: string
+          imageWidth?: number
+          moduleId: string
+          pageNumber: number
+          updatedAt?: string
+        }
+        Update: {
+          createdAt?: string
+          id?: string
+          imageHeight?: number
+          imageUrl?: string
+          imageWidth?: number
+          moduleId?: string
+          pageNumber?: number
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'BookPage_moduleId_fkey'
+            columns: ['moduleId']
+            isOneToOne: false
+            referencedRelation: 'Module'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       Branch: {
         Row: {
           address: string | null
@@ -364,65 +405,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      CapsuleLayer: {
-        Row: {
-          accentColor: string
-          completionCriteria: Json
-          content: Json
-          createdAt: string
-          estimatedMinutes: number
-          icon: string
-          id: string
-          layerType: string
-          lessonId: string
-          orderIndex: number
-          subtitle: string | null
-          title: string
-          updatedAt: string
-          xpReward: number
-        }
-        Insert: {
-          accentColor?: string
-          completionCriteria?: Json
-          content?: Json
-          createdAt?: string
-          estimatedMinutes?: number
-          icon?: string
-          id?: string
-          layerType: string
-          lessonId: string
-          orderIndex: number
-          subtitle?: string | null
-          title: string
-          updatedAt?: string
-          xpReward?: number
-        }
-        Update: {
-          accentColor?: string
-          completionCriteria?: Json
-          content?: Json
-          createdAt?: string
-          estimatedMinutes?: number
-          icon?: string
-          id?: string
-          layerType?: string
-          lessonId?: string
-          orderIndex?: number
-          subtitle?: string | null
-          title?: string
-          updatedAt?: string
-          xpReward?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'CapsuleLayer_lessonId_fkey'
-            columns: ['lessonId']
-            isOneToOne: false
-            referencedRelation: 'PathLesson'
-            referencedColumns: ['id']
-          }
-        ]
       }
       Conversation: {
         Row: {
@@ -964,82 +946,6 @@ export type Database = {
           }
         ]
       }
-      LayerProgress: {
-        Row: {
-          attempts: number
-          completedAt: string | null
-          createdAt: string
-          id: string
-          interactionData: Json
-          layerId: string
-          lessonId: string
-          maxScore: number | null
-          score: number | null
-          startedAt: string | null
-          status: string
-          studentId: string
-          timeSpentSeconds: number
-          updatedAt: string
-          xpEarned: number
-        }
-        Insert: {
-          attempts?: number
-          completedAt?: string | null
-          createdAt?: string
-          id?: string
-          interactionData?: Json
-          layerId: string
-          lessonId: string
-          maxScore?: number | null
-          score?: number | null
-          startedAt?: string | null
-          status?: string
-          studentId: string
-          timeSpentSeconds?: number
-          updatedAt?: string
-          xpEarned?: number
-        }
-        Update: {
-          attempts?: number
-          completedAt?: string | null
-          createdAt?: string
-          id?: string
-          interactionData?: Json
-          layerId?: string
-          lessonId?: string
-          maxScore?: number | null
-          score?: number | null
-          startedAt?: string | null
-          status?: string
-          studentId?: string
-          timeSpentSeconds?: number
-          updatedAt?: string
-          xpEarned?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'LayerProgress_layerId_fkey'
-            columns: ['layerId']
-            isOneToOne: false
-            referencedRelation: 'CapsuleLayer'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'LayerProgress_lessonId_fkey'
-            columns: ['lessonId']
-            isOneToOne: false
-            referencedRelation: 'PathLesson'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'LayerProgress_studentId_fkey'
-            columns: ['studentId']
-            isOneToOne: false
-            referencedRelation: 'Student'
-            referencedColumns: ['id']
-          }
-        ]
-      }
       Lesson: {
         Row: {
           createdAt: string
@@ -1083,6 +989,171 @@ export type Database = {
             columns: ['groupId']
             isOneToOne: false
             referencedRelation: 'Group'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      LessonAttempt: {
+        Row: {
+          createdAt: string
+          exerciseId: string
+          id: string
+          isCorrect: boolean | null
+          response: Json
+          score: number | null
+          studentId: string
+          updatedAt: string
+        }
+        Insert: {
+          createdAt?: string
+          exerciseId: string
+          id?: string
+          isCorrect?: boolean | null
+          response?: Json
+          score?: number | null
+          studentId: string
+          updatedAt?: string
+        }
+        Update: {
+          createdAt?: string
+          exerciseId?: string
+          id?: string
+          isCorrect?: boolean | null
+          response?: Json
+          score?: number | null
+          studentId?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'LessonAttempt_exerciseId_fkey'
+            columns: ['exerciseId']
+            isOneToOne: false
+            referencedRelation: 'LessonExercise'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'LessonAttempt_studentId_fkey'
+            columns: ['studentId']
+            isOneToOne: false
+            referencedRelation: 'Student'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      LessonExercise: {
+        Row: {
+          content: Json
+          createdAt: string
+          id: string
+          instruction: string | null
+          orderIndex: number
+          type: string
+          unitId: string
+          updatedAt: string
+          xp: number
+        }
+        Insert: {
+          content?: Json
+          createdAt?: string
+          id?: string
+          instruction?: string | null
+          orderIndex?: number
+          type: string
+          unitId: string
+          updatedAt?: string
+          xp?: number
+        }
+        Update: {
+          content?: Json
+          createdAt?: string
+          id?: string
+          instruction?: string | null
+          orderIndex?: number
+          type?: string
+          unitId?: string
+          updatedAt?: string
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'LessonExercise_unitId_fkey'
+            columns: ['unitId']
+            isOneToOne: false
+            referencedRelation: 'LessonUnit'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      LessonExerciseAnswer: {
+        Row: {
+          answerKey: Json
+          createdAt: string
+          exerciseId: string
+          explanation: string | null
+          updatedAt: string
+        }
+        Insert: {
+          answerKey?: Json
+          createdAt?: string
+          exerciseId: string
+          explanation?: string | null
+          updatedAt?: string
+        }
+        Update: {
+          answerKey?: Json
+          createdAt?: string
+          exerciseId?: string
+          explanation?: string | null
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'LessonExerciseAnswer_exerciseId_fkey'
+            columns: ['exerciseId']
+            isOneToOne: true
+            referencedRelation: 'LessonExercise'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      LessonUnit: {
+        Row: {
+          createdAt: string
+          id: string
+          intro: Json
+          moduleId: string
+          orderIndex: number
+          subtitle: string | null
+          title: string
+          updatedAt: string
+        }
+        Insert: {
+          createdAt?: string
+          id?: string
+          intro?: Json
+          moduleId: string
+          orderIndex?: number
+          subtitle?: string | null
+          title: string
+          updatedAt?: string
+        }
+        Update: {
+          createdAt?: string
+          id?: string
+          intro?: Json
+          moduleId?: string
+          orderIndex?: number
+          subtitle?: string | null
+          title?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'LessonUnit_moduleId_fkey'
+            columns: ['moduleId']
+            isOneToOne: false
+            referencedRelation: 'Module'
             referencedColumns: ['id']
           }
         ]
@@ -1192,6 +1263,7 @@ export type Database = {
           createdAt: string
           id: string
           order: number
+          pageCount: number
           pdfUrl: string | null
           title: string
         }
@@ -1200,6 +1272,7 @@ export type Database = {
           createdAt?: string
           id?: string
           order?: number
+          pageCount?: number
           pdfUrl?: string | null
           title: string
         }
@@ -1208,6 +1281,7 @@ export type Database = {
           createdAt?: string
           id?: string
           order?: number
+          pageCount?: number
           pdfUrl?: string | null
           title?: string
         }
@@ -1310,6 +1384,145 @@ export type Database = {
           }
         ]
       }
+      PageAttempt: {
+        Row: {
+          aiFeedback: Json | null
+          audioUrl: string | null
+          createdAt: string
+          exerciseId: string
+          id: string
+          isCorrect: boolean | null
+          response: Json
+          score: number | null
+          studentId: string
+          updatedAt: string
+        }
+        Insert: {
+          aiFeedback?: Json | null
+          audioUrl?: string | null
+          createdAt?: string
+          exerciseId: string
+          id?: string
+          isCorrect?: boolean | null
+          response?: Json
+          score?: number | null
+          studentId: string
+          updatedAt?: string
+        }
+        Update: {
+          aiFeedback?: Json | null
+          audioUrl?: string | null
+          createdAt?: string
+          exerciseId?: string
+          id?: string
+          isCorrect?: boolean | null
+          response?: Json
+          score?: number | null
+          studentId?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'PageAttempt_exerciseId_fkey'
+            columns: ['exerciseId']
+            isOneToOne: false
+            referencedRelation: 'PageExercise'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'PageAttempt_studentId_fkey'
+            columns: ['studentId']
+            isOneToOne: false
+            referencedRelation: 'Student'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      PageExercise: {
+        Row: {
+          createdAt: string
+          h: number
+          id: string
+          kind: string
+          options: Json
+          orderIndex: number
+          pageId: string
+          prompt: string | null
+          updatedAt: string
+          w: number
+          x: number
+          y: number
+        }
+        Insert: {
+          createdAt?: string
+          h: number
+          id?: string
+          kind: string
+          options?: Json
+          orderIndex?: number
+          pageId: string
+          prompt?: string | null
+          updatedAt?: string
+          w: number
+          x: number
+          y: number
+        }
+        Update: {
+          createdAt?: string
+          h?: number
+          id?: string
+          kind?: string
+          options?: Json
+          orderIndex?: number
+          pageId?: string
+          prompt?: string | null
+          updatedAt?: string
+          w?: number
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'PageExercise_pageId_fkey'
+            columns: ['pageId']
+            isOneToOne: false
+            referencedRelation: 'BookPage'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      PageExerciseAnswer: {
+        Row: {
+          answerKey: Json
+          createdAt: string
+          exerciseId: string
+          explanation: string | null
+          updatedAt: string
+        }
+        Insert: {
+          answerKey?: Json
+          createdAt?: string
+          exerciseId: string
+          explanation?: string | null
+          updatedAt?: string
+        }
+        Update: {
+          answerKey?: Json
+          createdAt?: string
+          exerciseId?: string
+          explanation?: string | null
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'PageExerciseAnswer_exerciseId_fkey'
+            columns: ['exerciseId']
+            isOneToOne: true
+            referencedRelation: 'PageExercise'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       Parent: {
         Row: {
           createdAt: string
@@ -1335,172 +1548,6 @@ export type Database = {
             columns: ['userId']
             isOneToOne: true
             referencedRelation: 'User'
-            referencedColumns: ['id']
-          }
-        ]
-      }
-      PathLesson: {
-        Row: {
-          createdAt: string
-          difficulty: string
-          durationMinutes: number
-          id: string
-          masteryThreshold: number
-          orderIndex: number
-          pathTopicId: string
-          subtitle: string | null
-          title: string
-          updatedAt: string
-          xpReward: number
-        }
-        Insert: {
-          createdAt?: string
-          difficulty?: string
-          durationMinutes?: number
-          id?: string
-          masteryThreshold?: number
-          orderIndex?: number
-          pathTopicId: string
-          subtitle?: string | null
-          title: string
-          updatedAt?: string
-          xpReward?: number
-        }
-        Update: {
-          createdAt?: string
-          difficulty?: string
-          durationMinutes?: number
-          id?: string
-          masteryThreshold?: number
-          orderIndex?: number
-          pathTopicId?: string
-          subtitle?: string | null
-          title?: string
-          updatedAt?: string
-          xpReward?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'PathLesson_pathTopicId_fkey'
-            columns: ['pathTopicId']
-            isOneToOne: false
-            referencedRelation: 'PathTopic'
-            referencedColumns: ['id']
-          }
-        ]
-      }
-      PathProgress: {
-        Row: {
-          completedAt: string | null
-          createdAt: string
-          currentLayerIndex: number
-          id: string
-          lastActivityAt: string | null
-          layersCompleted: number
-          masteryAchieved: boolean
-          masteryMaxScore: number | null
-          masteryScore: number | null
-          pathLessonId: string
-          studentId: string
-          updatedAt: string
-          xpEarned: number
-        }
-        Insert: {
-          completedAt?: string | null
-          createdAt?: string
-          currentLayerIndex?: number
-          id?: string
-          lastActivityAt?: string | null
-          layersCompleted?: number
-          masteryAchieved?: boolean
-          masteryMaxScore?: number | null
-          masteryScore?: number | null
-          pathLessonId: string
-          studentId: string
-          updatedAt?: string
-          xpEarned?: number
-        }
-        Update: {
-          completedAt?: string | null
-          createdAt?: string
-          currentLayerIndex?: number
-          id?: string
-          lastActivityAt?: string | null
-          layersCompleted?: number
-          masteryAchieved?: boolean
-          masteryMaxScore?: number | null
-          masteryScore?: number | null
-          pathLessonId?: string
-          studentId?: string
-          updatedAt?: string
-          xpEarned?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'PathProgress_pathLessonId_fkey'
-            columns: ['pathLessonId']
-            isOneToOne: false
-            referencedRelation: 'PathLesson'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'PathProgress_studentId_fkey'
-            columns: ['studentId']
-            isOneToOne: false
-            referencedRelation: 'Student'
-            referencedColumns: ['id']
-          }
-        ]
-      }
-      PathTopic: {
-        Row: {
-          bookId: string | null
-          color: string
-          createdAt: string
-          description: string | null
-          durationMinutes: number
-          icon: string
-          id: string
-          level: string | null
-          name: string
-          orderIndex: number
-          totalXp: number
-          updatedAt: string
-        }
-        Insert: {
-          bookId?: string | null
-          color?: string
-          createdAt?: string
-          description?: string | null
-          durationMinutes?: number
-          icon?: string
-          id?: string
-          level?: string | null
-          name: string
-          orderIndex?: number
-          totalXp?: number
-          updatedAt?: string
-        }
-        Update: {
-          bookId?: string | null
-          color?: string
-          createdAt?: string
-          description?: string | null
-          durationMinutes?: number
-          icon?: string
-          id?: string
-          level?: string | null
-          name?: string
-          orderIndex?: number
-          totalXp?: number
-          updatedAt?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'PathTopic_bookId_fkey'
-            columns: ['bookId']
-            isOneToOne: false
-            referencedRelation: 'Book'
             referencedColumns: ['id']
           }
         ]

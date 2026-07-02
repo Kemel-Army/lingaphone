@@ -61,7 +61,6 @@ export default defineNuxtConfig({
   // Runtime config for server-side secrets
   runtimeConfig: {
     openaiApiKey: process.env.OPENAI_API_KEY ?? '',
-    geminiApiKey: process.env.GEMINI_API_KEY ?? '',
     mailgunApiKey: process.env.MAILGUN_API_KEY ?? '',
     mailgunDomain: process.env.MAILGUN_DOMAIN ?? '',
     paymentApiKey: process.env.PAYMENT_API_KEY ?? '',
@@ -75,9 +74,7 @@ export default defineNuxtConfig({
       sentryDsn: process.env.SENTRY_DSN ?? '',
       turnServerUrl: process.env.TURN_SERVER_URL ?? '',
       turnServerUser: process.env.TURN_SERVER_USER ?? '',
-      turnServerCredential: process.env.TURN_SERVER_CREDENTIAL ?? '',
-      // Demo capsule mode: when true, allows free layer switching/progression.
-      capsuleDemoFreeSwitch: process.env.NUXT_PUBLIC_CAPSULE_DEMO_FREE_SWITCH ?? 'true'
+      turnServerCredential: process.env.TURN_SERVER_CREDENTIAL ?? ''
     }
   },
 
@@ -88,11 +85,14 @@ export default defineNuxtConfig({
     '/privacy': { isr: 86400 },
     '/terms': { isr: 86400 },
     '/programs/**': { isr: 3600 },
-    // Old "Книги" module removed → redirect stale links/bookmarks.
-    '/admin/books': { redirect: '/admin/capsules' },
-    '/admin/books/**': { redirect: '/admin/capsules' },
-    '/student/books': { redirect: '/student/my-path' },
-    '/student/books/**': { redirect: '/student/my-path' }
+    // Legacy routes (old "Книги" + capsule "Мой путь") → redirect to interactive book.
+    '/admin/books': { redirect: '/admin/interactive-book' },
+    '/admin/books/**': { redirect: '/admin/interactive-book' },
+    '/admin/capsules': { redirect: '/admin/interactive-book' },
+    '/student/books': { redirect: '/student/book' },
+    '/student/books/**': { redirect: '/student/book' },
+    '/student/my-path': { redirect: '/student/book' },
+    '/student/my-path/**': { redirect: '/student/book' }
   },
 
   devServer: {

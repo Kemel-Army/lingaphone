@@ -1639,6 +1639,76 @@
   animation: select-pop 0.28s cubic-bezier(0.25, 0.8, 0.4, 1.2);
 }
 
+/* === Lesson player — kid guidance & feedback === */
+/* «Сюда можно нажать» — мягкая дышащая подсветка пустого поля ввода */
+@keyframes hint-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+  50%      { box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.16); }
+}
+.animate-hint-pulse { animation: hint-pulse 1.8s ease-in-out infinite; }
+
+/* Подпрыгивающий эмодзи в подсказке — привлекает взгляд ребёнка */
+@keyframes hint-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.animate-hint-bob { animation: hint-bob 1.5s ease-in-out infinite; }
+
+/* Тряска на неверный ответ — «попробуй ещё» */
+@keyframes shake-x {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.animate-shake { animation: shake-x 0.4s ease-in-out; }
+
+/* Spring pop-in — reveal chips, badges */
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.6) translateY(4px); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1) translateY(0); }
+}
+.animate-pop-in { animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Gentle idle float — hint bubble */
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.animate-float-soft { animation: float-soft 3s ease-in-out infinite; }
+
+/* Progress bar sheen */
+@keyframes progress-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.progress-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, 0.5) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: progress-shimmer 2.2s linear infinite;
+}
+
+/* Correct-answer celebration — soft green burst behind the chip */
+@keyframes celebrate-pop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  50%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-celebrate { animation: celebrate-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hint-pulse,
+  .animate-hint-bob,
+  .animate-shake,
+  .animate-pop-in,
+  .animate-float-soft,
+  .animate-celebrate { animation: none !important; }
+  .progress-shimmer::after { animation: none !important; }
+}
+
 /* Уважаем prefers-reduced-motion для всех «дофаминовых» вспышек.
  * Список покрывает кейфреймы из FloatingXp / TrophyDisplay / StreakCounter /
  * HeartsBar / select-pop. Глушим до 0.01ms (нельзя в `none` чтобы не ломать
@@ -1756,91 +1826,6 @@
 .dark .stat-glass:hover {
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 30px rgba(248, 113, 113, 0.06);
-}
-
-/* ===========================================================================
-   CAPSULE-SAFE LAYOUT — фундамент для 11-слойных капсул 2 класса
-   ===========================================================================
-   Любой блок с атрибутом [data-capsule] получает защиту от переполнения:
-   текст переносится, формулы скроллятся, цифры в плитках авто-масштабируются
-   через container queries.
-
-   Применяется к секции контента в CapsuleRunner.vue и обёрткам KidSafeBox.
-   --------------------------------------------------------------------------- */
-
-[data-capsule] {
-  min-width: 0;
-}
-
-[data-capsule] :where(h1, h2, h3, h4, p, span, div, li, label, button) {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-[data-capsule] :where(.katex-display, .katex-html) {
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Плитка с цифрой: container query + авто-fit шрифта.
-   Используется внутри KidSafeBox variant="tile" и любой плитки с data-tile. */
-[data-capsule] [data-tile] {
-  container-type: inline-size;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  line-height: 1;
-  overflow: hidden;
-}
-
-[data-capsule] [data-tile-num] {
-  font-size: clamp(1rem, 22cqi, 3rem);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-/* Опции выбора: жёстко ограничиваем ширину строки и количество строк */
-[data-capsule] [data-option] {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-[data-capsule] [data-option-text] {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Формула: горизонтальный скролл при переполнении, не ломает layout */
-[data-capsule] [data-formula] {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* prose-чанки: переносим длинные слова, ограничиваем картинки */
-[data-capsule] [data-prose] :where(p, li) {
-  overflow-wrap: anywhere;
-}
-
-[data-capsule] [data-prose] :where(img, video, canvas, svg) {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Безопасная утилита line-clamp для заголовков капсул */
-.capsule-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-wrap: balance;
 }
 
 /* ===========================================================================
@@ -2324,4 +2309,205 @@ img, video, iframe {
     transition-duration: 0.01ms !important;
     animation: none !important;
   }
+}
+
+/* ===========================================================================
+   INTERACTIVE BOOK — page entrance + answer-field feedback animations
+   =========================================================================== */
+@keyframes ib-page-in {
+  from { opacity: 0; transform: translateY(28px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ib-field-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22); }
+}
+@keyframes ib-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+@keyframes ib-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.ib-page-in { animation: ib-page-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* Gentle glow on unanswered fields so it's obvious where to type. */
+.ib-field-idle { animation: ib-field-pulse 2.4s ease-in-out infinite; }
+.ib-pop { animation: ib-pop 0.42s ease; }
+.ib-shake { animation: ib-shake 0.42s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ib-page-in, .ib-field-idle, .ib-pop, .ib-shake { animation: none !important; }
+}
+
+/* ===========================================================================
+   BOOK READER — polish: soft skeletons, entrance, gentle hover
+   =========================================================================== */
+
+/* Card entrance — used on module / unit lists with per-item delay. */
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.card-rise { animation: card-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Book skeleton shimmer — self-contained, theme-safe. */
+@keyframes book-skeleton {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.book-skeleton {
+  background-image: linear-gradient(
+    100deg,
+    var(--ui-bg-elevated, rgba(0,0,0,0.05)) 30%,
+    var(--ui-bg-accented, rgba(0,0,0,0.10)) 50%,
+    var(--ui-bg-elevated, rgba(0,0,0,0.05)) 70%
+  );
+  background-size: 200% 100%;
+  animation: book-skeleton 1.5s ease-in-out infinite;
+}
+
+/* Play-icon nudge on hover-capable cards. */
+@keyframes play-nudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(3px); }
+}
+.group:hover .play-nudge { animation: play-nudge 0.9s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card-rise, .book-skeleton, .play-nudge {
+    animation: none !important;
+  }
+}
+
+/* ===========================================================================
+   DUO KIT — playful, chunky, springy (Duolingo-flavoured, not a copy)
+   Chunky 3D buttons, tactile press, bouncy pops, wiggles, sliding feedback.
+   =========================================================================== */
+
+/* --- Chunky 3D button: solid top face + darker bottom "edge" ------------- */
+.duo-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 1rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--duo-face, #22c55e);
+  box-shadow: 0 5px 0 0 var(--duo-edge, #15803d);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.06s ease, box-shadow 0.06s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+.duo-btn:hover:not(:disabled) { filter: brightness(1.04); }
+.duo-btn:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 0 0 0 var(--duo-edge, #15803d); }
+.duo-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: 0 5px 0 0 var(--duo-edge, #15803d); }
+.duo-btn--green   { --duo-face: #22c55e; --duo-edge: #15803d; }
+.duo-btn--gray    { --duo-face: #e5e7eb; --duo-edge: #cbd5e1; color: #64748b; }
+.dark .duo-btn--gray { --duo-face: #374151; --duo-edge: #1f2937; color: #9ca3af; }
+
+/* --- Chunky 3D card: thicker bottom border, lifts on hover --------------- */
+.duo-card {
+  border-radius: 1.25rem;
+  border: 2px solid var(--ui-border, #e5e7eb);
+  border-bottom-width: 4px;
+  transition: border-width 0.14s ease, margin 0.14s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* Lift via a growing bottom edge (not transform — stays compatible with
+   entrance animations whose fill-mode would otherwise lock `transform`). */
+.duo-card-hover:hover {
+  border-bottom-width: 7px;
+  margin-bottom: -3px;
+  border-color: var(--color-primary-300, #86efac);
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.10);
+}
+
+/* --- Tap-tile: chunky bottom edge + tactile press (keeps its own colors) - */
+.duo-tile {
+  border-bottom-width: 5px;
+  transition: transform 0.08s ease, border-width 0.08s ease,
+    border-color 0.15s ease, background-color 0.15s ease;
+}
+.duo-tile:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+}
+
+/* --- Bouncy entrance (spring overshoot) --------------------------------- */
+@keyframes duo-pop {
+  0%   { opacity: 0; transform: scale(0.8) translateY(10px); }
+  55%  { opacity: 1; transform: scale(1.04) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.duo-pop { animation: duo-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* --- Idle wiggle: gentle attention nudge on chunky icons ----------------- */
+@keyframes duo-wiggle {
+  0%, 92%, 100% { transform: rotate(0); }
+  94% { transform: rotate(-7deg); }
+  96% { transform: rotate(6deg); }
+  98% { transform: rotate(-4deg); }
+}
+.duo-wiggle { animation: duo-wiggle 3.2s ease-in-out infinite; }
+.group:hover .duo-wiggle-hover { animation: duo-wiggle 0.5s ease-in-out; }
+
+/* --- Tada on correct: scale + rotate celebration ------------------------- */
+@keyframes duo-tada {
+  0%   { transform: scale(1) rotate(0); }
+  20%  { transform: scale(1.15) rotate(-6deg); }
+  40%  { transform: scale(1.12) rotate(6deg); }
+  60%  { transform: scale(1.08) rotate(-4deg); }
+  80%  { transform: scale(1.04) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.duo-tada { animation: duo-tada 0.7s ease-in-out both; }
+
+/* --- Feedback banner slides up from the bottom of the card -------------- */
+@keyframes duo-slide-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.duo-slide-up { animation: duo-slide-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* --- Chunky progress bar: rounded fill + soft inner highlight ----------- */
+.duo-progress {
+  border-radius: 9999px;
+  background: var(--ui-bg-accented, #e5e7eb);
+  overflow: hidden;
+}
+.duo-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: #58cc02;
+  box-shadow: inset 0 3px 0 0 rgba(255, 255, 255, 0.35);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Bounce-in for the whole exercise stack (staggered) ----------------- */
+.duo-stagger > * { animation: duo-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.duo-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.duo-stagger > *:nth-child(2) { animation-delay: 0.09s; }
+.duo-stagger > *:nth-child(3) { animation-delay: 0.16s; }
+.duo-stagger > *:nth-child(4) { animation-delay: 0.23s; }
+.duo-stagger > *:nth-child(5) { animation-delay: 0.30s; }
+.duo-stagger > *:nth-child(n+6) { animation-delay: 0.36s; }
+/* State-feedback must beat the entrance animation this container sets on its
+   children (higher specificity + later source), else shake/flash never play. */
+.duo-stagger > .animate-shake { animation: shake-x 0.4s ease-in-out; }
+.duo-stagger > .animate-success-flash { animation: success-flash 0.6s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .duo-pop, .duo-wiggle, .duo-wiggle-hover, .duo-tada, .duo-slide-up,
+  .duo-stagger > * { animation: none !important; }
+  .duo-btn:active:not(:disabled) { transform: none; }
+  .duo-card-hover:hover { transform: none; }
 }

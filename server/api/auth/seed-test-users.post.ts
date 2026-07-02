@@ -115,7 +115,7 @@ export default defineEventHandler(async (event) => {
       if (tu.role === 'STUDENT') {
         const { data: student } = await supabase
           .from('Student')
-          .insert({ userId, grade: tu.grade ?? 9 } as never)
+          .insert({ userId } as never)
           .select('id')
           .single()
 

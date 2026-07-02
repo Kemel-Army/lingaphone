@@ -1,5 +1,15 @@
 import { ref, watch } from 'vue'
-import type { SoundEffect } from '~/entities/learning-path'
+
+/** Synthesised SFX names (previously lived in the removed learning-path slice). */
+export type SoundEffect
+  = | 'pop'
+    | 'correct'
+    | 'wrong'
+    | 'levelup'
+    | 'whoosh'
+    | 'click'
+    | 'sparkle'
+    | 'cheer'
 
 /**
  * useSound — лёгкий SFX-движок на Web Audio API без файлов + haptic feedback.
