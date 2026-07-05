@@ -8,16 +8,17 @@ import { z } from 'zod'
  * Equip a previously purchased cosmetic. The student must own the item
  * (StudentInventory.quantity > 0). Effect depends on category:
  *
- *   AVATAR_FRAME   → StudentGameProfile.activeFrameId = shopItemId
- *   TITLE          → StudentGameProfile.activeTitleId = shopItemId
- *   PROFILE_THEME  → StudentGameProfile.visualMode    = effect.name
+ *   AVATAR         → StudentGameProfile.activeAvatarId = shopItemId
+ *   AVATAR_FRAME   → StudentGameProfile.activeFrameId  = shopItemId
+ *   TITLE          → StudentGameProfile.activeTitleId  = shopItemId
+ *   PROFILE_THEME  → StudentGameProfile.visualMode     = effect.name
  *
  * Passing shopItemId = null with a category clears the slot (снять).
  * POWER_UP items cannot be equipped — they are consumed at action time.
  */
 
 const schema = z.object({
-  category: z.enum(['AVATAR_FRAME', 'TITLE', 'PROFILE_THEME']),
+  category: z.enum(['AVATAR', 'AVATAR_FRAME', 'TITLE', 'PROFILE_THEME']),
   shopItemId: z.string().uuid().nullable()
 })
 
@@ -29,12 +30,14 @@ export default defineEventHandler(async (event) => {
   const supabase = useServerSupabase(event)
 
   // Determine which slot we are writing.
-  const slot: 'activeFrameId' | 'activeTitleId' | 'visualMode'
-    = parsed.category === 'AVATAR_FRAME'
-      ? 'activeFrameId'
-      : parsed.category === 'TITLE'
-        ? 'activeTitleId'
-        : 'visualMode'
+  const slot: 'activeAvatarId' | 'activeFrameId' | 'activeTitleId' | 'visualMode'
+    = parsed.category === 'AVATAR'
+      ? 'activeAvatarId'
+      : parsed.category === 'AVATAR_FRAME'
+        ? 'activeFrameId'
+        : parsed.category === 'TITLE'
+          ? 'activeTitleId'
+          : 'visualMode'
 
   // Unequip path.
   if (parsed.shopItemId === null) {

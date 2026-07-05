@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { useAdminStats } from '~/entities/admin-stats'
+import { useLevelTracks } from '~/entities/book'
 
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
 const toast = useToast()
 const { fetchStudentById, updateStudent } = useAdminStats()
+const { fetchLevelTracks } = useLevelTracks()
+
+// Level → course-book matrix (ТЗ §2), drives the curator dropdown + bound book.
+const { data: tracks } = await useAsyncData('level-tracks', fetchLevelTracks)
 
 const { data, pending, refresh } = await useAsyncData(
   `admin-student-${route.params.id}`,
@@ -69,15 +74,20 @@ const submitEdit = async () => {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const levelOptions = [
-  { label: 'A1 — Начальный', value: 'A1' },
-  { label: 'A2 — Элементарный', value: 'A2' },
-  { label: 'S1', value: 'S1' },
-  { label: 'S2', value: 'S2' },
-  { label: 'B2 — Средний', value: 'B2' },
-  { label: 'F1', value: 'F1' },
-  { label: 'F2', value: 'F2' }
-]
+// Dropdown driven by the ТЗ matrix: level → book · tier · age. Curator picks a
+// level; saving it binds the matching course book (Book.trackKey == level).
+const levelOptions = computed(() =>
+  (tracks.value ?? []).map(t => ({
+    label: t.isActive
+      ? `${t.level} · ${t.bookTitle} · ${t.tier} (${t.ageRange} лет)`
+      : `${t.level} · ${t.bookTitle}`,
+    value: t.level
+  }))
+)
+
+/** The course book a given level binds to (from the matrix). */
+const trackFor = (level: string) => (tracks.value ?? []).find(t => t.level === level) ?? null
+const boundTrack = computed(() => student.value ? trackFor(student.value.level) : null)
 
 const gradeOptions = Array.from({ length: 12 }, (_, i) => ({
   label: `${i + 1} класс`,
@@ -194,6 +204,14 @@ const computedAge = (birthdate: string | null) => {
                 variant="subtle"
               >
                 Уровень {{ student.level }}
+              </UBadge>
+              <UBadge
+                v-if="boundTrack"
+                color="primary"
+                variant="subtle"
+                icon="i-lucide-book-open"
+              >
+                {{ boundTrack.bookTitle }}
               </UBadge>
               <UBadge
                 v-if="student.schoolGrade"
@@ -451,12 +469,29 @@ const computedAge = (birthdate: string | null) => {
           </div>
 
           <!-- Уровень -->
-          <UFormField label="Уровень английского">
+          <UFormField
+            label="Уровень английского"
+            help="При сохранении к ученику автоматически привяжется учебник этого уровня и откроется в «Мой путь»."
+          >
             <USelect
               v-model="editForm.level"
               :items="levelOptions"
               class="w-full"
             />
+            <p
+              v-if="trackFor(editForm.level)"
+              class="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary"
+            >
+              <UIcon
+                name="i-lucide-book-open"
+                class="size-3.5"
+              />
+              Учебник: {{ trackFor(editForm.level)?.bookTitle }}
+              <span
+                v-if="!trackFor(editForm.level)?.isActive"
+                class="text-error"
+              >— исключён из программы</span>
+            </p>
           </UFormField>
 
           <!-- Actions -->

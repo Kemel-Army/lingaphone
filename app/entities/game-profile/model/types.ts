@@ -13,6 +13,7 @@ export interface GameProfile {
   longestStreak: number
   streakFreezes: number
   lastActiveDate: string | null
+  activeAvatarId: string | null
   activeFrameId: string | null
   activeTitleId: string | null
   visualMode: string

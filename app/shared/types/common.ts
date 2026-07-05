@@ -218,6 +218,7 @@ export enum QuestStatus {
 
 export enum ShopCategory {
   POWER_UP = 'POWER_UP',
+  AVATAR = 'AVATAR',
   AVATAR_FRAME = 'AVATAR_FRAME',
   PROFILE_THEME = 'PROFILE_THEME',
   TITLE = 'TITLE'
@@ -280,8 +281,9 @@ export const STUDENT_SIDEBAR: SidebarItem[] = [
   { label: 'Журнал', icon: 'i-lucide-bar-chart-3', to: '/student/grades' },
   { label: 'Прогресс', icon: 'i-lucide-line-chart', to: '/student/progress' },
   { label: 'Материалы', icon: 'i-lucide-library', to: '/student/materials' },
-  { label: 'Учебник', icon: 'i-lucide-book-open', to: '/student/book', badge: 'NEW' },
+  { label: 'Мой путь', icon: 'i-lucide-book-open', to: '/student/book', badge: 'NEW' },
   { label: 'Маркет Достижений', icon: 'i-lucide-trophy', to: '/student/achievements' },
+  { label: 'Магазин', icon: 'i-lucide-shopping-bag', to: '/student/shop', badge: 'NEW' },
   { label: 'Рейтинг', icon: 'i-lucide-bar-chart-2', to: '/student/leaderboard' },
   { label: 'Грамматика', icon: 'i-lucide-book-marked', to: '/student/grammar', badge: 'NEW' },
   { label: 'Чтение', icon: 'i-lucide-book-open-text', to: '/student/reading', badge: 'NEW' },

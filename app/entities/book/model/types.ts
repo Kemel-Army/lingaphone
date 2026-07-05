@@ -201,6 +201,8 @@ export interface LessonUnit {
   subtitle: string | null
   orderIndex: number
   intro: IntroBlock[]
+  kind?: 'LESSON' | 'TEST'
+  passThreshold?: number
 }
 
 export interface LessonExercise {
@@ -224,6 +226,8 @@ export interface LessonUnitSummary {
   subtitle: string | null
   orderIndex: number
   exerciseCount: number
+  kind?: 'LESSON' | 'TEST'
+  passThreshold?: number
 }
 
 /** A student's attempt at one lesson exercise (own rows via RLS). */
@@ -233,4 +237,74 @@ export interface LessonAttempt {
   response: unknown
   isCorrect: boolean | null
   score: number | null
+}
+
+// ═══════════════════════════════════════════════════════════════
+// «Мой путь» (User Journey) — bound book as a gated block map
+// ═══════════════════════════════════════════════════════════════
+
+/** A unit's role inside a block: a lesson or the gating block test. */
+export type LessonUnitKind = 'LESSON' | 'TEST'
+
+export type MyPathBlockStatus = 'LOCKED' | 'AVAILABLE' | 'COMPLETED'
+
+export interface MyPathLesson {
+  id: string
+  title: string
+  orderIndex: number
+  exerciseCount: number
+  doneCount: number
+  completed: boolean
+}
+
+export interface MyPathBlockTest {
+  unitId: string
+  title: string
+  passThreshold: number
+  exerciseCount: number
+  passed: boolean
+  bestScore: number
+  attempts: number
+}
+
+export interface MyPathBlock {
+  id: string
+  title: string
+  order: number
+  status: MyPathBlockStatus
+  lessons: MyPathLesson[]
+  lessonsTotal: number
+  lessonsDone: number
+  test: MyPathBlockTest | null
+}
+
+/** The student's whole journey: bound book + ordered, gated blocks. */
+export interface MyPath {
+  level: string | null
+  tier: string | null
+  trackBookTitle: string | null
+  book: { id: string, title: string, cefrTier: string | null } | null
+  blocks: MyPathBlock[]
+}
+
+/** Result of finalizing a block test (/api/book/submit-block-test). */
+export interface BlockTestResult {
+  score: number
+  correct: number
+  total: number
+  passThreshold: number
+  passed: boolean
+  blockPassed: boolean
+  bestScore: number
+}
+
+/** A row from the LevelTrack reference matrix (ТЗ §2). */
+export interface LevelTrack {
+  level: string
+  tier: string
+  ageRange: string
+  grades: string
+  bookTitle: string
+  orderIndex: number
+  isActive: boolean
 }

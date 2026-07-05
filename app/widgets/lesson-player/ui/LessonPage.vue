@@ -6,7 +6,7 @@
  * Answers are checked on the server (deterministic); no mascot/confetti/XP.
  */
 import { useLessons } from '~/entities/book'
-import type { LessonUnitWithExercises, LessonExerciseType } from '~/entities/book'
+import type { LessonUnitWithExercises, LessonExerciseType, BlockTestResult } from '~/entities/book'
 import { useLessonPlayer } from '~/features/lesson-player'
 import type { ExerciseCheckResult } from '~/features/lesson-player'
 
@@ -41,7 +41,7 @@ const HINTS: Record<LessonExerciseType, { emoji: string, text: string }> = {
 }
 
 const { fetchUnit } = useLessons()
-const { checkExercise } = useLessonPlayer()
+const { checkExercise, submitBlockTest } = useLessonPlayer()
 
 const unit = ref<LessonUnitWithExercises | null>(null)
 const loading = ref(true)
@@ -51,13 +51,33 @@ const results = reactive<Record<string, ExerciseCheckResult>>({})
 const checking = reactive<Set<string>>(new Set())
 const isUrl = (s?: string) => !!s && /^(https?:|\/)/.test(s)
 
+// Block-test mode: a unit with kind==='TEST' gates the next block. After every
+// question is answered, the student finalizes the test → /submit-block-test.
+const isTest = computed(() => unit.value?.kind === 'TEST')
+const passThreshold = computed(() => unit.value?.passThreshold ?? 70)
+const submitting = ref(false)
+const testResult = ref<BlockTestResult | null>(null)
+
 const load = async () => {
   loading.value = true
+  testResult.value = null
   unit.value = await fetchUnit(props.unitId)
   loading.value = false
 }
 onMounted(load)
 watch(() => props.unitId, load)
+
+const submitTest = async () => {
+  if (submitting.value || testResult.value) return
+  submitting.value = true
+  try {
+    testResult.value = await submitBlockTest(props.unitId)
+  } catch {
+    // leave testResult null → button stays available for retry
+  } finally {
+    submitting.value = false
+  }
+}
 
 const statusOf = (id: string): 'idle' | 'correct' | 'wrong' => {
   const r = results[id]
@@ -305,9 +325,9 @@ const allDone = computed(() => total.value > 0 && done.value === total.value)
       </section>
     </div>
 
-    <!-- completion -->
+    <!-- completion — lesson -->
     <div
-      v-if="allDone"
+      v-if="allDone && !isTest"
       class="px-3 pb-6 sm:px-7"
     >
       <div class="duo-pop flex flex-col items-center gap-1.5 rounded-3xl bg-linear-to-br from-primary-500 to-emerald-600 p-6 text-center text-white shadow-[0_6px_0_0_var(--color-primary-700,#15803d)]">
@@ -321,6 +341,67 @@ const allDone = computed(() => total.value > 0 && done.value === total.value)
         <p class="text-sm font-medium text-white/85">
           Правильно {{ correctCount }} из {{ total }}
         </p>
+      </div>
+    </div>
+
+    <!-- completion — block test -->
+    <div
+      v-else-if="isTest"
+      class="px-3 pb-6 sm:px-7"
+    >
+      <!-- submit gate: available once every question is answered -->
+      <div
+        v-if="!testResult"
+        class="flex flex-col items-center gap-3 rounded-3xl bg-default p-6 text-center ring-1 ring-default"
+      >
+        <p class="text-sm font-medium text-muted">
+          Ответь на все вопросы и заверши тест. Порог сдачи — {{ passThreshold }}%.
+        </p>
+        <button
+          type="button"
+          class="duo-btn text-sm uppercase tracking-wide"
+          :class="allDone && !submitting ? 'duo-btn--green' : 'duo-btn--gray'"
+          :disabled="!allDone || submitting"
+          @click="submitTest"
+        >
+          <UIcon
+            :name="submitting ? 'i-lucide-loader-circle' : 'i-lucide-flag'"
+            class="size-5"
+            :class="submitting && 'animate-spin'"
+          />
+          Завершить тест ({{ done }}/{{ total }})
+        </button>
+      </div>
+
+      <!-- result -->
+      <div
+        v-else
+        class="duo-pop flex flex-col items-center gap-1.5 rounded-3xl p-6 text-center text-white shadow-[0_6px_0_0_rgba(0,0,0,0.15)]"
+        :class="testResult.passed ? 'bg-linear-to-br from-primary-500 to-emerald-600' : 'bg-linear-to-br from-rose-500 to-red-600'"
+      >
+        <UIcon
+          :name="testResult.passed ? 'i-lucide-badge-check' : 'i-lucide-rotate-ccw'"
+          class="duo-tada size-10"
+        />
+        <p class="font-display text-xl font-black">
+          {{ testResult.passed ? 'Тест сдан!' : 'Порог не пройден' }}
+        </p>
+        <p class="text-sm font-medium text-white/85">
+          Результат: {{ testResult.score }}% (нужно {{ testResult.passThreshold }}%)
+        </p>
+        <p
+          v-if="testResult.passed"
+          class="text-sm font-medium text-white/85"
+        >
+          Следующий блок открыт 🎉
+        </p>
+        <UButton
+          to="/student/book"
+          :color="testResult.passed ? 'primary' : 'error'"
+          variant="solid"
+          class="mt-2 bg-white! text-slate-900! hover:bg-white/90!"
+          :label="testResult.passed ? 'К карте «Мой путь»' : 'Вернуться и повторить'"
+        />
       </div>
     </div>
   </article>

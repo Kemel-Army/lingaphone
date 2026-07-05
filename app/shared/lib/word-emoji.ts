@@ -36,6 +36,7 @@ export const wordEmoji = (raw?: string): string => {
   if (!raw) return ''
   const w = raw.toLowerCase().trim().replace(/^(a|an|the)\s+/, '')
   if (EMOJI[w]) return EMOJI[w]
-  if (w.endsWith('s') && EMOJI[w.slice(0, -1)]) return EMOJI[w.slice(0, -1)] // plural fallback
+  const singular = w.endsWith('s') ? EMOJI[w.slice(0, -1)] : undefined // plural fallback
+  if (singular) return singular
   return ''
 }

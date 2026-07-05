@@ -12,6 +12,10 @@ interface Props {
   surname?: string
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
   frame?: 'starry' | 'galactic' | 'blackhole' | null
+  /** Emoji-персонаж из магазина. Приоритетнее фото и инициалов. */
+  emoji?: string | null
+  /** Фон под emoji-персонажем (effect.bg купленного аватара). */
+  emojiBg?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,7 +23,9 @@ const props = withDefaults(defineProps<Props>(), {
   name: '',
   surname: '',
   size: 'md',
-  frame: null
+  frame: null,
+  emoji: null,
+  emojiBg: null
 })
 
 const initials = computed(() => {
@@ -37,14 +43,35 @@ const sizeClasses: Record<string, string> = {
   '2xl': 'size-20 text-xl',
   '3xl': 'size-24 text-2xl'
 }
+
+// Emoji рисуем крупнее текста инициалов — это «лицо» персонажа.
+const emojiSizeClasses: Record<string, string> = {
+  'xs': 'size-6 text-sm',
+  'sm': 'size-8 text-base',
+  'md': 'size-10 text-xl',
+  'lg': 'size-12 text-2xl',
+  'xl': 'size-16 text-3xl',
+  '2xl': 'size-20 text-4xl',
+  '3xl': 'size-24 text-5xl'
+}
 </script>
 
 <template>
   <div
     :class="['femo-avatar-wrap', frame ? `femo-avatar-frame-${frame}` : '']"
   >
+    <div
+      v-if="emoji"
+      :class="[
+        emojiSizeClasses[size],
+        'flex items-center justify-center rounded-full leading-none select-none'
+      ]"
+      :style="{ backgroundColor: emojiBg ?? 'var(--ui-bg-elevated)' }"
+    >
+      {{ emoji }}
+    </div>
     <UAvatar
-      v-if="src"
+      v-else-if="src"
       :src="src ?? undefined"
       :alt="initials"
       :class="sizeClasses[size]"

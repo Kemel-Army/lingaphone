@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { useLingafonStudent } from '~/shared/composables/useLingafonStudent'
+import { useGamificationSync } from '~/entities/game-profile'
 import type { Database } from '~/shared/types/database.types'
 
 definePageMeta({ layout: 'dashboard' })
+
+// Оживляем источники кристаллов (серия + квесты + достижения) раз за сессию.
+const { syncDaily } = useGamificationSync()
+onMounted(() => {
+  syncDaily()
+})
 
 type MedalKind = Database['public']['Enums']['MedalKind']
 type EnglishLevel = Database['public']['Enums']['EnglishLevel']

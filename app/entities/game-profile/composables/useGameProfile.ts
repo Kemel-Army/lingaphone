@@ -222,7 +222,7 @@ export const useGameProfile = () => {
 
   const equipItem = async (
     _studentId: string,
-    category: 'AVATAR_FRAME' | 'TITLE' | 'PROFILE_THEME',
+    category: 'AVATAR' | 'AVATAR_FRAME' | 'TITLE' | 'PROFILE_THEME',
     shopItemId: string | null
   ): Promise<void> => {
     await $fetch('/api/gamification/equip-item', {

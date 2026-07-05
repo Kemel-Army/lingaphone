@@ -35,3 +35,6 @@ test-results/
 # Vercel build output
 .vercel
 .env*.local
+
+# Large source documents (content extracted into SQL migrations)
+*.docx

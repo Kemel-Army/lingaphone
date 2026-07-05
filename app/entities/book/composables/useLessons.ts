@@ -18,7 +18,7 @@ export const useLessons = () => {
   const fetchModuleUnits = async (moduleId: string): Promise<LessonUnitSummary[]> => {
     const { data, error } = await supabase
       .from('LessonUnit')
-      .select('id, title, subtitle, orderIndex, LessonExercise ( count )')
+      .select('id, title, subtitle, orderIndex, kind, passThreshold, LessonExercise ( count )')
       .eq('moduleId', moduleId)
       .order('orderIndex')
     if (error) throw error
@@ -30,7 +30,9 @@ export const useLessons = () => {
         title: u.title,
         subtitle: u.subtitle,
         orderIndex: u.orderIndex,
-        exerciseCount: u.LessonExercise?.[0]?.count ?? 0
+        exerciseCount: u.LessonExercise?.[0]?.count ?? 0,
+        kind: u.kind ?? 'LESSON',
+        passThreshold: u.passThreshold ?? 70
       }
     })
   }
@@ -40,7 +42,7 @@ export const useLessons = () => {
     const { data, error } = await supabase
       .from('LessonUnit')
       .select(
-        'id, moduleId, title, subtitle, orderIndex, intro,'
+        'id, moduleId, title, subtitle, orderIndex, intro, kind, passThreshold,'
         + ' LessonExercise ( id, unitId, orderIndex, type, instruction, content, xp )'
       )
       .eq('id', unitId)

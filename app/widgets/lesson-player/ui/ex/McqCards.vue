@@ -9,6 +9,19 @@ const selected = ref<string>('')
 const isUrl = (s?: string) => !!s && /^(https?:|\/)/.test(s)
 const hasImages = computed(() => content.value.options.some(o => o.image))
 
+// Friendly emoji cue for object words (e.g. "___ apple" → 🍎) when no image is
+// set, so picture-oriented items stay solvable/clear. wordEmoji returns '' for
+// non-objects (grammar words), so nothing shows there.
+const questionEmoji = computed(() => {
+  if (content.value.image) return ''
+  const words = (content.value.question ?? '').replace(/[_.,!?;:()"']/g, ' ').split(/\s+/).filter(Boolean)
+  for (const w of words) {
+    const e = wordEmoji(w)
+    if (e) return e
+  }
+  return ''
+})
+
 watch(selected, v => emit('change', { response: { optionId: v }, ready: !!v }), { immediate: true })
 const pick = (id: string) => {
   if (!props.disabled) selected.value = id
@@ -37,6 +50,10 @@ const cardClass = (id: string) => {
       v-else-if="content.image"
       class="text-7xl"
     >{{ content.image }}</span>
+    <span
+      v-else-if="questionEmoji"
+      class="text-7xl leading-none"
+    >{{ questionEmoji }}</span>
     <p
       v-if="content.question"
       class="text-center text-xl font-bold"
@@ -67,6 +84,10 @@ const cardClass = (id: string) => {
           v-else-if="o.image"
           class="text-5xl"
         >{{ o.image }}</span>
+        <span
+          v-else-if="wordEmoji(o.label)"
+          class="text-5xl leading-none"
+        >{{ wordEmoji(o.label) }}</span>
         <span v-if="o.label">{{ o.label }}</span>
       </button>
     </div>

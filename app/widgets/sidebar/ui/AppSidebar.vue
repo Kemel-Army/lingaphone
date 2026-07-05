@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useCurrentUser, UserAvatar } from '~/entities/user'
+import { useMyCosmetics } from '~/entities/game-profile'
 import { useAuthActions } from '~/features/auth'
 import { SIDEBAR_BY_ROLE, ROLE_LABELS } from '~/shared/types/common'
 import type { SidebarItem, UserRole } from '~/shared/types/common'
 
 const { currentUser, fullName, role, homeRoute, avatarUrl } = useCurrentUser()
+const { avatarEmoji, avatarBg, frameStyle } = useMyCosmetics()
 const { logout } = useAuthActions()
 const route = useRoute()
 
@@ -68,6 +70,9 @@ const roleLabel = computed(() => {
             :src="avatarUrl"
             :name="currentUser.name"
             :surname="currentUser.surname"
+            :emoji="avatarEmoji"
+            :emoji-bg="avatarBg"
+            :frame="frameStyle"
             size="sm"
           />
           <div class="min-w-0 flex-1 text-left">
