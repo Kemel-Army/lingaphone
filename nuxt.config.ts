@@ -65,12 +65,15 @@ export default defineNuxtConfig({
     mailgunDomain: process.env.MAILGUN_DOMAIN ?? '',
     paymentApiKey: process.env.PAYMENT_API_KEY ?? '',
     paymentMockMode: process.env.PAYMENT_MOCK_MODE ?? 'true',
+    // Wazzup24 aggregator (WhatsApp/Telegram/…) — ТЗ разд. 2.1/6, path A (iframe).
+    wazzupApiKey: process.env.WAZZUP_API_KEY ?? '',
     // Shared secret for server-internal $fetch calls. Routes that should
     // never be reachable from the public internet require this header.
     internalApiKey: process.env.INTERNAL_API_KEY ?? '',
     sentryDsn: process.env.SENTRY_DSN ?? '',
     public: {
       appName: 'Lingaphone',
+      jitsiDomain: process.env.JITSI_DOMAIN ?? 'meet.jit.si',
       sentryDsn: process.env.SENTRY_DSN ?? '',
       turnServerUrl: process.env.TURN_SERVER_URL ?? '',
       turnServerUser: process.env.TURN_SERVER_USER ?? '',
@@ -111,7 +114,9 @@ export default defineNuxtConfig({
     },
     scheduledTasks: {
       // Run early warning check daily at 9:00 AM
-      '0 9 * * *': ['early-warning']
+      '0 9 * * *': ['early-warning'],
+      // Оплата/успеваемость — ежедневно в 8:00 (ТЗ разд. 16)
+      '0 8 * * *': ['notify-daily']
     }
   },
 

@@ -285,6 +285,8 @@ export interface MyPath {
   trackBookTitle: string | null
   book: { id: string, title: string, cefrTier: string | null } | null
   blocks: MyPathBlock[]
+  /** Отсканированный учебник (страницы-картинки), если загружен — для чтения. */
+  scanModule: { id: string, title: string, pageCount: number } | null
 }
 
 /** Result of finalizing a block test (/api/book/submit-block-test). */

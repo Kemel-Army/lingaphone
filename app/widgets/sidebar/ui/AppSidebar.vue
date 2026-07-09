@@ -36,7 +36,7 @@ const roleLabel = computed(() => {
 </script>
 
 <template>
-  <UDashboardSidebar>
+  <UDashboardSidebar class="glass-panel">
     <template #header>
       <NuxtLink
         :to="homeRoute"

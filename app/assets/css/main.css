@@ -2511,3 +2511,31 @@ img, video, iframe {
   .duo-btn:active:not(:disabled) { transform: none; }
   .duo-card-hover:hover { transform: none; }
 }
+
+/* ============ Liquid Glass shell (ТЗ разд. 1.1 / 17) ============ */
+/* Полупрозрачные стеклянные сайдбар и навбар (стиль Femo). Админ/учитель/
+   директор — чистый профессиональный вид; студенческие страницы остаются
+   мультяшными за счёт контента, не шелла. */
+.app-shell {
+  background-image:
+    radial-gradient(70rem 40rem at 0% -10%, color-mix(in oklab, var(--ui-primary, #0ea5e9) 14%, transparent), transparent 60%),
+    radial-gradient(60rem 40rem at 110% 0%, color-mix(in oklab, #06b6d4 12%, transparent), transparent 55%);
+}
+.glass-panel {
+  background-color: rgb(255 255 255 / 0.62) !important;
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border-color: rgb(255 255 255 / 0.35) !important;
+}
+.dark .app-shell {
+  background-image:
+    radial-gradient(70rem 40rem at 0% -10%, color-mix(in oklab, #0ea5e9 16%, transparent), transparent 60%),
+    radial-gradient(60rem 40rem at 110% 0%, color-mix(in oklab, #06b6d4 14%, transparent), transparent 55%);
+}
+.dark .glass-panel {
+  background-color: rgb(2 6 23 / 0.55) !important;
+  border-color: rgb(255 255 255 / 0.08) !important;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .glass-panel { transition: background-color 0.3s ease; }
+}

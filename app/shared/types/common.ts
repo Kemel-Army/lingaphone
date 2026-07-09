@@ -1,10 +1,14 @@
 // Common types used across the application
 
+/** Nuxt UI badge/button color union — shared across CRM & dashboard UI. */
+export type UiColor = 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
+
 export enum UserRole {
   STUDENT = 'STUDENT',
   PARENT = 'PARENT',
   TEACHER = 'TEACHER',
-  ADMIN = 'ADMIN'
+  ADMIN = 'ADMIN',
+  DIRECTOR = 'DIRECTOR'
 }
 
 export enum AIMode {
@@ -246,14 +250,16 @@ export const ROLE_HOME_ROUTES: Record<UserRole, string> = {
   [UserRole.STUDENT]: '/student',
   [UserRole.PARENT]: '/parent',
   [UserRole.TEACHER]: '/teacher',
-  [UserRole.ADMIN]: '/admin'
+  [UserRole.ADMIN]: '/admin',
+  [UserRole.DIRECTOR]: '/director'
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.STUDENT]: 'Ученик',
   [UserRole.PARENT]: 'Родитель',
   [UserRole.TEACHER]: 'Педагог',
-  [UserRole.ADMIN]: 'Администратор'
+  [UserRole.ADMIN]: 'Администратор',
+  [UserRole.DIRECTOR]: 'Директор'
 }
 
 // Sidebar navigation items per role
@@ -273,9 +279,11 @@ export interface SidebarItem {
 
 export const STUDENT_SIDEBAR: SidebarItem[] = [
   { label: 'Главная', icon: 'i-lucide-home', to: '/student' },
+  { label: 'Мой персонаж', icon: 'i-lucide-smile', to: '/student/avatar', badge: 'NEW' },
   { label: 'AI-тренажёр', icon: 'i-lucide-headphones', to: '/student/practice', badge: 'NEW' },
   { label: 'Мини-игры', icon: 'i-lucide-gamepad-2', to: '/student/game', badge: 'NEW' },
   { label: 'Мои группы', icon: 'i-lucide-users', to: '/student/groups' },
+  { label: 'Онлайн-уроки', icon: 'i-lucide-video', to: '/student/online', badge: 'NEW' },
   { label: 'Расписание', icon: 'i-lucide-calendar', to: '/student/schedule' },
   { label: 'Домашка', icon: 'i-lucide-book-open', to: '/student/homework' },
   { label: 'Журнал', icon: 'i-lucide-bar-chart-3', to: '/student/grades' },
@@ -284,6 +292,7 @@ export const STUDENT_SIDEBAR: SidebarItem[] = [
   { label: 'Мой путь', icon: 'i-lucide-book-open', to: '/student/book', badge: 'NEW' },
   { label: 'Маркет Достижений', icon: 'i-lucide-trophy', to: '/student/achievements' },
   { label: 'Магазин', icon: 'i-lucide-shopping-bag', to: '/student/shop', badge: 'NEW' },
+  { label: 'Linga Coins', icon: 'i-lucide-coins', to: '/student/coins', badge: 'NEW' },
   { label: 'Рейтинг', icon: 'i-lucide-bar-chart-2', to: '/student/leaderboard' },
   { label: 'Грамматика', icon: 'i-lucide-book-marked', to: '/student/grammar', badge: 'NEW' },
   { label: 'Чтение', icon: 'i-lucide-book-open-text', to: '/student/reading', badge: 'NEW' },
@@ -301,18 +310,29 @@ export const PARENT_SIDEBAR: SidebarItem[] = [
 export const TEACHER_SIDEBAR: SidebarItem[] = [
   { label: 'Главная', icon: 'i-lucide-home', to: '/teacher' },
   { label: 'Мои группы', icon: 'i-lucide-layers', to: '/teacher/groups' },
+  { label: 'Учебники', icon: 'i-lucide-library', to: '/teacher/books', badge: 'NEW' },
   { label: 'Мои ученики', icon: 'i-lucide-users', to: '/teacher/students' },
   { label: 'Задания', icon: 'i-lucide-file-text', to: '/teacher/homework' },
   { label: 'Журнал оценок', icon: 'i-lucide-table', to: '/teacher/grades' },
   { label: 'Проверка работ', icon: 'i-lucide-inbox', to: '/teacher/submissions' },
+  { label: 'Аналитика', icon: 'i-lucide-bar-chart-3', to: '/teacher/analytics', badge: 'NEW' },
+  { label: 'Linga Coins', icon: 'i-lucide-coins', to: '/teacher/coins', badge: 'NEW' },
   { label: 'Тестирование', icon: 'i-lucide-clipboard-list', to: '/teacher/testing' },
+  { label: 'Онлайн-уроки', icon: 'i-lucide-video', to: '/teacher/online', badge: 'NEW' },
   { label: 'Расписание', icon: 'i-lucide-calendar-days', to: '/teacher/schedule' },
   { label: 'Профиль', icon: 'i-lucide-user-circle', to: '/teacher/profile' }
 ]
 
 export const ADMIN_SIDEBAR: SidebarItem[] = [
   { label: 'Дашборд', icon: 'i-lucide-layout-dashboard', to: '/admin' },
+  { label: 'Обзор директора', icon: 'i-lucide-crown', to: '/admin/director', badge: 'NEW' },
+  { label: 'Лиды', icon: 'i-lucide-user-plus', to: '/admin/leads', badge: 'NEW' },
+  { label: 'Задачи', icon: 'i-lucide-check-square', to: '/admin/tasks', badge: 'NEW' },
+  { label: 'Отчёты', icon: 'i-lucide-file-bar-chart', to: '/admin/reports', badge: 'NEW' },
+  { label: 'Финансы', icon: 'i-lucide-wallet', to: '/admin/finances', badge: 'NEW' },
+  { label: 'Мессенджер', icon: 'i-lucide-message-circle', to: '/admin/messenger', badge: 'NEW' },
   { label: 'Ученики', icon: 'i-lucide-graduation-cap', to: '/admin/students' },
+  { label: 'Родители', icon: 'i-lucide-contact', to: '/admin/parents', badge: 'NEW' },
   { label: 'Учителя', icon: 'i-lucide-users', to: '/admin/teachers' },
   { label: 'Группы', icon: 'i-lucide-layout-grid', to: '/admin/groups' },
   { label: 'Интерактивная книга', icon: 'i-lucide-book-open', to: '/admin/interactive-book' },
@@ -321,9 +341,16 @@ export const ADMIN_SIDEBAR: SidebarItem[] = [
   { label: 'Настройки', icon: 'i-lucide-settings', to: '/admin/settings' }
 ]
 
+export const DIRECTOR_SIDEBAR: SidebarItem[] = [
+  { label: 'Обзор', icon: 'i-lucide-crown', to: '/director' },
+  { label: 'Филиалы', icon: 'i-lucide-building-2', to: '/director/branches' },
+  { label: 'Отчёты', icon: 'i-lucide-file-bar-chart', to: '/director/reports' }
+]
+
 export const SIDEBAR_BY_ROLE: Record<UserRole, SidebarItem[]> = {
   [UserRole.STUDENT]: STUDENT_SIDEBAR,
   [UserRole.PARENT]: PARENT_SIDEBAR,
   [UserRole.TEACHER]: TEACHER_SIDEBAR,
-  [UserRole.ADMIN]: ADMIN_SIDEBAR
+  [UserRole.ADMIN]: ADMIN_SIDEBAR,
+  [UserRole.DIRECTOR]: DIRECTOR_SIDEBAR
 }

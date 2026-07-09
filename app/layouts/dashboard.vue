@@ -5,7 +5,7 @@ import { AppNavbar } from '~/widgets/navbar'
 
 <template>
   <UApp>
-    <UDashboardGroup>
+    <UDashboardGroup class="app-shell">
       <AppSidebar />
       <UDashboardPanel>
         <template #header>

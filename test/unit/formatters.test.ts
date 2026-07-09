@@ -95,32 +95,34 @@ describe('getInitials', () => {
 })
 
 describe('getMasteryColor', () => {
-  it('returns green for high mastery', () => {
-    expect(getMasteryColor(80)).toContain('green')
+  // Пороги источника: ≥90/≥70 green, ≥50 amber, ≥30 orange, иначе red.
+  it('returns green for high mastery (≥70)', () => {
+    expect(getMasteryColor(70)).toContain('green')
     expect(getMasteryColor(100)).toContain('green')
   })
 
-  it('returns yellow for medium-high', () => {
-    expect(getMasteryColor(60)).toContain('yellow')
-    expect(getMasteryColor(79)).toContain('yellow')
+  it('returns amber for medium (50–69)', () => {
+    expect(getMasteryColor(50)).toContain('amber')
+    expect(getMasteryColor(69)).toContain('amber')
   })
 
-  it('returns orange for medium-low', () => {
-    expect(getMasteryColor(40)).toContain('orange')
-    expect(getMasteryColor(59)).toContain('orange')
+  it('returns orange for medium-low (30–49)', () => {
+    expect(getMasteryColor(30)).toContain('orange')
+    expect(getMasteryColor(49)).toContain('orange')
   })
 
-  it('returns red for low mastery', () => {
+  it('returns red for low mastery (<30)', () => {
     expect(getMasteryColor(0)).toContain('red')
-    expect(getMasteryColor(39)).toContain('red')
+    expect(getMasteryColor(29)).toContain('red')
   })
 })
 
 describe('getMasteryBgColor', () => {
   it('returns appropriate background classes', () => {
     expect(getMasteryBgColor(90)).toContain('green')
-    expect(getMasteryBgColor(70)).toContain('yellow')
-    expect(getMasteryBgColor(50)).toContain('orange')
+    expect(getMasteryBgColor(70)).toContain('green')
+    expect(getMasteryBgColor(50)).toContain('amber')
+    expect(getMasteryBgColor(40)).toContain('orange')
     expect(getMasteryBgColor(20)).toContain('red')
   })
 })

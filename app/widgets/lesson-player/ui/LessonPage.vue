@@ -20,7 +20,8 @@ import TrueFalse from './ex/TrueFalse.vue'
 import SortColumns from './ex/SortColumns.vue'
 import ShortText from './ex/ShortText.vue'
 
-const props = defineProps<{ unitId: string }>()
+// readOnly — просмотр админом/учителем: без проверки/сабмита, задания статичны.
+const props = defineProps<{ unitId: string, readOnly?: boolean }>()
 
 const WIDGETS: Record<LessonExerciseType, unknown> = {
   FILL_BLANK: FillBlank, CHOOSE: Choose, MCQ: Mcq, WORD_IMAGE_MATCH: WordImageMatch,
@@ -177,7 +178,10 @@ const allDone = computed(() => total.value > 0 && done.value === total.value)
     </header>
 
     <!-- progress -->
-    <div class="flex items-center gap-3 border-b border-default bg-default px-5 py-3 sm:px-8">
+    <div
+      v-if="!readOnly"
+      class="flex items-center gap-3 border-b border-default bg-default px-5 py-3 sm:px-8"
+    >
       <div class="duo-progress h-3.5 flex-1">
         <div
           class="duo-progress-fill"
@@ -274,7 +278,7 @@ const allDone = computed(() => total.value > 0 && done.value === total.value)
 
         <!-- gentle guidance — soft, static -->
         <p
-          v-if="!results[ex.id]"
+          v-if="!results[ex.id] && !readOnly"
           class="mb-4 ml-12 inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600 ring-1 ring-primary-100 dark:bg-primary-950/40 dark:text-primary-300 dark:ring-primary-900/50"
         >
           <span class="text-sm leading-none">{{ HINTS[ex.type].emoji }}</span>
@@ -286,11 +290,14 @@ const allDone = computed(() => total.value > 0 && done.value === total.value)
           :exercise="ex"
           :status="statusOf(ex.id)"
           :reveal="results[ex.id]?.reveal ?? null"
-          :disabled="!!results[ex.id]"
+          :disabled="readOnly || !!results[ex.id]"
           @change="(v: { response: Record<string, unknown>, ready: boolean }) => onChange(ex.id, v)"
         />
 
-        <div class="mt-4 flex flex-wrap items-center gap-3">
+        <div
+          v-if="!readOnly"
+          class="mt-4 flex flex-wrap items-center gap-3"
+        >
           <button
             v-if="!results[ex.id]"
             type="button"
@@ -327,7 +334,7 @@ const allDone = computed(() => total.value > 0 && done.value === total.value)
 
     <!-- completion — lesson -->
     <div
-      v-if="allDone && !isTest"
+      v-if="allDone && !isTest && !readOnly"
       class="px-3 pb-6 sm:px-7"
     >
       <div class="duo-pop flex flex-col items-center gap-1.5 rounded-3xl bg-linear-to-br from-primary-500 to-emerald-600 p-6 text-center text-white shadow-[0_6px_0_0_var(--color-primary-700,#15803d)]">
@@ -346,7 +353,7 @@ const allDone = computed(() => total.value > 0 && done.value === total.value)
 
     <!-- completion — block test -->
     <div
-      v-else-if="isTest"
+      v-else-if="isTest && !readOnly"
       class="px-3 pb-6 sm:px-7"
     >
       <!-- submit gate: available once every question is answered -->

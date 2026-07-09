@@ -1,7 +1,43 @@
 import type { Book, BookModule, BookWithModules, BookLevel } from '../model/types'
 
+export interface LibraryModule {
+  id: string
+  title: string
+  order: number
+  pageCount: number
+  pdfUrl: string | null
+}
+export interface LibraryBook {
+  id: string
+  title: string
+  level: BookLevel
+  isPublished: boolean
+  modules: LibraryModule[]
+}
+
 export const useBooks = () => {
   const supabase = useTypedSupabaseClient()
+
+  /**
+   * Библиотека для админа/учителя — ВСЕ книги (вкл. черновики) с модулями
+   * и числом отрисованных страниц. RLS: админ/учитель видят всё.
+   */
+  const fetchAllBooksWithModules = async (): Promise<LibraryBook[]> => {
+    const { data, error } = await supabase
+      .from('Book')
+      .select('id, title, level, isPublished, createdAt, Module ( id, title, order, pageCount, pdfUrl )')
+      .order('level')
+      .order('createdAt', { ascending: false })
+    if (error) throw error
+    type Row = { id: string, title: string, level: BookLevel, isPublished: boolean, Module: LibraryModule[] | null }
+    return ((data ?? []) as unknown as Row[]).map(b => ({
+      id: b.id,
+      title: b.title,
+      level: b.level,
+      isPublished: b.isPublished,
+      modules: [...(b.Module ?? [])].sort((a, c) => a.order - c.order)
+    }))
+  }
 
   const fetchBooks = async (level?: BookLevel): Promise<Book[]> => {
     let query = supabase
@@ -64,5 +100,5 @@ export const useBooks = () => {
     await $fetch(`/api/admin/books/${id}`, { method: 'DELETE' })
   }
 
-  return { fetchBooks, fetchAllBooks, fetchBookWithModules, uploadBook, deleteBook }
+  return { fetchBooks, fetchAllBooks, fetchAllBooksWithModules, fetchBookWithModules, uploadBook, deleteBook }
 }

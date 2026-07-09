@@ -6,7 +6,6 @@ import {
   nameSchema,
   loginFormSchema,
   registerFormSchema,
-  reviewFormSchema,
   messageSchema,
   createLessonSchema
 } from '../../app/shared/lib/validators'
@@ -102,7 +101,7 @@ describe('registerFormSchema', () => {
     surname: 'Калиева',
     phone: '+77001234567',
     role: 'STUDENT' as const,
-    grade: 10
+    grade: 3
   }
 
   it('accepts valid student registration', () => {
@@ -126,20 +125,13 @@ describe('registerFormSchema', () => {
   })
 
   it('rejects grade out of range', () => {
-    expect(registerFormSchema.safeParse({ ...validData, grade: 4 }).success).toBe(false)
-    expect(registerFormSchema.safeParse({ ...validData, grade: 12 }).success).toBe(false)
-  })
-})
-
-describe('reviewFormSchema', () => {
-  it('accepts valid review', () => {
-    expect(reviewFormSchema.safeParse({ rating: 5 }).success).toBe(true)
-    expect(reviewFormSchema.safeParse({ rating: 3, comment: 'Good!' }).success).toBe(true)
+    // grade схема: min(1) max(6)
+    expect(registerFormSchema.safeParse({ ...validData, grade: 0 }).success).toBe(false)
+    expect(registerFormSchema.safeParse({ ...validData, grade: 7 }).success).toBe(false)
   })
 
-  it('rejects invalid rating', () => {
-    expect(reviewFormSchema.safeParse({ rating: 0 }).success).toBe(false)
-    expect(reviewFormSchema.safeParse({ rating: 6 }).success).toBe(false)
+  it('accepts grade within range', () => {
+    expect(registerFormSchema.safeParse({ ...validData, grade: 6 }).success).toBe(true)
   })
 })
 

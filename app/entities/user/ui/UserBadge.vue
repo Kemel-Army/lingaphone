@@ -14,7 +14,8 @@ const colorMap: Record<UserRole, string> = {
   [UserRole.STUDENT]: 'primary',
   [UserRole.PARENT]: 'info',
   [UserRole.TEACHER]: 'success',
-  [UserRole.ADMIN]: 'error'
+  [UserRole.ADMIN]: 'error',
+  [UserRole.DIRECTOR]: 'warning'
 }
 </script>
 

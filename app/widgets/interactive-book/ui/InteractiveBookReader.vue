@@ -11,7 +11,8 @@ import { useBookExercises } from '~/features/book-exercises'
 import type { CheckResult } from '~/features/book-exercises'
 import ExerciseField from './ExerciseField.vue'
 
-const props = defineProps<{ moduleId: string }>()
+// readOnly — режим просмотра (админ/учитель): без попыток ученика и проверки.
+const props = defineProps<{ moduleId: string, readOnly?: boolean }>()
 
 const { fetchModulePages, fetchAttemptsByExercises } = useBookPages()
 const { checkAnswer } = useBookExercises()
@@ -30,6 +31,7 @@ const load = async () => {
   try {
     const p = await fetchModulePages(props.moduleId)
     pages.value = p
+    if (props.readOnly) return
     const ids = p.flatMap(pg => pg.exercises.map(e => e.id))
     const attempts = await fetchAttemptsByExercises(ids)
     // Seed previously-checked answers so the reader restores ✓/✗ on return.
@@ -130,7 +132,10 @@ const responseFor = (ex: PageExercise) => responses[ex.id] ?? {}
         <!-- page toolbar -->
         <div class="flex items-center justify-between px-1">
           <span class="text-xs font-semibold text-muted">Стр. {{ page.pageNumber }}</span>
-          <div class="flex items-center gap-2">
+          <div
+            v-if="!readOnly"
+            class="flex items-center gap-2"
+          >
             <span
               v-if="page.exercises.length"
               class="text-xs font-medium text-muted"

@@ -9,7 +9,7 @@ import { UserRole, ROLE_HOME_ROUTES } from '~/shared/types/common'
  * 2. **Cross-role redirect** — an authenticated user trying to peek into
  *    another role's pages gets bounced to their own dashboard.
  */
-const PROTECTED_PREFIXES = ['/student', '/parent', '/teacher', '/admin', '/lesson', '/messenger']
+const PROTECTED_PREFIXES = ['/student', '/parent', '/teacher', '/admin', '/director', '/lesson', '/messenger']
 
 const isProtected = (path: string) =>
   PROTECTED_PREFIXES.some(p => path === p || path.startsWith(`${p}/`))
@@ -18,7 +18,8 @@ const ROLE_TO_PREFIX: Record<UserRole, string> = {
   [UserRole.STUDENT]: '/student',
   [UserRole.PARENT]: '/parent',
   [UserRole.TEACHER]: '/teacher',
-  [UserRole.ADMIN]: '/admin'
+  [UserRole.ADMIN]: '/admin',
+  [UserRole.DIRECTOR]: '/director'
 }
 
 export default defineNuxtRouteMiddleware((to) => {

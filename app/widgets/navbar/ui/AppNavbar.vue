@@ -3,8 +3,23 @@ import { useCurrentUser, UserAvatar } from '~/entities/user'
 import { useNotifications, NotificationItem } from '~/entities/notification'
 import type { AppNotification } from '~/entities/notification'
 import { useAuthActions } from '~/features/auth'
+import { useDirector, useDirectorBranch, ALL_BRANCHES } from '~/features/director-stats'
+import { UserRole } from '~/shared/types/common'
 
 const { currentUser, fullName, role, avatarUrl, internalId } = useCurrentUser()
+
+// Свитчер филиалов — только директор (ТЗ разд. 8).
+const isDirector = computed(() => role.value === UserRole.DIRECTOR)
+const selectedBranch = useDirectorBranch()
+const { fetchBranches } = useDirector()
+const branchOptions = ref<{ label: string, value: string }[]>([{ label: 'Все филиалы', value: ALL_BRANCHES }])
+onMounted(async () => {
+  if (!isDirector.value) return
+  try {
+    const bs = await fetchBranches()
+    branchOptions.value = [{ label: 'Все филиалы', value: ALL_BRANCHES }, ...bs.map(b => ({ label: b.name, value: b.id }))]
+  } catch { /* ignore */ }
+})
 const { logout } = useAuthActions()
 const { locale, setLocale } = useI18n()
 
@@ -104,9 +119,17 @@ const userMenuItems = computed(() => [
 </script>
 
 <template>
-  <UDashboardNavbar>
+  <UDashboardNavbar class="glass-panel">
     <template #left>
       <UDashboardSidebarCollapse />
+      <USelect
+        v-if="isDirector"
+        v-model="selectedBranch"
+        :items="branchOptions"
+        icon="i-lucide-building-2"
+        size="sm"
+        class="ml-2 w-48"
+      />
     </template>
 
     <template #right>

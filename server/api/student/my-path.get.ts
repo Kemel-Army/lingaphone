@@ -38,7 +38,8 @@ export default defineEventHandler(async (event) => {
     tier: track?.tier ?? null,
     trackBookTitle: track?.bookTitle ?? null,
     book: null as null | { id: string, title: string, cefrTier: string | null },
-    blocks: [] as any[]
+    blocks: [] as any[],
+    scanModule: null as null | { id: string, title: string, pageCount: number }
   }
   if (!level) return base
 
@@ -50,11 +51,15 @@ export default defineEventHandler(async (event) => {
   if (!book) return base
   base.book = { id: book.id, title: book.title, cefrTier: book.cefrTier }
 
-  // Blocks (modules) ordered.
+  // Blocks (modules) ordered. Отсканированный учебник (pageCount>0) — не блок
+  // «Мой путь», а отдельная читалка → отделяем его.
   const { data: modules } = await supabase
-    .from('Module').select('id, title, order').eq('bookId', book.id).order('order') as unknown as
-    { data: Array<{ id: string, title: string, order: number }> | null }
-  const blocks = modules ?? []
+    .from('Module').select('id, title, order, pageCount').eq('bookId', book.id).order('order') as unknown as
+    { data: Array<{ id: string, title: string, order: number, pageCount: number }> | null }
+  const allModules = modules ?? []
+  const scan = allModules.find(m => (m.pageCount ?? 0) > 0)
+  if (scan) base.scanModule = { id: scan.id, title: scan.title, pageCount: scan.pageCount }
+  const blocks = allModules.filter(m => (m.pageCount ?? 0) === 0)
   if (!blocks.length) return base
   const moduleIds = blocks.map(b => b.id)
 
