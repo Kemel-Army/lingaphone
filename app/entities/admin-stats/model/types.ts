@@ -1,3 +1,5 @@
+import type { ScheduleSlot } from '~/shared/lib/schedule'
+
 export interface AdminKpi {
   totalStudents: number
   activeStudents7d: number
@@ -30,6 +32,38 @@ export interface AdminStudent {
   lastActiveDate: string | null
   createdAt: string
   groupCount: number
+  status: 'ACTIVE' | 'PAUSED' | 'DROPPED'
+}
+
+export interface AdminStudentGroup {
+  id: string
+  name: string
+  level: string
+  teacherName: string
+  teacherAvatarUrl: string | null
+  schedule: ScheduleSlot[]
+}
+
+export interface AdminStudentSubscription {
+  id: string
+  plan: string
+  course: string | null
+  price: number
+  lessonsTotal: number
+  lessonsUsed: number
+  startAt: string
+  endAt: string | null
+  nextPaymentAt: string | null
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'EXPIRED'
+}
+
+export interface AdminStudentAttendance {
+  lessonId: string
+  status: 'PRESENT' | 'ABSENT' | 'LATE'
+  markedAt: string
+  lessonTopic: string | null
+  lessonStartsAt: string
+  groupName: string
 }
 
 export interface AdminTeacher {

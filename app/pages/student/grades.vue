@@ -76,7 +76,7 @@ const predictedMedalFromAvg = (avg: number) => {
     <div class="p-3 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-5xl mx-auto">
       <header class="space-y-2">
         <p class="text-sm font-bold text-primary uppercase tracking-wider">
-          📊 Журнал
+          📊 Дневник
         </p>
         <h1 class="text-3xl sm:text-4xl font-black tracking-tight">
           Мои оценки

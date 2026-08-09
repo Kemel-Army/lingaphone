@@ -3,6 +3,8 @@ import type { OnlineLesson } from '~/features/online-lesson'
 
 defineProps<{
   lessons: OnlineLesson[]
+  /** Route to the schedule for teacher/admin — shown as a hint on empty state. */
+  scheduleHintTo?: string
 }>()
 
 const fmt = (d: string) => new Date(d).toLocaleString('ru-RU', {
@@ -70,11 +72,25 @@ const fmt = (d: string) => new Date(d).toLocaleString('ru-RU', {
       </UButton>
     </div>
 
-    <p
+    <div
       v-if="!lessons.length"
       class="text-center text-muted py-12"
     >
-      Нет запланированных онлайн-уроков
-    </p>
+      <p>Нет запланированных онлайн-уроков</p>
+      <template v-if="scheduleHintTo">
+        <p class="text-xs mt-1">
+          Похоже, для вашей группы не запланировано будущих уроков
+        </p>
+        <UButton
+          :to="scheduleHintTo"
+          size="sm"
+          variant="soft"
+          icon="i-lucide-calendar-plus"
+          class="mt-3"
+        >
+          Открыть расписание
+        </UButton>
+      </template>
+    </div>
   </div>
 </template>

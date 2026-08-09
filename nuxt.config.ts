@@ -116,7 +116,9 @@ export default defineNuxtConfig({
       // Run early warning check daily at 9:00 AM
       '0 9 * * *': ['early-warning'],
       // Оплата/успеваемость — ежедневно в 8:00 (ТЗ разд. 16)
-      '0 8 * * *': ['notify-daily']
+      '0 8 * * *': ['notify-daily'],
+      // Продлить горизонт уроков (иначе «Онлайн-уроки» пустеет через ~12 недель)
+      '0 3 * * 1': ['extend-lesson-schedule']
     }
   },
 

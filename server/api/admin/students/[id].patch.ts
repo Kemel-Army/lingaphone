@@ -10,7 +10,8 @@ const bodySchema = z.object({
   iin: z.string().max(12).trim().nullable().optional(),
   birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   schoolGrade: z.number().int().min(1).max(12).nullable().optional(),
-  level: z.enum(['A1', 'A2', 'S1', 'S2', 'B2', 'F1', 'F2', 'F3', 'F4']).optional()
+  level: z.enum(['A1', 'A2', 'S1', 'S2', 'B2', 'F1', 'F2', 'F3', 'F4']).optional(),
+  status: z.enum(['ACTIVE', 'PAUSED', 'DROPPED']).optional()
 })
 
 export default defineEventHandler(async (event) => {
@@ -59,6 +60,7 @@ export default defineEventHandler(async (event) => {
   if (body.birthdate !== undefined) studentUpdates.birthdate = body.birthdate
   if (body.schoolGrade !== undefined) studentUpdates.schoolGrade = body.schoolGrade
   if (body.level !== undefined) studentUpdates.level = body.level
+  if (body.status !== undefined) studentUpdates.status = body.status
 
   if (Object.keys(studentUpdates).length > 0) {
     const { error: studentError } = await supabase

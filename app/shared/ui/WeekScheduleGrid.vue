@@ -13,6 +13,7 @@ export interface GridLesson {
   durationMin?: number
   topic?: string | null
   status?: string
+  type?: LessonKind
   groupId: string
   groupName: string
   groupLevel?: string
@@ -228,8 +229,14 @@ const legend = computed(() => {
               :class="lessonCellClass(lesson)"
               @click="emit('select', lesson)"
             >
-              <p class="text-xs font-semibold leading-tight truncate">
-                {{ lesson.groupName }}
+              <p class="text-xs font-semibold leading-tight truncate flex items-center gap-1">
+                <UIcon
+                  v-if="lesson.type && lesson.type !== 'GROUP'"
+                  :name="LESSON_TYPE_MAP[lesson.type].icon"
+                  class="size-3 shrink-0"
+                  :title="LESSON_TYPE_MAP[lesson.type].label"
+                />
+                <span class="truncate">{{ lesson.groupName }}</span>
               </p>
               <p
                 v-if="lesson.topic"

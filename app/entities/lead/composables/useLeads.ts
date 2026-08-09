@@ -77,13 +77,15 @@ export const useLeads = () => {
    */
   const moveStage = async (
     lead: Pick<LeadWithRelations, 'id' | 'stage' | 'paidAt' | 'convertedAt'>,
-    toStage: LeadStage
+    toStage: LeadStage,
+    convertedStudentId?: string
   ): Promise<LeadWithRelations | null> => {
     if (lead.stage === toStage) return null
     const patch: LeadUpdate = { stage: toStage }
     const nowIso = new Date().toISOString()
     if (toStage === 'PAYMENT' && !lead.paidAt) patch.paidAt = nowIso
     if (toStage === 'ACTIVE' && !lead.convertedAt) patch.convertedAt = nowIso
+    if (toStage === 'ACTIVE' && convertedStudentId) patch.convertedStudentId = convertedStudentId
 
     const { data, error } = await supabase
       .from('Lead')

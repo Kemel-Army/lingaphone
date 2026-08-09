@@ -4,7 +4,22 @@ import { useAdminStats, type AdminStudent } from '~/entities/admin-stats'
 definePageMeta({ layout: 'dashboard' })
 
 const toast = useToast()
-const { fetchStudentsPaged, fetchStudents, createStudent, updateStudent } = useAdminStats()
+const { fetchStudentsPaged, fetchStudents, fetchStudentStatusCounts, createStudent, updateStudent } = useAdminStats()
+
+// ─── Status tabs ────────────────────────────────────────────────────────────
+
+type StudentStatus = 'ACTIVE' | 'PAUSED' | 'DROPPED'
+const STATUS_TABS: { value: StudentStatus, label: string }[] = [
+  { value: 'ACTIVE', label: 'Активные' },
+  { value: 'PAUSED', label: 'Приостановили' },
+  { value: 'DROPPED', label: 'Бросили' }
+]
+const tab = ref<StudentStatus>('ACTIVE')
+
+const { data: statusCounts } = await useAsyncData(
+  'admin-students-status-counts',
+  () => fetchStudentStatusCounts()
+)
 
 // ─── Pagination & Search ──────────────────────────────────────────────────────
 
@@ -22,12 +37,16 @@ watch(search, (val) => {
   }, 300)
 })
 
+watch(tab, () => {
+  page.value = 0
+})
+
 const { data: pagedResult, pending, refresh } = await useAsyncData(
-  () => `admin-students-p${page.value}-q${searchDebounced.value}`,
-  () => fetchStudentsPaged(page.value, PAGE_SIZE, searchDebounced.value)
+  () => `admin-students-p${page.value}-q${searchDebounced.value}-t${tab.value}`,
+  () => fetchStudentsPaged(page.value, PAGE_SIZE, searchDebounced.value, tab.value)
 )
 
-watch([page, searchDebounced], () => refresh())
+watch([page, searchDebounced, tab], () => refresh())
 
 const students = computed((): AdminStudent[] => pagedResult.value?.students ?? [])
 const total = computed(() => pagedResult.value?.total ?? 0)
@@ -323,6 +342,29 @@ const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('ru-
       </div>
     </div>
 
+    <!-- Status tabs -->
+    <div class="flex items-center gap-2 border-b border-subtle">
+      <button
+        v-for="t in STATUS_TABS"
+        :key="t.value"
+        class="px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+        :class="tab === t.value
+          ? 'border-primary text-primary'
+          : 'border-transparent text-muted hover:text-default'"
+        @click="tab = t.value"
+      >
+        {{ t.label }}
+        <UBadge
+          size="sm"
+          variant="subtle"
+          :color="tab === t.value ? 'primary' : 'neutral'"
+          class="ml-1"
+        >
+          {{ statusCounts?.[t.value] ?? 0 }}
+        </UBadge>
+      </button>
+    </div>
+
     <!-- Loading -->
     <div
       v-if="pending"
@@ -370,7 +412,8 @@ const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('ru-
           <tr
             v-for="s in students"
             :key="s.id"
-            class="border-b border-subtle last:border-0 hover:bg-muted/20 transition-colors group"
+            class="border-b border-subtle last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer"
+            @click="navigateTo(`/admin/students/${s.id}`)"
           >
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
@@ -436,14 +479,7 @@ const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('ru-
                   variant="ghost"
                   size="sm"
                   color="neutral"
-                  @click="openEdit(s)"
-                />
-                <UButton
-                  :to="`/admin/students/${s.id}`"
-                  icon="i-lucide-eye"
-                  variant="ghost"
-                  size="sm"
-                  color="neutral"
+                  @click.stop="openEdit(s)"
                 />
               </div>
             </td>

@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
   const supabase = useServerSupabase(event)
 
   const body = await readBody(event)
-  const { groupId, topic, startsAt, durationMin, meetingUrl } = body
+  const { groupId, topic, startsAt, durationMin, meetingUrl, type } = body
 
   if (!groupId || !topic?.trim() || !startsAt) {
     throw createError({ statusCode: 400, message: 'groupId, topic и startsAt обязательны' })
@@ -45,10 +45,11 @@ export default defineEventHandler(async (event) => {
       topic: topic.trim(),
       startsAt: new Date(startsAt).toISOString(),
       status: 'SCHEDULED',
+      type: type ?? 'GROUP',
       durationMin: durationMin ?? 60,
       meetingUrl: meetingUrl?.trim() || null
     })
-    .select('id, groupId, topic, startsAt, status, durationMin, meetingUrl, createdAt')
+    .select('id, groupId, topic, startsAt, status, type, durationMin, meetingUrl, createdAt')
     .single()
 
   if (error) throw createError({ statusCode: 500, message: error.message })

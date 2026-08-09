@@ -19,6 +19,7 @@ interface ScheduleLesson {
   durationMin: number
   topic: string | null
   status: string
+  type: LessonKind
   groupId: string
   groupName: string
   groupLevel: string
@@ -75,7 +76,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
     const { data, error } = await supabase
       .from('Lesson')
       .select(`
-        id, startsAt, durationMin, topic, status, meetingUrl, groupId,
+        id, startsAt, durationMin, topic, status, type, meetingUrl, groupId,
         Group!groupId ( name, level, archivedAt, Teacher!teacherId ( User!userId ( name, surname, avatarUrl ) ) )
       `)
       .gte('startsAt', from.toISOString())
@@ -87,6 +88,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
         durationMin: number
         topic: string | null
         status: string
+        type: LessonKind
         meetingUrl: string | null
         groupId: string
         Group: {
@@ -114,6 +116,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           durationMin: l.durationMin ?? 60,
           topic: l.topic,
           status: l.status,
+          type: l.type,
           groupId: l.groupId,
           groupName: group?.name ?? '—',
           groupLevel: group?.level ?? '',
@@ -197,6 +200,7 @@ const addForm = reactive({
   time: '',
   durationMin: 60,
   topic: '',
+  type: 'GROUP' as LessonKind,
   repeat: 'once' as 'once' | 'weekly'
 })
 
@@ -217,6 +221,7 @@ const openAdd = () => {
   addForm.time = ''
   addForm.durationMin = 60
   addForm.topic = ''
+  addForm.type = 'GROUP'
   addForm.repeat = 'once'
   showAdd.value = true
 }
@@ -236,6 +241,7 @@ const submitAdd = async () => {
       groupId: addForm.groupId,
       durationMin: addForm.durationMin || 60,
       topic: addForm.topic.trim() || '',
+      type: addForm.type,
       status: 'SCHEDULED' as const
     }
     const count = addForm.repeat === 'weekly' ? RECUR_WEEKS : 1
@@ -482,8 +488,14 @@ const statusLabel: Record<string, string> = {
               :class="lessonCellClass(lesson)"
               @click="openLesson(lesson)"
             >
-              <p class="text-xs font-semibold leading-tight truncate">
-                {{ lesson.groupName }}
+              <p class="text-xs font-semibold leading-tight truncate flex items-center gap-1">
+                <UIcon
+                  v-if="lesson.type !== 'GROUP'"
+                  :name="LESSON_TYPE_MAP[lesson.type].icon"
+                  class="size-3 shrink-0"
+                  :title="LESSON_TYPE_MAP[lesson.type].label"
+                />
+                <span class="truncate">{{ lesson.groupName }}</span>
               </p>
               <p class="text-[10px] text-muted truncate">
                 {{ lesson.teacherName.split(' ')[0] }}
@@ -548,6 +560,14 @@ const statusLabel: Record<string, string> = {
               />
             </UFormField>
           </div>
+
+          <UFormField label="Тип занятия">
+            <USelect
+              v-model="addForm.type"
+              :items="LESSON_TYPE_OPTIONS"
+              class="w-full"
+            />
+          </UFormField>
 
           <div class="grid grid-cols-2 gap-3">
             <UFormField label="Длительность (мин)">
@@ -651,6 +671,14 @@ const statusLabel: Record<string, string> = {
                   size="xs"
                 >
                   {{ statusLabel[selectedLesson.status] ?? selectedLesson.status }}
+                </UBadge>
+                <UBadge
+                  :color="LESSON_TYPE_MAP[selectedLesson.type].color"
+                  variant="subtle"
+                  size="xs"
+                  :icon="LESSON_TYPE_MAP[selectedLesson.type].icon"
+                >
+                  {{ LESSON_TYPE_MAP[selectedLesson.type].label }}
                 </UBadge>
               </div>
               <p class="text-sm text-muted">

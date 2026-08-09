@@ -1111,6 +1111,7 @@ export type Database = {
           startsAt: string
           status: Database['public']['Enums']['LessonStatus']
           topic: string
+          type: Database['public']['Enums']['LessonType']
           updatedAt: string
         }
         Insert: {
@@ -1123,6 +1124,7 @@ export type Database = {
           startsAt: string
           status?: Database['public']['Enums']['LessonStatus']
           topic?: string
+          type?: Database['public']['Enums']['LessonType']
           updatedAt?: string
         }
         Update: {
@@ -1135,6 +1137,7 @@ export type Database = {
           startsAt?: string
           status?: Database['public']['Enums']['LessonStatus']
           topic?: string
+          type?: Database['public']['Enums']['LessonType']
           updatedAt?: string
         }
         Relationships: [
@@ -2343,6 +2346,7 @@ export type Database = {
           lastActiveDate: string | null
           level: Database['public']['Enums']['EnglishLevel']
           schoolGrade: number | null
+          status: Database['public']['Enums']['StudentStatus']
           totalEarnings: number
           totalXp: number
           updatedAt: string
@@ -2358,6 +2362,7 @@ export type Database = {
           lastActiveDate?: string | null
           level?: Database['public']['Enums']['EnglishLevel']
           schoolGrade?: number | null
+          status?: Database['public']['Enums']['StudentStatus']
           totalEarnings?: number
           totalXp?: number
           updatedAt?: string
@@ -2373,6 +2378,7 @@ export type Database = {
           lastActiveDate?: string | null
           level?: Database['public']['Enums']['EnglishLevel']
           schoolGrade?: number | null
+          status?: Database['public']['Enums']['StudentStatus']
           totalEarnings?: number
           totalXp?: number
           updatedAt?: string
@@ -3069,6 +3075,9 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }, Returns: Json }
+      get_current_parent_child_user_ids: { Args: never, Returns: string[] }
+      get_current_parent_group_ids: { Args: never, Returns: string[] }
+      get_current_parent_homework_ids: { Args: never, Returns: string[] }
       get_current_parent_student_ids: { Args: never, Returns: string[] }
       get_current_role: {
         Args: never
@@ -3145,6 +3154,7 @@ export type Database = {
         | 'PAYMENT'
         | 'ACTIVE'
       LessonStatus: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+      LessonType: 'GROUP' | 'INDIVIDUAL' | 'TRIAL' | 'MAKEUP' | 'SPEAKING_CLUB'
       LingaCoinReason:
         | 'BEHAVIOR'
         | 'NO_TARDINESS'
@@ -3196,6 +3206,7 @@ export type Database = {
         | 'PROFILE_THEME'
         | 'TITLE'
         | 'AVATAR'
+      StudentStatus: 'ACTIVE' | 'PAUSED' | 'DROPPED'
       SubscriptionStatus: 'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'EXPIRED'
       TaskRelatedType: 'STUDENT' | 'LEAD' | 'INTERNAL'
       TaskStatus: 'NEW' | 'IN_PROGRESS' | 'DONE' | 'OVERDUE'
@@ -3427,6 +3438,7 @@ export const Constants = {
         'ACTIVE'
       ],
       LessonStatus: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+      LessonType: ['GROUP', 'INDIVIDUAL', 'TRIAL', 'MAKEUP', 'SPEAKING_CLUB'],
       LingaCoinReason: [
         'BEHAVIOR',
         'NO_TARDINESS',
@@ -3482,6 +3494,7 @@ export const Constants = {
         'TITLE',
         'AVATAR'
       ],
+      StudentStatus: ['ACTIVE', 'PAUSED', 'DROPPED'],
       SubscriptionStatus: ['ACTIVE', 'PAUSED', 'CANCELLED', 'EXPIRED'],
       TaskRelatedType: ['STUDENT', 'LEAD', 'INTERNAL'],
       TaskStatus: ['NEW', 'IN_PROGRESS', 'DONE', 'OVERDUE'],

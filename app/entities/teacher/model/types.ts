@@ -45,6 +45,7 @@ export interface TeacherLesson {
   topic: string
   startsAt: string
   status: string
+  type: LessonKind
   durationMin: number
   meetingUrl: string | null
   createdAt: string

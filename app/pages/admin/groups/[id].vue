@@ -199,6 +199,10 @@ const submitAddStudents = async () => {
     toast.add({ title: `Добавлено ${selectedStudentIds.value.length} уч.`, color: 'success', icon: 'i-lucide-check' })
     showAddStudents.value = false
     await Promise.all([refreshMembers(), refreshOccupied()])
+    // Держим групповой чат в актуальном составе (не блокирует успех добавления).
+    try {
+      await $fetch(`/api/admin/groups/${groupId}/sync-conversation`, { method: 'POST' })
+    } catch { /* non-fatal */ }
   } catch (e: unknown) {
     toast.add({ title: 'Ошибка', description: String((e as { message?: string })?.message ?? e), color: 'error', icon: 'i-lucide-x' })
   } finally {
@@ -220,6 +224,9 @@ const removeStudent = async (studentId: string) => {
     if (error) throw error
     toast.add({ title: 'Ученик удалён из группы', color: 'success', icon: 'i-lucide-check' })
     await Promise.all([refreshMembers(), refreshOccupied()])
+    try {
+      await $fetch(`/api/admin/groups/${groupId}/sync-conversation`, { method: 'POST' })
+    } catch { /* non-fatal */ }
   } catch {
     toast.add({ title: 'Ошибка', color: 'error', icon: 'i-lucide-x' })
   } finally {

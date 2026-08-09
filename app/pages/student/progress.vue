@@ -139,7 +139,7 @@ const totalActivity = computed(() => activityCalendar.value.reduce((s, c) => s +
           📊 Аналитика
         </p>
         <h1 class="text-3xl sm:text-4xl font-black tracking-tight">
-          Твой прогресс
+          Мой прогресс
         </h1>
         <p class="text-sm text-muted">
           Где ты силён, где пробелы и куда движется средний балл — данные за последние недели

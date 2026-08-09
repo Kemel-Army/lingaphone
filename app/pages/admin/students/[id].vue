@@ -19,6 +19,49 @@ const { data, pending, refresh } = await useAsyncData(
 
 const student = computed(() => data.value?.student)
 const medals = computed(() => data.value?.medals ?? [])
+const group = computed(() => data.value?.group ?? null)
+const subscription = computed(() => data.value?.subscription ?? null)
+const attendance = computed(() => data.value?.attendance ?? [])
+
+const WEEKDAY_LABEL = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+const SUBSCRIPTION_STATUS_META: Record<'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'EXPIRED', { label: string, color: 'success' | 'warning' | 'error' | 'neutral' }> = {
+  ACTIVE: { label: 'Активен', color: 'success' },
+  PAUSED: { label: 'Приостановлен', color: 'warning' },
+  CANCELLED: { label: 'Отменён', color: 'error' },
+  EXPIRED: { label: 'Истёк', color: 'neutral' }
+}
+const ATTENDANCE_META: Record<'PRESENT' | 'ABSENT' | 'LATE', { label: string, color: 'success' | 'error' | 'warning', icon: string }> = {
+  PRESENT: { label: 'Был(а)', color: 'success', icon: 'i-lucide-check' },
+  ABSENT: { label: 'Отсутствовал(а)', color: 'error', icon: 'i-lucide-x' },
+  LATE: { label: 'Опоздал(а)', color: 'warning', icon: 'i-lucide-clock' }
+}
+
+// ─── Status ──────────────────────────────────────────────────────────────────
+type StudentStatus = 'ACTIVE' | 'PAUSED' | 'DROPPED'
+const STATUS_META: Record<StudentStatus, { label: string, color: 'success' | 'warning' | 'error' }> = {
+  ACTIVE: { label: 'Активный', color: 'success' },
+  PAUSED: { label: 'Приостановил обучение', color: 'warning' },
+  DROPPED: { label: 'Бросил обучение', color: 'error' }
+}
+const statusOptions = (Object.keys(STATUS_META) as StudentStatus[]).map(value => ({
+  label: STATUS_META[value].label,
+  value
+}))
+const changingStatus = ref(false)
+const changeStatus = async (status: StudentStatus) => {
+  if (!student.value || status === student.value.status) return
+  changingStatus.value = true
+  try {
+    await updateStudent(student.value.id, { status })
+    toast.add({ title: `Статус изменён: ${STATUS_META[status].label}`, color: 'success', icon: 'i-lucide-check' })
+    await refresh()
+  } catch (e: unknown) {
+    const msg = (e as { data?: { message?: string } })?.data?.message ?? String(e)
+    toast.add({ title: 'Ошибка', description: msg, color: 'error' })
+  } finally {
+    changingStatus.value = false
+  }
+}
 
 // ─── Edit modal ──────────────────────────────────────────────────────────────
 const showEdit = ref(false)
@@ -200,6 +243,12 @@ const computedAge = (birthdate: string | null) => {
             <!-- Badges row -->
             <div class="flex flex-wrap gap-2 mt-3">
               <UBadge
+                :color="STATUS_META[student.status].color"
+                variant="subtle"
+              >
+                {{ STATUS_META[student.status].label }}
+              </UBadge>
+              <UBadge
                 :color="levelColor(student.level)"
                 variant="subtle"
               >
@@ -254,15 +303,24 @@ const computedAge = (birthdate: string | null) => {
             </div>
           </div>
 
-          <!-- Edit button -->
-          <UButton
-            icon="i-lucide-edit"
-            variant="outline"
-            color="neutral"
-            @click="openEdit"
-          >
-            Редактировать
-          </UButton>
+          <!-- Status + Edit -->
+          <div class="flex flex-col items-end gap-2 shrink-0">
+            <USelect
+              :model-value="student.status"
+              :items="statusOptions"
+              :loading="changingStatus"
+              class="w-56"
+              @update:model-value="changeStatus($event as StudentStatus)"
+            />
+            <UButton
+              icon="i-lucide-edit"
+              variant="outline"
+              color="neutral"
+              @click="openEdit"
+            >
+              Редактировать
+            </UButton>
+          </div>
         </div>
       </UCard>
 
@@ -299,6 +357,204 @@ const computedAge = (birthdate: string | null) => {
           </div>
         </UCard>
       </div>
+
+      <!-- Group + Subscription -->
+      <div class="grid sm:grid-cols-2 gap-3">
+        <!-- Group / regular schedule -->
+        <UCard>
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-lucide-users"
+                class="size-4 text-primary"
+              />
+              <h3 class="font-semibold">
+                Группа
+              </h3>
+            </div>
+          </template>
+
+          <div v-if="group">
+            <div class="flex items-center gap-3 mb-3">
+              <UAvatar
+                :src="group.teacherAvatarUrl ?? undefined"
+                :alt="group.teacherName"
+                size="sm"
+              />
+              <div class="min-w-0">
+                <NuxtLink
+                  :to="`/admin/groups/${group.id}`"
+                  class="font-semibold hover:underline truncate block"
+                >
+                  {{ group.name }}
+                </NuxtLink>
+                <p class="text-xs text-muted truncate">
+                  {{ group.teacherName }} · {{ group.level }}
+                </p>
+              </div>
+            </div>
+            <div
+              v-if="group.schedule.length"
+              class="flex flex-wrap gap-1.5"
+            >
+              <UBadge
+                v-for="(slot, i) in group.schedule"
+                :key="i"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+              >
+                {{ WEEKDAY_LABEL[slot.weekday] }} {{ slot.startTime }}
+              </UBadge>
+            </div>
+            <p
+              v-else
+              class="text-xs text-muted"
+            >
+              Расписание не задано
+            </p>
+          </div>
+          <div
+            v-else
+            class="py-6 text-center text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-users"
+              class="size-6 mx-auto mb-2 opacity-30"
+            />
+            <p class="mb-3">
+              Не состоит в группе
+            </p>
+            <UButton
+              to="/admin/groups"
+              size="sm"
+              variant="soft"
+              icon="i-lucide-plus"
+            >
+              Добавить в группу
+            </UButton>
+          </div>
+        </UCard>
+
+        <!-- Subscription -->
+        <UCard>
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-lucide-credit-card"
+                class="size-4 text-primary"
+              />
+              <h3 class="font-semibold">
+                Абонемент
+              </h3>
+            </div>
+          </template>
+
+          <div v-if="subscription">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <p class="font-semibold">
+                  {{ subscription.plan }}
+                </p>
+                <p
+                  v-if="subscription.course"
+                  class="text-xs text-muted"
+                >
+                  {{ subscription.course }}
+                </p>
+              </div>
+              <UBadge
+                :color="SUBSCRIPTION_STATUS_META[subscription.status].color"
+                variant="subtle"
+                size="sm"
+              >
+                {{ SUBSCRIPTION_STATUS_META[subscription.status].label }}
+              </UBadge>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div class="rounded-lg bg-muted/40 p-2">
+                <p class="text-xs text-muted">
+                  Осталось занятий
+                </p>
+                <p class="font-bold">
+                  {{ Math.max(subscription.lessonsTotal - subscription.lessonsUsed, 0) }} / {{ subscription.lessonsTotal }}
+                </p>
+              </div>
+              <div class="rounded-lg bg-muted/40 p-2">
+                <p class="text-xs text-muted">
+                  Действует до
+                </p>
+                <p class="font-bold">
+                  {{ formatDate(subscription.endAt) }}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div
+            v-else
+            class="py-6 text-center text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-credit-card"
+              class="size-6 mx-auto mb-2 opacity-30"
+            />
+            Нет активного абонемента
+          </div>
+        </UCard>
+      </div>
+
+      <!-- Attendance history -->
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="i-lucide-calendar-check"
+              class="size-4 text-primary"
+            />
+            <h3 class="font-semibold">
+              История посещений
+            </h3>
+          </div>
+        </template>
+
+        <div
+          v-if="attendance.length"
+          class="divide-y divide-subtle"
+        >
+          <div
+            v-for="a in attendance"
+            :key="a.lessonId"
+            class="flex items-center justify-between py-2.5"
+          >
+            <div class="min-w-0">
+              <p class="text-sm font-medium truncate">
+                {{ a.lessonTopic || a.groupName }}
+              </p>
+              <p class="text-xs text-muted">
+                {{ a.groupName }} · {{ formatDate(a.lessonStartsAt) }}
+              </p>
+            </div>
+            <UBadge
+              :color="ATTENDANCE_META[a.status].color"
+              variant="subtle"
+              size="sm"
+              :icon="ATTENDANCE_META[a.status].icon"
+            >
+              {{ ATTENDANCE_META[a.status].label }}
+            </UBadge>
+          </div>
+        </div>
+        <div
+          v-else
+          class="py-8 text-center text-muted text-sm"
+        >
+          <UIcon
+            name="i-lucide-calendar-check"
+            class="size-8 mx-auto mb-2 opacity-30"
+          />
+          <p>Посещений ещё нет</p>
+        </div>
+      </UCard>
 
       <!-- Medal history -->
       <UCard>

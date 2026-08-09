@@ -41,6 +41,7 @@ interface RawLessonRow {
   topic: string
   startsAt: string
   status: string
+  type: LessonKind
   durationMin: number
   meetingUrl: string | null
   createdAt: string
@@ -242,7 +243,7 @@ export const useTeacher = () => {
 
       supabase
         .from('Lesson')
-        .select('id, groupId, topic, startsAt, status, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
+        .select('id, groupId, topic, startsAt, status, type, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
         .eq('groupId', groupId)
         .order('startsAt', { ascending: true })
         .limit(200) as unknown as { data: RawLessonRow[] | null, error: unknown }
@@ -278,6 +279,7 @@ export const useTeacher = () => {
       topic: l.topic,
       startsAt: l.startsAt,
       status: l.status,
+      type: l.type,
       durationMin: l.durationMin,
       meetingUrl: l.meetingUrl,
       createdAt: l.createdAt
@@ -424,7 +426,7 @@ export const useTeacher = () => {
   const fetchMyLessons = async (groupId?: string): Promise<TeacherLesson[]> => {
     let query = supabase
       .from('Lesson')
-      .select('id, groupId, topic, startsAt, status, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
+      .select('id, groupId, topic, startsAt, status, type, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
       .order('startsAt', { ascending: true })
       .limit(200)
 
@@ -446,6 +448,7 @@ export const useTeacher = () => {
       topic: l.topic,
       startsAt: l.startsAt,
       status: l.status,
+      type: l.type,
       durationMin: l.durationMin,
       meetingUrl: l.meetingUrl,
       createdAt: l.createdAt
@@ -858,6 +861,7 @@ export const useTeacher = () => {
     startsAt: string
     durationMin?: number
     meetingUrl?: string
+    type?: LessonKind
   }): Promise<TeacherLesson> => {
     const data = await $fetch<TeacherLesson>('/api/teacher/lessons', {
       method: 'POST',

@@ -1,6 +1,9 @@
 import type {
   AdminKpi,
   AdminStudent,
+  AdminStudentGroup,
+  AdminStudentSubscription,
+  AdminStudentAttendance,
   AdminTeacher,
   AdminGroup,
   AdminMedal,
@@ -21,6 +24,7 @@ interface RawStudentRow {
   totalEarnings: number
   lastActiveDate: string | null
   createdAt: string
+  status: 'ACTIVE' | 'PAUSED' | 'DROPPED'
   User: {
     name: string
     surname: string
@@ -159,15 +163,20 @@ export const useAdminStats = () => {
   const fetchStudentsPaged = async (
     page: number,
     pageSize: number,
-    search?: string
+    search?: string,
+    status?: 'ACTIVE' | 'PAUSED' | 'DROPPED'
   ): Promise<{ students: AdminStudent[], total: number }> => {
     const from = page * pageSize
     const to = from + pageSize - 1
 
-    const { data, error, count } = await supabase
+    let query = supabase
       .from('Student')
-      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )', { count: 'exact' })
+      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, status, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )', { count: 'exact' })
       .order('createdAt', { ascending: false })
+
+    if (status) query = query.eq('status', status)
+
+    const { data, error, count } = await query
       .range(from, to) as unknown as { data: RawStudentRow[] | null, error: unknown, count: number | null }
 
     if (error) throw error
@@ -220,11 +229,25 @@ export const useAdminStats = () => {
         totalEarnings: s.totalEarnings,
         lastActiveDate: s.lastActiveDate,
         createdAt: s.createdAt,
-        groupCount: countMap[s.id] ?? 0
+        groupCount: countMap[s.id] ?? 0,
+        status: s.status
       } as AdminStudent
     })
 
     return { students, total: count ?? 0 }
+  }
+
+  const fetchStudentStatusCounts = async (): Promise<Record<'ACTIVE' | 'PAUSED' | 'DROPPED', number>> => {
+    const [active, paused, dropped] = await Promise.all([
+      supabase.from('Student').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
+      supabase.from('Student').select('*', { count: 'exact', head: true }).eq('status', 'PAUSED'),
+      supabase.from('Student').select('*', { count: 'exact', head: true }).eq('status', 'DROPPED')
+    ])
+    return {
+      ACTIVE: active.count ?? 0,
+      PAUSED: paused.count ?? 0,
+      DROPPED: dropped.count ?? 0
+    }
   }
 
   // ─── Students (legacy full fetch for exports) ─────────────────────────────────
@@ -232,7 +255,7 @@ export const useAdminStats = () => {
   const fetchStudents = async (): Promise<AdminStudent[]> => {
     const { data, error } = await supabase
       .from('Student')
-      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )')
+      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, status, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )')
       .order('createdAt', { ascending: false }) as unknown as { data: RawStudentRow[] | null, error: unknown }
 
     if (error) throw error
@@ -273,7 +296,8 @@ export const useAdminStats = () => {
         totalEarnings: s.totalEarnings,
         lastActiveDate: s.lastActiveDate,
         createdAt: s.createdAt,
-        groupCount: countMap[s.id] ?? 0
+        groupCount: countMap[s.id] ?? 0,
+        status: s.status
       }
     })
   }
@@ -281,7 +305,7 @@ export const useAdminStats = () => {
   const fetchStudentById = async (studentId: string) => {
     const { data, error } = await supabase
       .from('Student')
-      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )')
+      .select('id, userId, level, schoolGrade, birthdate, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, status, User!userId ( name, surname, patronymic, email, phone, avatarUrl, iin, initialPassword )')
       .eq('id', studentId)
       .single() as unknown as { data: RawStudentRow | null, error: unknown }
 
@@ -331,8 +355,99 @@ export const useAdminStats = () => {
     const computedGoldStreak = medalList.filter(m => m.medal === 'GOLD').length
     const computedTotalEarnings = medalList.reduce((s, m) => s + (m.payout ?? 0), 0)
 
+    // ─── Group (active membership) ───────────────────────────────────────────
+    const { data: memberRow } = await supabase
+      .from('GroupMember')
+      .select('Group!groupId ( id, name, level, schedule, Teacher!teacherId ( User!userId ( name, surname, avatarUrl ) ) )')
+      .eq('studentId', studentId)
+      .eq('status', 'ACTIVE')
+      .maybeSingle() as unknown as {
+      data: {
+        Group: {
+          id: string
+          name: string
+          level: string
+          schedule: unknown
+          Teacher: { User: { name: string, surname: string, avatarUrl: string | null } | null } | null
+        } | null
+      } | null
+    }
+    const groupRow = memberRow?.Group
+      ? (Array.isArray(memberRow.Group) ? memberRow.Group[0] : memberRow.Group)
+      : null
+    const groupTeacher = groupRow
+      ? (Array.isArray(groupRow.Teacher) ? groupRow.Teacher[0] : groupRow.Teacher)
+      : null
+    const groupTeacherUser = groupTeacher
+      ? (Array.isArray(groupTeacher.User) ? groupTeacher.User[0] : groupTeacher.User)
+      : null
+    const group: AdminStudentGroup | null = groupRow
+      ? {
+          id: groupRow.id,
+          name: groupRow.name,
+          level: groupRow.level,
+          teacherName: groupTeacherUser ? `${groupTeacherUser.name} ${groupTeacherUser.surname}`.trim() : '—',
+          teacherAvatarUrl: groupTeacherUser?.avatarUrl ?? null,
+          schedule: normalizeSchedule(groupRow.schedule)
+        }
+      : null
+
+    // ─── Subscription (latest, non-archived) ─────────────────────────────────
+    const { data: subRow } = await supabase
+      .from('Subscription')
+      .select('id, plan, course, price, lessonsTotal, lessonsUsed, startAt, endAt, nextPaymentAt, status')
+      .eq('studentId', studentId)
+      .eq('archived', false)
+      .order('createdAt', { ascending: false })
+      .limit(1)
+      .maybeSingle() as unknown as { data: AdminStudentSubscription | null }
+    const subscription: AdminStudentSubscription | null = subRow
+      ? {
+          id: subRow.id,
+          plan: subRow.plan,
+          course: subRow.course,
+          price: Number(subRow.price),
+          lessonsTotal: subRow.lessonsTotal,
+          lessonsUsed: subRow.lessonsUsed,
+          startAt: subRow.startAt,
+          endAt: subRow.endAt,
+          nextPaymentAt: subRow.nextPaymentAt,
+          status: subRow.status
+        }
+      : null
+
+    // ─── Attendance history (last 30) ─────────────────────────────────────────
+    const { data: attRows } = await supabase
+      .from('Attendance')
+      .select('lessonId, status, markedAt, Lesson!lessonId ( topic, startsAt, Group!groupId ( name ) )')
+      .eq('studentId', studentId)
+      .order('markedAt', { ascending: false })
+      .limit(30) as unknown as {
+      data: {
+        lessonId: string
+        status: 'PRESENT' | 'ABSENT' | 'LATE'
+        markedAt: string
+        Lesson: { topic: string | null, startsAt: string, Group: { name: string } | null } | null
+      }[] | null
+    }
+    const attendance: AdminStudentAttendance[] = (attRows ?? []).map((a) => {
+      const lesson = Array.isArray(a.Lesson) ? a.Lesson[0] : a.Lesson
+      const attGroup = lesson ? (Array.isArray(lesson.Group) ? lesson.Group[0] : lesson.Group) : null
+      return {
+        lessonId: a.lessonId,
+        status: a.status,
+        markedAt: a.markedAt,
+        lessonTopic: lesson?.topic ?? null,
+        lessonStartsAt: lesson?.startsAt ?? a.markedAt,
+        groupName: attGroup?.name ?? '—'
+      }
+    })
+
     const user = pickUser(data)
     return {
+      group,
+      subscription,
+      attendance,
       student: {
         id: data.id,
         userId: data.userId,
@@ -353,7 +468,8 @@ export const useAdminStats = () => {
         totalEarnings: computedTotalEarnings,
         lastActiveDate: data.lastActiveDate,
         createdAt: data.createdAt,
-        groupCount: 0
+        groupCount: 0,
+        status: data.status
       } as AdminStudent,
       medals: (medals ?? []) as {
         id: string
@@ -639,6 +755,7 @@ export const useAdminStats = () => {
     birthdate?: string | null
     schoolGrade?: number | null
     level?: string
+    status?: 'ACTIVE' | 'PAUSED' | 'DROPPED'
   }) => {
     return await $fetch(`/api/admin/students/${studentId}`, {
       method: 'PATCH',
@@ -650,6 +767,7 @@ export const useAdminStats = () => {
     fetchKpi,
     fetchStudents,
     fetchStudentsPaged,
+    fetchStudentStatusCounts,
     fetchStudentById,
     fetchTeachers,
     fetchGroups,

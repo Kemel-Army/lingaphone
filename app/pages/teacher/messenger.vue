@@ -11,7 +11,7 @@ definePageMeta({ layout: 'dashboard' })
         💬 Мессенджер
       </p>
       <h1 class="text-2xl sm:text-4xl font-black tracking-tight">
-        Чат с группой
+        Чаты групп
       </h1>
     </header>
 

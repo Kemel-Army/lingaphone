@@ -2,6 +2,7 @@
 import { LeadFunnelBoard } from '~/widgets/lead-funnel'
 import { WazzupPanel } from '~/widgets/wazzup'
 import { useCurrentUser } from '~/entities/user'
+import { useAdminStats } from '~/entities/admin-stats'
 import {
   useLeads,
   LEAD_STAGES,
@@ -22,13 +23,16 @@ const {
   fetchLeads, createLead, updateLead, moveStage,
   claimLead, deleteLead, fetchStageHistory, fetchAdmins, fetchBranches
 } = useLeads()
+const { createStudent } = useAdminStats()
 
 const { data, pending, refresh } = await useAsyncData('admin-leads', async () => {
   const [leads, admins, branches] = await Promise.all([fetchLeads(), fetchAdmins(), fetchBranches()])
   return { leads, admins, branches }
 })
 
-const leads = computed<LeadWithRelations[]>(() => data.value?.leads ?? [])
+// Лиды со stage=ACTIVE («Активный ученик») уже сконвертированы — их место
+// в разделе «Ученики», не здесь (см. changeStage/convert-modal ниже).
+const leads = computed<LeadWithRelations[]>(() => (data.value?.leads ?? []).filter(l => l.stage !== 'ACTIVE'))
 const admins = computed(() => data.value?.admins ?? [])
 const branches = computed(() => data.value?.branches ?? [])
 
@@ -49,23 +53,22 @@ const sourceOptions = LEAD_SOURCES.map(s => ({ label: s.label, value: s.value })
 const stageOptions = LEAD_STAGES.map(s => ({ label: s.label, value: s.value }))
 
 // ─── Tabs ───────────────────────────────────────────────────────────
-type Tab = 'funnel' | 'list' | 'mine' | 'clients'
+// «Клиенты» убрана — сконвертированные (stage=ACTIVE) лиды теперь живут
+// только в разделе «Ученики», see leads computed above.
+type Tab = 'funnel' | 'list' | 'mine'
 const tab = ref<Tab>('funnel')
 const tabs: { value: Tab, label: string, icon: string }[] = [
   { value: 'funnel', label: 'Воронка', icon: 'i-lucide-columns-3' },
   { value: 'list', label: 'Список', icon: 'i-lucide-list' },
-  { value: 'mine', label: 'Я ответственный', icon: 'i-lucide-user-check' },
-  { value: 'clients', label: 'Клиенты', icon: 'i-lucide-circle-check-big' }
+  { value: 'mine', label: 'Я ответственный', icon: 'i-lucide-user-check' }
 ]
 
 const listLeads = computed(() => {
   if (tab.value === 'mine') return leads.value.filter(l => l.responsibleId === internalId.value)
-  if (tab.value === 'clients') return leads.value.filter(l => l.stage === 'ACTIVE')
   return leads.value
 })
 
 const mineCount = computed(() => leads.value.filter(l => l.responsibleId === internalId.value).length)
-const clientsCount = computed(() => leads.value.filter(l => l.stage === 'ACTIVE').length)
 
 // ─── Create ─────────────────────────────────────────────────────────
 const showCreate = ref(false)
@@ -178,6 +181,12 @@ const saveDetail = async () => {
 }
 
 const changeStage = async (lead: LeadWithRelations, toStage: LeadStage) => {
+  // Перевод в «Активный ученик» = реальная конвертация лида в аккаунт
+  // ученика (иначе лид просто исчезнет из вида, а Student не появится).
+  if (toStage === 'ACTIVE' && !lead.convertedStudentId) {
+    openConvert(lead)
+    return
+  }
   try {
     await moveStage(lead, toStage)
     const label = LEAD_STAGE_MAP[toStage].label
@@ -189,6 +198,54 @@ const changeStage = async (lead: LeadWithRelations, toStage: LeadStage) => {
     await refresh()
   } catch (e: unknown) {
     toast.add({ title: 'Ошибка', description: errMsg(e), color: 'error', icon: 'i-lucide-x' })
+  }
+}
+
+// ─── Convert to student ───────────────────────────────────────────────
+// «Оплата → Активный ученик → автоматически во вкладку Клиенты» (ТЗ):
+// клиент = реальный Student-аккаунт, а не просто смена stage.
+const showConvert = ref(false)
+const convertTarget = ref<LeadWithRelations | null>(null)
+const converting = ref(false)
+const convertShowPassword = ref(false)
+const convertForm = reactive({ name: '', surname: '', email: '', password: '', phone: '' })
+
+const openConvert = (lead: LeadWithRelations) => {
+  const parts = lead.fullName.trim().split(/\s+/)
+  convertTarget.value = lead
+  convertForm.name = parts[0] ?? lead.fullName
+  convertForm.surname = parts.slice(1).join(' ') || parts[0] || ''
+  convertForm.email = lead.email ?? ''
+  convertForm.phone = lead.phone ?? ''
+  convertForm.password = Array.from({ length: 10 }, () =>
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$'[Math.floor(Math.random() * 60)]
+  ).join('')
+  showConvert.value = true
+}
+const canConvert = computed(() =>
+  convertForm.name.trim() && convertForm.surname.trim() && convertForm.email.trim() && convertForm.password.length >= 6
+)
+
+const submitConvert = async () => {
+  if (!convertTarget.value || !canConvert.value) return
+  converting.value = true
+  try {
+    const result = await createStudent({
+      name: convertForm.name.trim(),
+      surname: convertForm.surname.trim(),
+      email: convertForm.email.trim(),
+      password: convertForm.password,
+      phone: convertForm.phone.trim() || undefined
+    })
+    await moveStage(convertTarget.value, 'ACTIVE', result.studentId)
+    toast.add({ title: 'Ученик создан, лид переведён в «Активный ученик»', color: 'success', icon: 'i-lucide-check' })
+    showConvert.value = false
+    if (selected.value?.id === convertTarget.value.id) closeDetail()
+    await refresh()
+  } catch (e: unknown) {
+    toast.add({ title: 'Ошибка', description: errMsg(e), color: 'error', icon: 'i-lucide-x' })
+  } finally {
+    converting.value = false
   }
 }
 
@@ -265,14 +322,6 @@ const respName = (l: LeadWithRelations) => l.responsible ? `${l.responsible.surn
           size="sm"
         >
           {{ mineCount }}
-        </UBadge>
-        <UBadge
-          v-if="t.value === 'clients' && clientsCount"
-          color="neutral"
-          variant="subtle"
-          size="sm"
-        >
-          {{ clientsCount }}
         </UBadge>
       </UButton>
     </div>
@@ -382,9 +431,7 @@ const respName = (l: LeadWithRelations) => l.responsible ? `${l.responsible.surn
                   colspan="8"
                   class="px-4 py-16 text-center text-muted"
                 >
-                  {{ tab === 'mine' ? 'Нет закреплённых за вами лидов'
-                    : tab === 'clients' ? 'Пока нет активных клиентов'
-                      : 'Лидов пока нет' }}
+                  {{ tab === 'mine' ? 'Нет закреплённых за вами лидов' : 'Лидов пока нет' }}
                 </td>
               </tr>
             </tbody>
@@ -759,6 +806,110 @@ const respName = (l: LeadWithRelations) => l.responsible ? `${l.responsible.surn
               chat-type="whatsapp"
               :chat-id="chatPhone"
             />
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- ─── Convert to student modal ──────────────────────────────── -->
+    <UModal
+      v-model:open="showConvert"
+      :ui="{ content: 'max-w-xl' }"
+    >
+      <template #content>
+        <div class="p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold">
+                Конвертировать в ученика
+              </h2>
+              <p class="text-sm text-muted mt-0.5">
+                Создаётся аккаунт ученика, лид переходит в «Активный ученик» и исчезает из «Лидов»
+              </p>
+            </div>
+            <UButton
+              icon="i-lucide-x"
+              variant="ghost"
+              color="neutral"
+              size="sm"
+              @click="showConvert = false"
+            />
+          </div>
+          <UDivider />
+
+          <div class="grid grid-cols-2 gap-3">
+            <UFormField
+              label="Имя"
+              required
+            >
+              <UInput
+                v-model="convertForm.name"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              label="Фамилия"
+              required
+            >
+              <UInput
+                v-model="convertForm.surname"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <UFormField label="Телефон">
+            <UInput
+              v-model="convertForm.phone"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField
+            label="Email"
+            required
+            hint="Логин для входа в личный кабинет"
+          >
+            <UInput
+              v-model="convertForm.email"
+              type="email"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField
+            label="Пароль"
+            required
+            hint="Минимум 6 символов"
+          >
+            <div class="flex gap-2">
+              <UInput
+                v-model="convertForm.password"
+                :type="convertShowPassword ? 'text' : 'password'"
+                class="flex-1"
+              />
+              <UButton
+                :icon="convertShowPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                variant="ghost"
+                color="neutral"
+                @click="convertShowPassword = !convertShowPassword"
+              />
+            </div>
+          </UFormField>
+
+          <div class="flex justify-end gap-3">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              @click="showConvert = false"
+            >
+              Отмена
+            </UButton>
+            <UButton
+              :disabled="!canConvert || converting"
+              :loading="converting"
+              icon="i-lucide-user-check"
+              @click="submitConvert"
+            >
+              Создать ученика
+            </UButton>
           </div>
         </div>
       </template>

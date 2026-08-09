@@ -36,6 +36,7 @@ const upcoming = computed(() => (lessons.value ?? []).filter(l => !l.isPast))
     <OnlineLessonsList
       v-else
       :lessons="upcoming"
+      schedule-hint-to="/teacher/schedule"
     />
   </div>
 </template>

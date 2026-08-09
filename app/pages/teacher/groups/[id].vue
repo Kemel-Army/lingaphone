@@ -15,7 +15,7 @@ const { list: listMaterials, upload: uploadMaterial, remove: removeMaterial, dow
 
 // ── Lesson creation modal ────────────────────────────────────────────────────
 const showCreateLesson = ref(false)
-const lessonForm = ref({ topic: '', startsAt: '', durationMin: 60, meetingUrl: '' })
+const lessonForm = ref({ topic: '', startsAt: '', durationMin: 60, meetingUrl: '', type: 'GROUP' as LessonKind })
 const lessonCreating = ref(false)
 
 const canCreateLesson = computed(
@@ -31,11 +31,12 @@ const submitCreateLesson = async () => {
       topic: lessonForm.value.topic.trim(),
       startsAt: new Date(lessonForm.value.startsAt).toISOString(),
       durationMin: lessonForm.value.durationMin || 60,
-      meetingUrl: lessonForm.value.meetingUrl.trim() || undefined
+      meetingUrl: lessonForm.value.meetingUrl.trim() || undefined,
+      type: lessonForm.value.type
     })
     toast.add({ title: 'Урок создан', color: 'success', icon: 'i-lucide-check-circle' })
     showCreateLesson.value = false
-    lessonForm.value = { topic: '', startsAt: '', durationMin: 60, meetingUrl: '' }
+    lessonForm.value = { topic: '', startsAt: '', durationMin: 60, meetingUrl: '', type: 'GROUP' }
     await refresh()
   } catch (e) {
     toast.add({ title: 'Ошибка', description: String(e), color: 'error', icon: 'i-lucide-x-circle' })
@@ -254,17 +255,19 @@ const statusLabel: Record<string, string> = {
 const formatDate = (d: string) =>
   new Date(d).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-const WEEKDAY_RU: Record<number, string> = {
-  1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Вс'
-}
+const WEEKDAY_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 
+// Group.schedule jsonb comes in several historical shapes (see
+// ~/shared/lib/schedule.ts) — this page previously only handled the bare
+// array shape, showing "—" for groups using the current { slots: [...] }
+// or legacy { days, time } object shapes even though they have a schedule.
 const formatSchedule = (schedule: unknown): string => {
-  if (!schedule || !Array.isArray(schedule) || !schedule.length) return '—'
-  const first = schedule[0] as { weekday?: number, startTime?: string, durationMin?: number }
-  const days = schedule.map((s: { weekday?: number }) => s.weekday ? (WEEKDAY_RU[s.weekday] ?? `#${s.weekday}`) : '?').join(', ')
-  const time = first.startTime ?? ''
+  const slots = normalizeSchedule(schedule)
+  if (!slots.length) return '—'
+  const first = slots[0]!
+  const days = slots.map(s => WEEKDAY_RU[s.weekday] ?? `#${s.weekday}`).join(', ')
   const dur = first.durationMin ? ` (${first.durationMin} мин)` : ''
-  return time ? `${days} · ${time}${dur}` : days
+  return first.startTime ? `${days} · ${first.startTime}${dur}` : days
 }
 </script>
 
@@ -923,6 +926,14 @@ const formatSchedule = (schedule: unknown): string => {
               />
             </UFormField>
           </div>
+
+          <UFormField label="Тип занятия">
+            <USelect
+              v-model="lessonForm.type"
+              :items="LESSON_TYPE_OPTIONS"
+              class="w-full"
+            />
+          </UFormField>
 
           <UFormField label="Ссылка на конференцию (необязательно)">
             <UInput

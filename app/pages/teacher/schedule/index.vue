@@ -19,6 +19,7 @@ const gridLessons = computed<GridLesson[]>(() =>
     durationMin: l.durationMin,
     topic: l.topic,
     status: l.status,
+    type: l.type,
     groupId: l.groupId,
     groupName: l.groupName
   }))
@@ -137,6 +138,19 @@ const statusLabel: Record<string, string> = {
                 size="sm"
               >
                 {{ statusLabel[detailLesson.status] ?? detailLesson.status }}
+              </UBadge>
+            </div>
+            <div class="rounded-xl bg-muted/40 p-3">
+              <p class="text-xs text-muted mb-1">
+                Тип занятия
+              </p>
+              <UBadge
+                :color="LESSON_TYPE_MAP[detailLesson.type].color"
+                variant="subtle"
+                size="sm"
+                :icon="LESSON_TYPE_MAP[detailLesson.type].icon"
+              >
+                {{ LESSON_TYPE_MAP[detailLesson.type].label }}
               </UBadge>
             </div>
             <div
