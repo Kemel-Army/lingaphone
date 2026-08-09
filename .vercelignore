@@ -1,0 +1,32 @@
+# Large source documents (content already extracted into SQL migrations)
+/*.docx
+/*.pdf
+docs/
+
+# Build outputs
+.output
+.nuxt
+.nitro
+.cache
+dist
+
+# Deps
+node_modules
+
+# Tests / coverage
+coverage/
+playwright-report/
+test-results/
+tests/
+e2e/
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Misc
+.git
+.claude
+.vscode
+.github
