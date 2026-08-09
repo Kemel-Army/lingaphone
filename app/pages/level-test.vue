@@ -139,6 +139,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleKeyDown))
           50 вопросов от A1 до C1, отобранных случайно из пула в 400+ заданий —
           у каждого студента тест уникальный. Без регистрации, без подвохов
         </p>
+        <LandingMascot
+          class="mx-auto mt-5"
+          state="progress-analyst"
+          size="sm"
+          label="Проверим навыки по шагам"
+          alt="Линг помогает пройти тест уровня"
+        />
 
         <!-- Stats strip -->
         <div class="mt-8 grid grid-cols-3 gap-3 sm:gap-4 max-w-md mx-auto">

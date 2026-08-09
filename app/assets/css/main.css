@@ -76,6 +76,34 @@
   --ease-out-back:  cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ============ Landing redesign foundation ============ */
+:root {
+  --linga-navy-950: #071D33;
+  --linga-navy-900: #0B2947;
+  --linga-navy-800: #123B63;
+  --linga-blue-700: #1264A3;
+  --linga-blue-600: #1677C8;
+  --linga-sky-500: #23A8E0;
+  --linga-sky-100: #DDF4FF;
+  --linga-sky-50: #F2FAFF;
+  --linga-white: #FFFFFF;
+  --linga-surface: #F8FCFF;
+  --linga-gold: #F4B942;
+  --linga-coral: #F26B5B;
+  --linga-text: #102A43;
+  --linga-text-muted: #526D82;
+  --linga-border: #D8EAF5;
+
+  --linga-content: 1200px;
+  --linga-gutter: clamp(1.25rem, 4vw, 3rem);
+  --linga-section-space: clamp(5rem, 9vw, 8.5rem);
+  --linga-radius-sm: 0.875rem;
+  --linga-radius-md: 1.25rem;
+  --linga-radius-lg: 2rem;
+  --linga-shadow-card: 0 18px 50px rgba(18, 59, 99, 0.09);
+  --linga-shadow-float: 0 28px 80px rgba(18, 59, 99, 0.14);
+}
+
 /* ===== Lingaphone UI baseline overrides ===== */
 
 :root:not(.dark) {

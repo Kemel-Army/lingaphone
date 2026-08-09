@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'landing'
+  layout: false
 })
 
 useSeoMeta({
@@ -35,7 +35,10 @@ useSchemaOrg([
 </script>
 
 <template>
-  <div class="femo-landing">
+  <div
+    v-if="false"
+    class="femo-landing"
+  >
     <!-- Hero -->
     <LandingHero />
 
@@ -78,4 +81,5 @@ useSchemaOrg([
     <!-- Финальный CTA — запись в WhatsApp -->
     <LandingCta />
   </div>
+  <LandingRedesign />
 </template>

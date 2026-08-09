@@ -1,16 +1,11 @@
 <script setup lang="ts">
-/**
- * Floating Lingo — появляется в правом нижнем углу после прокрутки Hero.
- * Маскот школы Lingaphone — попугай Lingo 🦜
- * Члик → плавная прокрутка к #method.
- */
-
-type FemiState = 'wink' | 'teach' | 'trophy' | 'celebrate'
+/** Brand guide: the same Ling mascot follows visitors across public pages. */
+type LingState = 'welcome' | 'method-teacher' | 'celebrate' | 'faq-curious'
 
 const visible = ref(false)
-const state = ref<FemiState>('wink')
+const state = ref<LingState>('welcome')
 const bubbleVisible = ref(false)
-const bubbleText = ref('Привет! Я Lingo 🦜')
+const bubbleText = ref('Привет! Я Линг')
 
 let bubbleTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -25,10 +20,10 @@ const onScroll = () => {
 
   // Choose state by scroll progress
   const ratio = docH > 0 ? y / docH : 0
-  if (ratio < 0.3) state.value = 'wink'
-  else if (ratio < 0.55) state.value = 'teach'
+  if (ratio < 0.3) state.value = 'welcome'
+  else if (ratio < 0.55) state.value = 'method-teacher'
   else if (ratio < 0.78) state.value = 'celebrate'
-  else state.value = 'trophy'
+  else state.value = 'faq-curious'
 }
 
 const showBubble = (text: string, ms = 3500) => {
@@ -44,15 +39,15 @@ const onClick = () => {
   if (typeof document === 'undefined') return
   const target = document.getElementById('method')
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  showBubble('Британская методика! 🇬🇧', 2500)
+  showBubble(target ? 'Покажу, как работает методика' : 'Я рядом, если появится вопрос', 2500)
 }
 
 const onHover = () => {
   const lines = [
-    'Нажми — узнай про методику!',
-    'British accent from day 1 🇬🇧',
-    'Группы 3–6 детей 👨‍👩‍👧',
-    'Маркет достижений 🥇'
+    'Подскажу следующий шаг',
+    'Практика продолжается между уроками',
+    'Родитель видит весь прогресс',
+    'Можно начать с бесплатного урока'
   ]
   showBubble(lines[Math.floor(Math.random() * lines.length)] ?? lines[0]!)
 }
@@ -62,7 +57,7 @@ onMounted(() => {
   onScroll()
   // Greet after a moment
   setTimeout(() => {
-    if (visible.value) showBubble('Привет! Я Lingo 🦜', 4000)
+    if (visible.value) showBubble('Привет! Я Линг', 4000)
   }, 1800)
 })
 
@@ -90,15 +85,13 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="float-femi-btn"
-        aria-label="Поговорить с Феми"
+        aria-label="Получить подсказку от Линга"
         @click="onClick"
         @mouseenter="onHover"
       >
-        <FemiMascot
+        <LandingMascot
           :state="state"
-          size="sm"
-          silent
-          ignore-reactions
+          size="xs"
         />
       </button>
     </div>
@@ -123,26 +116,22 @@ onBeforeUnmount(() => {
 
 .float-femi-btn {
   pointer-events: auto;
-  width: 3.6rem;
-  height: 3.6rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #FFFFFF 0%, #FFF7F4 100%);
-  border: 2px solid var(--color-femo-red-200);
-  box-shadow:
-    0 18px 40px -10px rgba(220, 38, 38, 0.4),
-    0 6px 14px -6px rgba(15, 23, 42, 0.18);
+  width: 6rem;
+  height: 7.8rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   transition: transform 0.3s var(--ease-out-expo);
   animation: float-femi-bob 3s ease-in-out infinite;
 }
 
 .float-femi-btn:hover {
   transform: scale(1.1) rotate(-5deg);
-  border-color: var(--color-femo-red-400);
 }
 
 @keyframes float-femi-bob {
@@ -155,13 +144,13 @@ onBeforeUnmount(() => {
   max-width: 14rem;
   padding: 0.55rem 0.85rem;
   background: var(--ui-bg-elevated);
-  border: 1px solid var(--color-femo-red-100);
+  border: 1px solid rgb(188 228 245 / 90%);
   border-radius: 1rem;
   border-bottom-right-radius: 0.3rem;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--color-femo-ink-800);
-  box-shadow: 0 12px 28px -12px rgba(220, 38, 38, 0.3);
+  color: #123b63;
+  box-shadow: 0 12px 28px -12px rgb(18 59 99 / 28%);
   text-align: right;
   line-height: 1.35;
 }

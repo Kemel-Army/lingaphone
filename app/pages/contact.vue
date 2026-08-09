@@ -39,9 +39,18 @@ const handleSubmit = async () => {
 <template>
   <UContainer class="py-16">
     <div class="mx-auto max-w-2xl space-y-8">
-      <h1 class="text-4xl font-bold">
-        {{ $t('legal.contact.title') }}
-      </h1>
+      <div class="flex items-end justify-between gap-4">
+        <h1 class="text-4xl font-bold">
+          {{ $t('legal.contact.title') }}
+        </h1>
+        <LandingMascot
+          class="shrink-0"
+          state="faq-curious"
+          size="xs"
+          label="Я помогу найти ответ"
+          alt="Линг помогает связаться с командой"
+        />
+      </div>
 
       <div class="grid gap-6 sm:grid-cols-2">
         <UCard>
