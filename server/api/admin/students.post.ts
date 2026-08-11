@@ -81,6 +81,10 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (studentError || !studentRow) {
+    // Roll back steps 1-2, otherwise a failed create leaves an orphaned auth
+    // user + User row and every retry collides on the already-taken email.
+    await supabase.from('User').delete().eq('id', userRow.id)
+    await supabase.auth.admin.deleteUser(authId).catch(() => {})
     throw createError({ statusCode: 500, message: studentError?.message ?? 'Failed to create student record' })
   }
 

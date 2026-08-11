@@ -1,0 +1,23 @@
+-- Снимает политику, разрешавшую ЛЮБОМУ авторизованному пользователю создать
+-- беседу с произвольным составом участников:
+--
+--   authenticated_insert_conversations
+--     ON "Conversation" FOR INSERT
+--     WITH CHECK (auth.uid() IS NOT NULL)
+--
+-- participantIds не проверялся вообще, поэтому любой залогиненный ученик мог
+-- вставить Conversation с собой и любым другим пользователем и дальше писать
+-- туда сообщения (msg_participant_insert проверяет членство — а членство он
+-- себе только что и выдал). Немодерируемая переписка с кем угодно на платформе,
+-- включая чужих учеников.
+--
+-- Миграция 20260513110959_rls_hardening_v2_student_integrity.sql эту политику
+-- уже удаляла осознанно («No client INSERT policy on Conversation or
+-- ConversationParticipant. Server uses service_role.»), но её вернули руками
+-- через дашборд.
+--
+-- Клиент беседы только читает: единственные записи в Conversation идут из
+-- server/utils/groupConversation.ts под service-role, который RLS обходит,
+-- поэтому удаление политики не ломает ни один пользовательский сценарий.
+
+DROP POLICY IF EXISTS "authenticated_insert_conversations" ON "Conversation";

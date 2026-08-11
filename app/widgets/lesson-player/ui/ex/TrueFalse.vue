@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { LessonExercise, TrueFalseContent } from '~/entities/book'
+import type { ExerciseReveal } from '../../model/reveal'
 
-const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: any, disabled: boolean }>()
+const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: ExerciseReveal | null, disabled: boolean }>()
 const emit = defineEmits<{ (e: 'change', v: { response: Record<string, unknown>, ready: boolean }): void }>()
 
 const content = computed(() => props.exercise.content as TrueFalseContent)

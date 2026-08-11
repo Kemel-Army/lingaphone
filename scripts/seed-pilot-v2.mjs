@@ -15,7 +15,8 @@ const H = { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Co
 const rest = async (path, { method = 'GET', body, prefer } = {}) => {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method, headers: { ...H, ...(prefer ? { Prefer: prefer } : {}) }, body: body ? JSON.stringify(body) : undefined })
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}: ${(await res.text()).slice(0, 200)}`)
-  const t = await res.text(); return t ? JSON.parse(t) : null
+  const t = await res.text()
+  return t ? JSON.parse(t) : null
 }
 
 // ── Page 7 Ex5: UNDERLINE the correct form (two options per item) ──

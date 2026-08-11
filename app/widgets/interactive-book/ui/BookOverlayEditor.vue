@@ -85,9 +85,21 @@ const onKindChange = (k: PageExerciseKind) => {
 }
 
 // ── Options (positioned) ──────────────────────────────────────
-const addOption = () => { if (selectedEx.value) selectedEx.value.options = [...opts.value, { id: uid(), x: 0.4, y: 0.55, w: 0.05, h: 0.022 }] }
-const addEndpoint = (side: 'L' | 'R') => { if (selectedEx.value) selectedEx.value.options = [...opts.value, { id: uid(), side, x: side === 'L' ? 0.08 : 0.3, y: 0.55, w: side === 'L' ? 0.04 : 0.05, h: 0.02 }] }
-const removeOption = (id?: string) => { if (selectedEx.value) selectedEx.value.options = opts.value.filter(o => o.id !== id) }
+const addOption = () => {
+  if (!selectedEx.value) return
+  selectedEx.value.options = [...opts.value, { id: uid(), x: 0.4, y: 0.55, w: 0.05, h: 0.022 }]
+}
+const addEndpoint = (side: 'L' | 'R') => {
+  if (!selectedEx.value) return
+  selectedEx.value.options = [
+    ...opts.value,
+    { id: uid(), side, x: side === 'L' ? 0.08 : 0.3, y: 0.55, w: side === 'L' ? 0.04 : 0.05, h: 0.02 }
+  ]
+}
+const removeOption = (id?: string) => {
+  if (!selectedEx.value) return
+  selectedEx.value.options = opts.value.filter(o => o.id !== id)
+}
 
 const correctId = computed<string>({
   get: () => (selectedEx.value?.answerKey?.correctId as string) ?? '',
@@ -103,29 +115,44 @@ const setRightForLeft = (lId?: string, rId?: string) => {
 const matchLines = computed(() => {
   const pairs = (selectedEx.value?.answerKey?.pairs as { l: string, r: string }[]) ?? []
   return pairs.map((p) => {
-    const l = lefts.value.find(o => o.id === p.l); const r = rights.value.find(o => o.id === p.r)
+    const l = lefts.value.find(o => o.id === p.l)
+    const r = rights.value.find(o => o.id === p.r)
     if (!l || !r) return null
     return { x1: (l.x ?? 0) + (l.w ?? 0) / 2, y1: (l.y ?? 0) + (l.h ?? 0) / 2, x2: (r.x ?? 0) + (r.w ?? 0) / 2, y2: (r.y ?? 0) + (r.h ?? 0) / 2 }
   }).filter(Boolean) as { x1: number, y1: number, x2: number, y2: number }[]
 })
 
 const acceptText = computed<string>({
-  get: () => { const a = selectedEx.value?.answerKey?.accept; return Array.isArray(a) ? a.join('\n') : '' },
+  get: () => {
+    const a = selectedEx.value?.answerKey?.accept
+    return Array.isArray(a) ? a.join('\n') : ''
+  },
   set: (v: string) => { if (selectedEx.value) selectedEx.value.answerKey = { accept: v.split('\n').map(s => s.trim()).filter(Boolean) } }
 })
 const tfValue = computed<boolean>({
   get: () => Boolean(selectedEx.value?.answerKey?.value),
   set: (v: boolean) => { if (selectedEx.value) selectedEx.value.answerKey = { value: v } }
 })
-const promptModel = computed<string>({ get: () => selectedEx.value?.prompt ?? '', set: (v) => { if (selectedEx.value) selectedEx.value.prompt = v } })
-const explanationModel = computed<string>({ get: () => selectedEx.value?.explanation ?? '', set: (v) => { if (selectedEx.value) selectedEx.value.explanation = v } })
+const promptModel = computed<string>({
+  get: () => selectedEx.value?.prompt ?? '',
+  set: (v) => {
+    if (selectedEx.value) selectedEx.value.prompt = v
+  }
+})
+const explanationModel = computed<string>({
+  get: () => selectedEx.value?.explanation ?? '',
+  set: (v) => {
+    if (selectedEx.value) selectedEx.value.explanation = v
+  }
+})
 
 // ── Generalised drag (works on an exercise box OR an option box) ──
 type Box = { x?: number, y?: number, w?: number, h?: number }
 const canvasRef = ref<HTMLElement | null>(null)
 let drag: { box: Box, mode: 'move' | 'resize', sx: number, sy: number, ox: number, oy: number, ow: number, oh: number, rw: number, rh: number } | null = null
 const startDrag = (box: Box, mode: 'move' | 'resize', e: PointerEvent, exUid?: string) => {
-  e.stopPropagation(); e.preventDefault()
+  e.stopPropagation()
+  e.preventDefault()
   const rect = canvasRef.value?.getBoundingClientRect()
   if (!rect) return
   if (exUid) selectedUid.value = exUid
@@ -137,9 +164,19 @@ const onMove = (e: PointerEvent) => {
   if (!drag) return
   const dx = (e.clientX - drag.sx) / drag.rw
   const dy = (e.clientY - drag.sy) / drag.rh
-  if (drag.mode === 'move') { drag.box.x = clamp(drag.ox + dx, 0, 1 - (drag.box.w ?? 0)); drag.box.y = clamp(drag.oy + dy, 0, 1 - (drag.box.h ?? 0)) } else { drag.box.w = clamp(drag.ow + dx, 0.015, 1 - (drag.box.x ?? 0)); drag.box.h = clamp(drag.oh + dy, 0.012, 1 - (drag.box.y ?? 0)) }
+  if (drag.mode === 'move') {
+    drag.box.x = clamp(drag.ox + dx, 0, 1 - (drag.box.w ?? 0))
+    drag.box.y = clamp(drag.oy + dy, 0, 1 - (drag.box.h ?? 0))
+  } else {
+    drag.box.w = clamp(drag.ow + dx, 0.015, 1 - (drag.box.x ?? 0))
+    drag.box.h = clamp(drag.oh + dy, 0.012, 1 - (drag.box.y ?? 0))
+  }
 }
-const endDrag = () => { drag = null; window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', endDrag) }
+const endDrag = () => {
+  drag = null
+  window.removeEventListener('pointermove', onMove)
+  window.removeEventListener('pointerup', endDrag)
+}
 
 // ── Save ──────────────────────────────────────────────────────
 const savePage = async () => {
@@ -148,7 +185,9 @@ const savePage = async () => {
   try {
     const payload: EditableExercise[] = page.value.exercises.map(({ _uid, ...ex }, i) => ({ ...ex, orderIndex: i }))
     const { saved } = await saveOverlay(page.value.id, payload)
-    page.value.exercises.forEach((ex, i) => { ex.id = saved[i]?.id ?? ex.id })
+    page.value.exercises.forEach((ex, i) => {
+      ex.id = saved[i]?.id ?? ex.id
+    })
     toast.add({ title: 'Страница сохранена', description: `${saved.length} заданий`, color: 'success' })
   } catch (e: unknown) {
     toast.add({ title: 'Не удалось сохранить', description: String((e as Error)?.message ?? e), color: 'error' })

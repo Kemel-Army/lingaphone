@@ -66,7 +66,7 @@ const faq = [
             </div><small><UIcon name="i-lucide-circle-check" /> 45 минут · определим уровень · без обязательств</small>
           </div><div class="visual platform-hero">
             <img
-              :src="'/images/brand/platform-hero-transparent-v2.png'"
+              :src="'/images/brand/platform-hero-transparent-v2.webp'"
               alt="Платформа Lingaphone на компьютере, планшете и телефоне: персональный путь, живой урок и прогресс"
             >
             <LandingMascot

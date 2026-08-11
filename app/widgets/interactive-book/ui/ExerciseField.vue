@@ -46,7 +46,9 @@ const text = computed({
   get: () => (props.response?.text as string) ?? '',
   set: (v: string) => emit('update', { text: v })
 })
-const submitText = () => { if (text.value.trim()) emit('check') }
+const submitText = () => {
+  if (text.value.trim()) emit('check')
+}
 
 const ringClass = computed(() => ({
   correct: 'ring-2 ring-green-500 bg-green-50/70 dark:bg-green-900/30',
@@ -57,7 +59,12 @@ const ringClass = computed(() => ({
 
 const anim = ref('')
 watch(state, (s) => {
-  if (s === 'correct') { anim.value = 'ib-pop'; setTimeout(() => { anim.value = '' }, 450) } else if (s === 'wrong') { anim.value = 'ib-shake'; setTimeout(() => { anim.value = '' }, 450) }
+  const effect = s === 'correct' ? 'ib-pop' : s === 'wrong' ? 'ib-shake' : ''
+  if (!effect) return
+  anim.value = effect
+  setTimeout(() => {
+    anim.value = ''
+  }, 450)
 })
 
 // ── Pick (CHOICE / UNDERLINE) ─────────────────────────────────
@@ -78,7 +85,10 @@ const optOutcome = (o: PageExerciseOption): 'sel-ok' | 'sel-bad' | 'answer' | 'n
 
 // ── True / False ──────────────────────────────────────────────
 const selectedBool = computed(() => props.response?.value as boolean | undefined)
-const pickBool = (value: boolean) => { emit('update', { value }); nextTick(() => emit('check')) }
+const pickBool = (value: boolean) => {
+  emit('update', { value })
+  nextTick(() => emit('check'))
+}
 
 // ── Match (connect L ↔ R) ─────────────────────────────────────
 const lefts = computed(() => options.value.filter(o => o.side === 'L'))
@@ -93,13 +103,20 @@ const setPairs = (map: Record<string, string>) => {
 }
 const tapLeft = (id?: string) => {
   if (!id) return
-  if (pairs.value[id]) { const m = { ...pairs.value }; delete m[id]; setPairs(m); armedLeft.value = null; return }
+  if (pairs.value[id]) {
+    // Rebuild without the tapped left instead of `delete m[id]`
+    // (@typescript-eslint/no-dynamic-delete).
+    setPairs(Object.fromEntries(Object.entries(pairs.value).filter(([l]) => l !== id)))
+    armedLeft.value = null
+    return
+  }
   armedLeft.value = armedLeft.value === id ? null : id
 }
 const tapRight = (id?: string) => {
   if (!id || !armedLeft.value) return
-  const m = { ...pairs.value }
-  for (const l of Object.keys(m)) if (m[l] === id) delete m[l] // one R per L
+  // Drop any existing pairing to this right-hand option (one R per L), then
+  // attach it to the armed left. Filtering avoids a dynamic `delete`.
+  const m = Object.fromEntries(Object.entries(pairs.value).filter(([, r]) => r !== id))
   m[armedLeft.value] = id
   setPairs(m)
   armedLeft.value = null

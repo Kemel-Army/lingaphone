@@ -15,7 +15,8 @@ const H = { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Co
 const rest = async (path, { method = 'GET', body, prefer } = {}) => {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { method, headers: { ...H, ...(prefer ? { Prefer: prefer } : {}) }, body: body ? JSON.stringify(body) : undefined })
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}: ${(await res.text()).slice(0, 300)}`)
-  const t = await res.text(); return t ? JSON.parse(t) : null
+  const t = await res.text()
+  return t ? JSON.parse(t) : null
 }
 let _n = 0
 const oid = () => `o${_n++}`
@@ -32,7 +33,8 @@ const fill = (instruction, items) => ({
   explanation: ''
 })
 const choose = (instruction, items) => {
-  const c = { items: [] }; const k = { items: [] }
+  const c = { items: [] }
+  const k = { items: [] }
   for (const it of items) {
     const opts = it.options.map(l => ({ id: oid(), label: l }))
     const correct = opts.find(o => o.label === it.correct)
@@ -43,7 +45,8 @@ const choose = (instruction, items) => {
 }
 const sort = (instruction, columns, items) => {
   const cols = columns.map(l => ({ id: oid(), label: l }))
-  const cItems = []; const placement = {}
+  const cItems = []
+  const placement = {}
   for (const it of items) {
     const id = oid()
     cItems.push({ id, label: it.label, image: '' })
@@ -52,8 +55,15 @@ const sort = (instruction, columns, items) => {
   return { type: 'SORT_COLUMNS', instruction, content: { columns: cols, items: cItems }, answerKey: { placement }, explanation: '' }
 }
 const match = (instruction, pairs) => {
-  const left = []; const right = []; const pk = []
-  for (const [l, r] of pairs) { const id = oid(); left.push({ id, label: l }); right.push({ id, label: r }); pk.push({ l: id, r: id }) }
+  const left = []
+  const right = []
+  const pk = []
+  for (const [l, r] of pairs) {
+    const id = oid()
+    left.push({ id, label: l })
+    right.push({ id, label: r })
+    pk.push({ l: id, r: id })
+  }
   // shuffle right (stable) so it's a real task
   right.sort((a, b) => a.label.length - b.label.length || a.label.localeCompare(b.label))
   return { type: 'MATCH_PAIRS', instruction, content: { left, right }, answerKey: { pairs: pk }, explanation: '' }

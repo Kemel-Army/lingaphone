@@ -2,7 +2,6 @@
 import { LeadFunnelBoard } from '~/widgets/lead-funnel'
 import { WazzupPanel } from '~/widgets/wazzup'
 import { useCurrentUser } from '~/entities/user'
-import { useAdminStats } from '~/entities/admin-stats'
 import {
   useLeads,
   LEAD_STAGES,
@@ -21,9 +20,9 @@ const toast = useToast()
 const { internalId } = useCurrentUser()
 const {
   fetchLeads, createLead, updateLead, moveStage,
-  claimLead, deleteLead, fetchStageHistory, fetchAdmins, fetchBranches
+  claimLead, deleteLead, fetchStageHistory, fetchAdmins, fetchBranches,
+  convertToStudent: convertLeadToStudent
 } = useLeads()
-const { createStudent } = useAdminStats()
 
 const { data, pending, refresh } = await useAsyncData('admin-leads', async () => {
   const [leads, admins, branches] = await Promise.all([fetchLeads(), fetchAdmins(), fetchBranches()])
@@ -230,14 +229,16 @@ const submitConvert = async () => {
   if (!convertTarget.value || !canConvert.value) return
   converting.value = true
   try {
-    const result = await createStudent({
+    // Один атомарный вызов вместо createStudent() + moveStage(): при падении
+    // второго шага аккаунт уже существовал, лид оставался несконвертированным,
+    // и повторная попытка плодила дубль ученика с занятым email.
+    await convertLeadToStudent(convertTarget.value.id, {
       name: convertForm.name.trim(),
       surname: convertForm.surname.trim(),
       email: convertForm.email.trim(),
       password: convertForm.password,
       phone: convertForm.phone.trim() || undefined
     })
-    await moveStage(convertTarget.value, 'ACTIVE', result.studentId)
     toast.add({ title: 'Ученик создан, лид переведён в «Активный ученик»', color: 'success', icon: 'i-lucide-check' })
     showConvert.value = false
     if (selected.value?.id === convertTarget.value.id) closeDetail()

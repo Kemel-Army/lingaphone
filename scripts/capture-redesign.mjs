@@ -7,7 +7,11 @@ const browser = await chromium.launch({
 
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
 await page.goto('http://127.0.0.1:3210', { waitUntil: 'networkidle' })
-await page.evaluate(() => document.querySelectorAll('img[loading="lazy"]').forEach((image) => { image.loading = 'eager' }))
+await page.evaluate(() => {
+  document.querySelectorAll('img[loading="lazy"]').forEach((image) => {
+    image.loading = 'eager'
+  })
+})
 await page.evaluate(async () => {
   for (let y = 0; y < document.body.scrollHeight; y += 700) {
     window.scrollTo(0, y)

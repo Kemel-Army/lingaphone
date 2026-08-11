@@ -146,6 +146,30 @@ export const useLeads = () => {
     return data ?? []
   }
 
+  /**
+   * Конвертация лида в реальный аккаунт ученика — одним атомарным вызовом.
+   * Сервер создаёт auth-пользователя, User и Student, переводит лид в ACTIVE
+   * и связывает его с учеником; при падении любого шага всё откатывается,
+   * поэтому повтор безопасен. См. server/api/admin/leads/[id]/convert.post.ts
+   */
+  const convertToStudent = async (leadId: string, payload: {
+    name: string
+    surname: string
+    email: string
+    password: string
+    phone?: string
+    patronymic?: string
+    birthdate?: string
+    schoolGrade?: number
+    iin?: string
+    level?: string
+  }): Promise<{ success: boolean, userId: string, studentId: string }> => {
+    return await $fetch(`/api/admin/leads/${leadId}/convert`, {
+      method: 'POST',
+      body: payload
+    })
+  }
+
   return {
     fetchLeads,
     fetchLead,
@@ -157,6 +181,7 @@ export const useLeads = () => {
     deleteLead,
     fetchStageHistory,
     fetchAdmins,
-    fetchBranches
+    fetchBranches,
+    convertToStudent
   }
 }

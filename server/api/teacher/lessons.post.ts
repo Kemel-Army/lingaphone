@@ -1,3 +1,5 @@
+const LESSON_TYPES = ['GROUP', 'INDIVIDUAL', 'TRIAL', 'MAKEUP', 'SPEAKING_CLUB'] as const
+
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['TEACHER'])
   const supabase = useServerSupabase(event)
@@ -7,6 +9,19 @@ export default defineEventHandler(async (event) => {
 
   if (!groupId || !topic?.trim() || !startsAt) {
     throw createError({ statusCode: 400, message: 'groupId, topic и startsAt обязательны' })
+  }
+
+  // Validate before it reaches the LessonType enum column — an unknown value
+  // used to surface as an opaque 500 from Postgres instead of a 400.
+  if (type !== undefined && !LESSON_TYPES.includes(type)) {
+    throw createError({
+      statusCode: 400,
+      message: `type должен быть одним из: ${LESSON_TYPES.join(', ')}`
+    })
+  }
+
+  if (Number.isNaN(new Date(startsAt).getTime())) {
+    throw createError({ statusCode: 400, message: 'startsAt — некорректная дата' })
   }
 
   const authId = (user.sub as string | undefined) ?? user.id

@@ -3,7 +3,9 @@ import { expect, test } from '@nuxt/test-utils/playwright'
 test.describe('Landing page', () => {
   test('loads and displays title', async ({ page, goto }) => {
     await goto('/', { waitUntil: 'hydration' })
-    await expect(page).toHaveTitle(/FEMO/)
+    // Was /FEMO/ — the landing title is Lingaphone since the rebrand, so this
+    // assertion could only ever have passed before the project was renamed.
+    await expect(page).toHaveTitle(/Lingaphone/)
   })
 
   test('has navigation links', async ({ page, goto }) => {
@@ -16,12 +18,12 @@ test.describe('Landing page', () => {
 test.describe('Auth pages', () => {
   test('login page loads', async ({ page, goto }) => {
     await goto('/login', { waitUntil: 'hydration' })
-    await expect(page.getByRole('heading')).toBeVisible()
+    await expect(page.getByRole('heading').first()).toBeVisible()
   })
 
   test('register page loads', async ({ page, goto }) => {
     await goto('/register', { waitUntil: 'hydration' })
-    await expect(page.getByRole('heading')).toBeVisible()
+    await expect(page.getByRole('heading').first()).toBeVisible()
   })
 
   test('login form validates on empty submit', async ({ page, goto }) => {
@@ -37,11 +39,11 @@ test.describe('Auth pages', () => {
 test.describe('Public pages', () => {
   test('about page loads', async ({ page, goto }) => {
     await goto('/about', { waitUntil: 'hydration' })
-    await expect(page.getByRole('heading')).toBeVisible()
+    await expect(page.getByRole('heading').first()).toBeVisible()
   })
 
   test('contact page loads', async ({ page, goto }) => {
     await goto('/contact', { waitUntil: 'hydration' })
-    await expect(page.getByRole('heading')).toBeVisible()
+    await expect(page.getByRole('heading').first()).toBeVisible()
   })
 })

@@ -27,7 +27,6 @@ export const syncGroupConversation = async (supabase: any, groupId: string): Pro
     .filter((id): id is string => !!id)
 
   const participantIds = [teacherRow?.userId, ...studentUserIds].filter(Boolean) as string[]
-  if (!participantIds.length) return { conversationId: null }
 
   const { data: existing } = await supabase
     .from('Conversation')
@@ -36,6 +35,9 @@ export const syncGroupConversation = async (supabase: any, groupId: string): Pro
     .eq('kind', 'GROUP')
     .maybeSingle()
 
+  // An existing chat is always re-synced, including down to an empty roster.
+  // Bailing out early on `!participantIds.length` left the last known members
+  // in place after the final student was removed, so they kept read access.
   if (existing) {
     const { error } = await supabase
       .from('Conversation')
@@ -44,6 +46,9 @@ export const syncGroupConversation = async (supabase: any, groupId: string): Pro
     if (error) throw error
     return { conversationId: existing.id }
   }
+
+  // Nothing to create a chat around yet (group has neither teacher nor members).
+  if (!participantIds.length) return { conversationId: null }
 
   const { data: created, error } = await supabase
     .from('Conversation')

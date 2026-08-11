@@ -16,7 +16,8 @@ const rest = async (path, { method = 'GET', body, prefer } = {}) => {
     method, headers: { ...H, ...(prefer ? { Prefer: prefer } : {}) }, body: body ? JSON.stringify(body) : undefined
   })
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}: ${(await res.text()).slice(0, 200)}`)
-  const t = await res.text(); return t ? JSON.parse(t) : null
+  const t = await res.text()
+  return t ? JSON.parse(t) : null
 }
 
 // bbox normalised 0..1 (origin top-left), read off the rendered scans.
@@ -52,7 +53,10 @@ if (targetIds.length) {
 let total = 0
 for (const [num, list] of Object.entries(PAGES)) {
   const pageId = byNum[num]
-  if (!pageId) { console.log(`no BookPage for page ${num}`); continue }
+  if (!pageId) {
+    console.log(`no BookPage for page ${num}`)
+    continue
+  }
   let order = 0
   for (const ex of list) {
     const [row] = await rest('PageExercise', {

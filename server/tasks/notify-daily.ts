@@ -115,13 +115,3 @@ export default defineTask({
     return { result: `notify-daily: created ${out.length} notifications` }
   }
 })
-
-/** Сервис-роль клиент для фоновой задачи (без H3-event). */
-function taskServiceRoleClient() {
-  const config = useRuntimeConfig() as any
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createClient } = require('@supabase/supabase-js') as { createClient: (url: string, key: string, opts?: object) => any }
-  const url = config.public?.supabase?.url ?? config.supabaseUrl ?? process.env.SUPABASE_URL ?? ''
-  const key = config.supabaseServiceKey ?? config.supabase?.serviceKey ?? process.env.SUPABASE_SERVICE_KEY ?? ''
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}

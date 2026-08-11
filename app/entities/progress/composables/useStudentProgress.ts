@@ -113,13 +113,23 @@ export const useStudentProgress = () => {
       dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1)
     }
 
+    // Keys are built in UTC to match `dayCounts`, whose keys come from slicing
+    // the timestamptz columns above (always UTC).
+    //
+    // The previous version took local midnight (`setHours(0,0,0,0)`) and then
+    // called `toISOString()`, which converts back to UTC. East of Greenwich
+    // that lands on the *previous* day: in Kazakhstan (UTC+5) the cell for
+    // today got the key 2026-08-10 while an event logged today keys 2026-08-11,
+    // so the whole calendar was shifted one day and today's activity never
+    // showed up. It also rendered differently on the server (UTC) than in the
+    // browser (Asia/Almaty), which Vue reported as a hydration mismatch.
     const cells: ActivityCell[] = []
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const now = new Date()
+    const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
     const days = 12 * 7
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today)
-      d.setDate(today.getDate() - i)
+      const d = new Date(todayUtc)
+      d.setUTCDate(d.getUTCDate() - i)
       const key = d.toISOString().slice(0, 10)
       const count = dayCounts.get(key) ?? 0
       let level: ActivityCell['level'] = 0
@@ -287,8 +297,19 @@ export const useStudentProgress = () => {
     }
   })
 
+  /**
+   * True once the fetch has resolved. Prefer this over `pending` for template
+   * branching: the query runs with `server: false`, so during SSR `pending` is
+   * already false and the loaded branch renders, while the browser's first tick
+   * has `pending: true` and renders the skeleton. The two passes disagree and
+   * Vue reports "Hydration completed but contains mismatches". `data` is null in
+   * both passes, so this flag keeps them identical.
+   */
+  const loaded = computed(() => data.value !== null)
+
   return {
     pending,
+    loaded,
     refresh,
     summary,
     topicMastery,

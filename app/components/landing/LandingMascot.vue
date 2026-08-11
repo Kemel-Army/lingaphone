@@ -27,16 +27,16 @@ const props = withDefaults(defineProps<{
 })
 
 const stateFiles: Record<MascotState, string> = {
-  'welcome': '01-welcome-transparent.png',
-  'platform-guide': '02-platform-guide-transparent.png',
-  'method-teacher': '03-method-teacher-transparent.png',
-  'progress-analyst': '04-progress-analyst-transparent.png',
-  'celebrate': '05-celebrate-transparent.png',
-  'encourage': '06-encourage-transparent.png',
-  'plan-helper': '07-plan-helper-transparent.png',
-  'onboarding-guide': '08-onboarding-guide-transparent.png',
-  'faq-curious': '09-faq-curious-transparent.png',
-  'trial-invite': '10-trial-invite-transparent.png'
+  'welcome': '01-welcome-transparent.webp',
+  'platform-guide': '02-platform-guide-transparent.webp',
+  'method-teacher': '03-method-teacher-transparent.webp',
+  'progress-analyst': '04-progress-analyst-transparent.webp',
+  'celebrate': '05-celebrate-transparent.webp',
+  'encourage': '06-encourage-transparent.webp',
+  'plan-helper': '07-plan-helper-transparent.webp',
+  'onboarding-guide': '08-onboarding-guide-transparent.webp',
+  'faq-curious': '09-faq-curious-transparent.webp',
+  'trial-invite': '10-trial-invite-transparent.webp'
 }
 
 const source = computed(() => `/images/brand/mascot-states/${stateFiles[props.state]}`)
@@ -52,8 +52,8 @@ const source = computed(() => `/images/brand/mascot-states/${stateFiles[props.st
       :src="source"
       :alt="alt"
       :loading="loading"
-      width="1104"
-      height="1424"
+      width="640"
+      height="824"
     >
     <figcaption v-if="label">
       {{ label }}

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { LessonExercise, MatchPairsContent } from '~/entities/book'
+import type { ExerciseReveal } from '../../model/reveal'
 
-const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: any, disabled: boolean }>()
+const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: ExerciseReveal | null, disabled: boolean }>()
 const emit = defineEmits<{ (e: 'change', v: { response: Record<string, unknown>, ready: boolean }): void }>()
 
 const content = computed(() => props.exercise.content as MatchPairsContent)
@@ -53,7 +54,7 @@ const tapRight = (id: string) => {
 // after check: is this left's pair correct?
 const leftOutcome = (id: string) => {
   if (props.status === 'idle') return ''
-  const want = (props.reveal?.pairs ?? []).find((p: any) => p.l === id)?.r
+  const want = (props.reveal?.pairs ?? []).find(p => p.l === id)?.r
   return pairs.value[id] === want ? 'ring-2 ring-green-500' : 'ring-2 ring-red-500'
 }
 </script>

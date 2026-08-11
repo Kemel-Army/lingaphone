@@ -7,9 +7,23 @@ import {
   conversationTitle,
   conversationSubtitle,
   conversationInitials,
-  type ConversationRow,
-  type MessageRow
+  type ConversationRow
 } from '~/entities/conversation'
+
+/**
+ * The four fields this widget actually renders.
+ *
+ * Deliberately NOT `MessageRow`: its `attachments` column is typed as the
+ * recursive `Json` union, and any mutation of a `Ref<MessageRow[]>` makes TS
+ * bail out with "type instantiation is excessively deep" (TS2589). Narrowing
+ * to the rendered shape keeps the widget fully typed with no `any`.
+ */
+interface ChatMessage {
+  id: string
+  senderId: string
+  body: string
+  createdAt: string
+}
 
 const { fetchConversations, fetchMessages, sendMessage, subscribeToMessages } = useMessenger()
 
@@ -26,6 +40,11 @@ const { data, pending } = useAsyncData(
   { server: false, default: () => null, watch: [user] }
 )
 
+// The loading branch keys off `!data`, not `pending`. With `server: false` the
+// fetch never runs during SSR, so the server rendered the "no chats yet" branch
+// while the client's first tick had `pending: true` and rendered the spinner —
+// Vue reported that as "Hydration completed but contains mismatches". `data` is
+// null in both passes, so branching on it keeps the two renders identical.
 const conversations = computed(() => data.value?.conversations ?? [])
 const userById = computed(() => buildUserMap(data.value?.users ?? []))
 const groupNameById = computed(() => buildGroupNameMap(data.value?.groups ?? []))
@@ -52,7 +71,7 @@ const backToList = () => {
   showChatOnMobile.value = false
 }
 
-const messages = ref<MessageRow[]>([])
+const messages = ref<ChatMessage[]>([])
 const messagesLoading = ref(false)
 const draft = ref('')
 
@@ -62,7 +81,8 @@ const activeConversation = computed(() =>
 
 const loadMessages = async (convId: string) => {
   messagesLoading.value = true
-  messages.value = await fetchMessages(convId)
+  const rows = await fetchMessages(convId)
+  messages.value = rows.map(({ id, senderId, body, createdAt }) => ({ id, senderId, body, createdAt }))
   messagesLoading.value = false
 }
 
@@ -78,10 +98,13 @@ watch(activeId, async (convId) => {
   }
   await loadMessages(convId)
   unsubscribe = subscribeToMessages(convId, (msg) => {
-    // `as any[]` — MessageRow's recursive `Json` (attachments) field blows up
-    // TS ("excessively deep") when pushed into a typed ref array directly.
-    const list = messages.value as any[]
-    if (!list.some(m => m.id === msg.id)) list.push(msg)
+    if (messages.value.some(m => m.id === msg.id)) return
+    messages.value.push({
+      id: msg.id,
+      senderId: msg.senderId,
+      body: msg.body,
+      createdAt: msg.createdAt
+    })
   })
 }, { immediate: true })
 
@@ -113,7 +136,7 @@ const senderNameOf = (senderId: string) => {
 <template>
   <div class="relative">
     <div
-      v-if="pending && !conversations.length"
+      v-if="!data || (pending && !conversations.length)"
       class="rounded-2xl border-2 border-dashed border-default p-12 text-center"
     >
       <UIcon

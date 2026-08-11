@@ -3,6 +3,15 @@
 /*.pdf
 docs/
 
+# Landing redesign screenshots committed to the repo root (~5 MB, not served)
+/redesign-*.png
+
+# Brand source art: ~36 MB of 1104px PNGs. The landing renders the .webp
+# variants produced by scripts/optimize-brand-images.mjs, which stay included —
+# only the PNG masters are stripped from the deployment.
+public/images/brand/*.png
+public/images/brand/mascot-states/*.png
+
 # Build outputs
 .output
 .nuxt

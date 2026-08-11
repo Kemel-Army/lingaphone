@@ -24,15 +24,24 @@ interface Slot { weekday: number, time: string, durationMin: number }
 export const parseScheduleSlots = (schedule: any): Slot[] => {
   const fallbackDuration = Number(schedule?.durationMin) > 0 ? Number(schedule.durationMin) : 60
 
-  if (Array.isArray(schedule?.slots)) {
-    return (schedule.slots as unknown[])
+  const fromSlotArray = (raw: unknown[]): Slot[] =>
+    raw
       .map((s) => {
-        const o = s as { weekday?: number, time?: string, durationMin?: number }
-        if (typeof o?.weekday !== 'number' || !o?.time) return null
-        return { weekday: o.weekday, time: o.time, durationMin: Number(o.durationMin) > 0 ? Number(o.durationMin) : fallbackDuration }
+        // `startTime` is the shape app/shared/lib/schedule.ts emits; `time` is
+        // what the admin form writes. Both occur in Group.schedule, so accept
+        // either — reading only `time` silently produced zero lessons for any
+        // group stored in the other shape.
+        const o = s as { weekday?: number, time?: string, startTime?: string, durationMin?: number }
+        const time = o?.time ?? o?.startTime
+        if (typeof o?.weekday !== 'number' || !time) return null
+        return { weekday: o.weekday, time, durationMin: Number(o.durationMin) > 0 ? Number(o.durationMin) : fallbackDuration }
       })
       .filter((s): s is Slot => !!s)
-  }
+
+  // Bare slot array — the legacy shape normalizeSchedule() already accepted.
+  if (Array.isArray(schedule)) return fromSlotArray(schedule)
+
+  if (Array.isArray(schedule?.slots)) return fromSlotArray(schedule.slots as unknown[])
 
   // Legacy: shared time across selected days.
   const time: string = typeof schedule?.time === 'string' ? schedule.time : ''
@@ -62,24 +71,34 @@ export const buildLessonRows = (
   const slots = parseScheduleSlots(schedule)
   if (!slots.length) return []
 
-  const byWeekday = new Map<number, Slot>()
-  for (const s of slots) byWeekday.set(s.weekday, s)
+  // Map<weekday, Slot[]> — a group can meet twice on the same weekday
+  // (e.g. Mon 09:00 and Mon 18:00). Keying a single Slot per weekday silently
+  // dropped every lesson but the last one for that day.
+  const byWeekday = new Map<number, Slot[]>()
+  for (const s of slots) {
+    const bucket = byWeekday.get(s.weekday)
+    if (bucket) bucket.push(s)
+    else byWeekday.set(s.weekday, [s])
+  }
+  for (const bucket of byWeekday.values()) bucket.sort((a, b) => a.time.localeCompare(b.time))
 
   const rows: Array<{ groupId: string, startsAt: string, durationMin: number, status: 'SCHEDULED' }> = []
   const cursor = new Date(fromDate)
   cursor.setHours(0, 0, 0, 0)
   for (let i = 0; i < weeksAhead * 7; i++) {
-    const slot = byWeekday.get(cursor.getDay())
-    if (slot) {
+    const daySlots = byWeekday.get(cursor.getDay())
+    if (daySlots) {
       const y = cursor.getFullYear()
       const m = String(cursor.getMonth() + 1).padStart(2, '0')
       const day = String(cursor.getDate()).padStart(2, '0')
-      rows.push({
-        groupId,
-        startsAt: `${y}-${m}-${day}T${slot.time}:00+05:00`,
-        durationMin: slot.durationMin,
-        status: 'SCHEDULED'
-      })
+      for (const slot of daySlots) {
+        rows.push({
+          groupId,
+          startsAt: `${y}-${m}-${day}T${slot.time}:00+05:00`,
+          durationMin: slot.durationMin,
+          status: 'SCHEDULED'
+        })
+      }
     }
     cursor.setDate(cursor.getDate() + 1)
   }

@@ -6,7 +6,7 @@ import type { ChartData } from 'chart.js'
 definePageMeta({ layout: 'dashboard' })
 
 const {
-  pending,
+  loaded,
   summary,
   topicMastery,
   strengths,
@@ -148,7 +148,7 @@ const totalActivity = computed(() => activityCalendar.value.reduce((s, c) => s +
 
       <!-- Loading -->
       <div
-        v-if="pending"
+        v-if="!loaded"
         class="animate-pulse grid grid-cols-2 md:grid-cols-4 gap-4"
       >
         <div

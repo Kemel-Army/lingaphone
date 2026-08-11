@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { LessonExercise, FillBlankContent } from '~/entities/book'
+import type { ExerciseReveal } from '../../model/reveal'
 
-const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: any, disabled: boolean }>()
+const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: ExerciseReveal | null, disabled: boolean }>()
 const emit = defineEmits<{ (e: 'change', v: { response: Record<string, unknown>, ready: boolean }): void }>()
 
 const content = computed(() => props.exercise.content as FillBlankContent)
@@ -16,7 +17,7 @@ const isWordGrid = computed(() =>
   !hasImages.value
   && content.value.items.every(it => !it.before && (it.after ?? '').length > 0 && (it.after ?? '').length <= 14))
 
-const norm = (s?: string) => String(s ?? '').toLowerCase().replace(/[.,!?;:'"`’]/g, '').replace(/\s+/g, ' ').trim()
+const norm = (s?: string | null) => String(s ?? '').toLowerCase().replace(/[.,!?;:'"`’]/g, '').replace(/\s+/g, ' ').trim()
 const cellOk = (i: number) => norm(answers.value[i]) === norm(props.reveal?.answers?.[i])
 
 // input border/bg per state

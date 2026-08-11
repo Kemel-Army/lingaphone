@@ -176,7 +176,11 @@ const levelMeta = computed(() =>
             />
           </div>
 
-          <!-- Markdown theory -->
+          <!-- Markdown theory. Safe to bind: `md` is built with html:false and
+               linkify:false, so raw HTML in the source is escaped instead of
+               emitted, and markdown-it's default validateLink rejects
+               javascript:/vbscript:/data: URLs. -->
+          <!-- eslint-disable vue/no-v-html -->
           <div
             class="prose prose-sm dark:prose-invert max-w-none
               prose-headings:font-black prose-headings:tracking-tight
@@ -187,6 +191,7 @@ const levelMeta = computed(() =>
               dark:prose-blockquote:bg-amber-900/20"
             v-html="theoryHtml"
           />
+          <!-- eslint-enable vue/no-v-html -->
         </UCard>
 
         <div class="flex items-center justify-between">

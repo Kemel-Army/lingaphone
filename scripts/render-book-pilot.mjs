@@ -104,17 +104,28 @@ const detect = async (b64) => {
         generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 8192 }
       })
     })
-    if (res.status === 429) { geminiDead = true; console.log('   gemini 429 (daily quota) → switching to demo seed'); return [] }
-    if (!res.ok) { console.log(`   gemini ${res.status}`); return [] }
+    if (res.status === 429) {
+      geminiDead = true
+      console.log('   gemini 429 (daily quota) → switching to demo seed')
+      return []
+    }
+    if (!res.ok) {
+      console.log(`   gemini ${res.status}`)
+      return []
+    }
     const data = await res.json()
     let text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}'
     // Salvage against markdown fences / trailing truncation.
     text = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim()
-    const s = text.indexOf('{'); const e = text.lastIndexOf('}')
+    const s = text.indexOf('{')
+    const e = text.lastIndexOf('}')
     if (s >= 0 && e > s) text = text.slice(s, e + 1)
     const parsed = JSON.parse(text)
     return Array.isArray(parsed?.exercises) ? parsed.exercises : []
-  } catch (e) { console.log(`   gemini parse/err: ${String(e).slice(0, 80)}`); return [] }
+  } catch (e) {
+    console.log(`   gemini parse/err: ${String(e).slice(0, 80)}`)
+    return []
+  }
 }
 
 const KINDS = new Set(['BLANK', 'CHOICE', 'TRUE_FALSE', 'MATCH', 'SHORT_TEXT'])
@@ -147,7 +158,10 @@ if (DETECT_ONLY) {
     for (const ex of found) await addExercise(p.id, ex, order++)
     total += order
     console.log(`  p${p.pageNumber}: ${order} exercises`)
-    if (geminiDead) { console.log('  (quota hit — stopping)'); break }
+    if (geminiDead) {
+      console.log('  (quota hit — stopping)')
+      break
+    }
   }
   console.log(`\nDETECT DONE: ${total} exercises`)
   process.exit(0)

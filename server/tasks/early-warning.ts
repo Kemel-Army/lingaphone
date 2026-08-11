@@ -23,7 +23,7 @@ export default defineTask({
   async run() {
     console.log('[early-warning] Running early warning check...')
 
-    const supabase = useServiceRoleSupabase()
+    const supabase = taskServiceRoleClient()
     const now = new Date()
     const notifications: { userId: string, type: string, title: string, message: string }[] = []
 
@@ -175,17 +175,3 @@ export default defineTask({
     return { result: `Created ${uniqueNotifications.length} notifications for ${students.length} students` }
   }
 })
-
-/**
- * Create a Supabase service-role client for server tasks.
- */
-function useServiceRoleSupabase() {
-  const config = useRuntimeConfig()
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createClient } = require('@supabase/supabase-js') as { createClient: (url: string, key: string, opts?: object) => any }
-  return createClient(
-    config.public.supabase?.url ?? (config as any).supabaseUrl ?? '',
-    (config as any).supabaseServiceKey ?? (config as any).supabase?.serviceKey ?? '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
-}

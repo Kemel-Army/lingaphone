@@ -356,12 +356,17 @@ export const useAdminStats = () => {
     const computedTotalEarnings = medalList.reduce((s, m) => s + (m.payout ?? 0), 0)
 
     // ─── Group (active membership) ───────────────────────────────────────────
-    const { data: memberRow } = await supabase
+    // `.limit(1)`, not `.maybeSingle()`: membership is M:N, and a student in
+    // two active groups made maybeSingle() return PGRST116 ("result contains
+    // 2 rows"). The error was discarded, memberRow became null and the card
+    // silently showed no group at all.
+    const { data: memberRows } = await supabase
       .from('GroupMember')
       .select('Group!groupId ( id, name, level, schedule, Teacher!teacherId ( User!userId ( name, surname, avatarUrl ) ) )')
       .eq('studentId', studentId)
       .eq('status', 'ACTIVE')
-      .maybeSingle() as unknown as {
+      .order('joinedAt', { ascending: true })
+      .limit(1) as unknown as {
       data: {
         Group: {
           id: string
@@ -370,8 +375,9 @@ export const useAdminStats = () => {
           schedule: unknown
           Teacher: { User: { name: string, surname: string, avatarUrl: string | null } | null } | null
         } | null
-      } | null
+      }[] | null
     }
+    const memberRow = memberRows?.[0] ?? null
     const groupRow = memberRow?.Group
       ? (Array.isArray(memberRow.Group) ? memberRow.Group[0] : memberRow.Group)
       : null
