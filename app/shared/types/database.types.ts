@@ -974,6 +974,7 @@ export type Database = {
           notes: string | null
           paidAt: string | null
           phone: string | null
+          phoneDigits: string | null
           responsibleId: string | null
           source: Database['public']['Enums']['LeadSource']
           stage: Database['public']['Enums']['LeadStage']
@@ -996,6 +997,7 @@ export type Database = {
           notes?: string | null
           paidAt?: string | null
           phone?: string | null
+          phoneDigits?: string | null
           responsibleId?: string | null
           source?: Database['public']['Enums']['LeadSource']
           stage?: Database['public']['Enums']['LeadStage']
@@ -1018,6 +1020,7 @@ export type Database = {
           notes?: string | null
           paidAt?: string | null
           phone?: string | null
+          phoneDigits?: string | null
           responsibleId?: string | null
           source?: Database['public']['Enums']['LeadSource']
           stage?: Database['public']['Enums']['LeadStage']
@@ -1941,6 +1944,59 @@ export type Database = {
           }
         ]
       }
+      PlacementTest: {
+        Row: {
+          ageBand: Database['public']['Enums']['PlacementAgeBand']
+          answers: Json
+          autoMax: number
+          autoScore: number
+          createdAt: string
+          fullName: string
+          id: string
+          leadId: string
+          openAnswers: Json
+          phone: string
+          recommendedLevel: string | null
+          skippedCount: number
+        }
+        Insert: {
+          ageBand: Database['public']['Enums']['PlacementAgeBand']
+          answers?: Json
+          autoMax?: number
+          autoScore?: number
+          createdAt?: string
+          fullName: string
+          id?: string
+          leadId: string
+          openAnswers?: Json
+          phone: string
+          recommendedLevel?: string | null
+          skippedCount?: number
+        }
+        Update: {
+          ageBand?: Database['public']['Enums']['PlacementAgeBand']
+          answers?: Json
+          autoMax?: number
+          autoScore?: number
+          createdAt?: string
+          fullName?: string
+          id?: string
+          leadId?: string
+          openAnswers?: Json
+          phone?: string
+          recommendedLevel?: string | null
+          skippedCount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'PlacementTest_leadId_fkey'
+            columns: ['leadId']
+            isOneToOne: false
+            referencedRelation: 'Lead'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       PracticeAttempt: {
         Row: {
           attemptedAt: string
@@ -2214,11 +2270,13 @@ export type Database = {
       Song: {
         Row: {
           artist: string
+          audioFileName: string | null
+          audioUrl: string | null
           createdAt: string
           genre: string | null
           id: string
           isPublished: boolean
-          level: string
+          level: string | null
           lyrics: Json
           title: string
           vocabulary: Json
@@ -2226,11 +2284,13 @@ export type Database = {
         }
         Insert: {
           artist: string
+          audioFileName?: string | null
+          audioUrl?: string | null
           createdAt?: string
           genre?: string | null
           id?: string
           isPublished?: boolean
-          level: string
+          level?: string | null
           lyrics?: Json
           title: string
           vocabulary?: Json
@@ -2238,11 +2298,13 @@ export type Database = {
         }
         Update: {
           artist?: string
+          audioFileName?: string | null
+          audioUrl?: string | null
           createdAt?: string
           genre?: string | null
           id?: string
           isPublished?: boolean
-          level?: string
+          level?: string | null
           lyrics?: Json
           title?: string
           vocabulary?: Json
@@ -3188,6 +3250,7 @@ export type Database = {
       PaymentMethod: 'CASH' | 'CARD' | 'KASPI' | 'TRANSFER' | 'OTHER'
       PaymentStatus: 'COMPLETED' | 'PENDING' | 'REFUNDED' | 'FAILED'
       PayoutStatus: 'PENDING' | 'PAID' | 'CANCELLED'
+      PlacementAgeBand: 'AGE_6_9' | 'AGE_9_12' | 'AGE_12_16'
       QuestPeriod: 'DAILY' | 'WEEKLY'
       QuestStatus: 'ACTIVE' | 'COMPLETED' | 'EXPIRED'
       QuestType:
@@ -3474,6 +3537,7 @@ export const Constants = {
       PaymentMethod: ['CASH', 'CARD', 'KASPI', 'TRANSFER', 'OTHER'],
       PaymentStatus: ['COMPLETED', 'PENDING', 'REFUNDED', 'FAILED'],
       PayoutStatus: ['PENDING', 'PAID', 'CANCELLED'],
+      PlacementAgeBand: ['AGE_6_9', 'AGE_9_12', 'AGE_12_16'],
       QuestPeriod: ['DAILY', 'WEEKLY'],
       QuestStatus: ['ACTIVE', 'COMPLETED', 'EXPIRED'],
       QuestType: [

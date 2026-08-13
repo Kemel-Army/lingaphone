@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSongs, useSongProgress, SONG_LEVEL_META, SONG_GENRE_LABELS } from '~/entities/song'
+import { useSongs, useSongProgress, songLevelMeta, totalGaps, SONG_GENRE_LABELS } from '~/entities/song'
 import { LyricsGapFill, usePracticeSong } from '~/features/practice-song'
 import type { GapResult } from '~/features/practice-song'
 import { LevelUpModal } from '~/entities/game-profile'
@@ -76,11 +76,12 @@ const retry = () => {
 }
 
 const levelMeta = computed(() =>
-  data.value?.song ? SONG_LEVEL_META[data.value.song.level] : null
+  data.value?.song ? songLevelMeta(data.value.song.level) : null
 )
 
+// Считаем пропуски, а не строки с пропусками: в строке их может быть несколько.
 const gapCount = computed(() =>
-  data.value?.song.lyrics.filter(l => l.hasGap).length ?? 0
+  data.value?.song ? totalGaps(data.value.song.lyrics) : 0
 )
 
 // Phase steps for indicator
@@ -180,9 +181,37 @@ const STEP_LABELS: Record<Phase, string> = {
 
       <!-- ── LISTEN phase ─────────────────────────────────────────────────── -->
       <template v-if="phase === 'listen'">
+        <!-- Загруженный трек приоритетнее YouTube: он всегда доступен -->
+        <div
+          v-if="data.song.audioUrl"
+          class="mb-6 rounded-2xl bg-linear-to-br p-6 text-white shadow-lg"
+          :class="levelMeta?.gradient"
+        >
+          <div class="mb-4 flex items-center gap-3">
+            <UIcon
+              name="i-lucide-music"
+              class="size-10 shrink-0 opacity-90"
+            />
+            <div class="min-w-0">
+              <p class="truncate text-lg font-black">
+                {{ data.song.title }}
+              </p>
+              <p class="truncate text-sm opacity-80">
+                {{ data.song.artist }}
+              </p>
+            </div>
+          </div>
+          <audio
+            :src="data.song.audioUrl"
+            controls
+            preload="metadata"
+            class="w-full"
+          />
+        </div>
+
         <!-- YouTube embed -->
         <div
-          v-if="data.song.youtubeId"
+          v-else-if="data.song.youtubeId"
           class="mb-6 overflow-hidden rounded-2xl shadow-lg"
         >
           <ClientOnly>
@@ -256,10 +285,13 @@ const STEP_LABELS: Record<Phase, string> = {
       <!-- ── FILL phase ──────────────────────────────────────────────────── -->
       <template v-else-if="phase === 'fill'">
         <p class="mb-4 text-sm text-muted">
-          Заполни пропуски по памяти. Можно прокрутить наверх и послушать ещё раз.
+          {{ data.song.audioUrl
+            ? 'Включай запись и вписывай пропущенные слова на слух.'
+            : 'Заполни пропуски по памяти. Можно прокрутить наверх и послушать ещё раз.' }}
         </p>
         <LyricsGapFill
           :lyrics="data.song.lyrics"
+          :audio-url="data.song.audioUrl"
           @done="onFillDone"
         />
       </template>

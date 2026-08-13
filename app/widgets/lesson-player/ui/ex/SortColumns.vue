@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LessonExercise, SortColumnsContent } from '~/entities/book'
 import type { ExerciseReveal } from '../../model/reveal'
+import { useArmHint } from '../../model/armHint'
 
 const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: ExerciseReveal | null, disabled: boolean }>()
 const emit = defineEmits<{ (e: 'change', v: { response: Record<string, unknown>, ready: boolean }): void }>()
@@ -25,8 +26,16 @@ const omit = (o: Record<string, string>, k: string) => {
 const tapItem = (id: string) => {
   if (!props.disabled) armedItem.value = armedItem.value === id ? null : id
 }
+const { hint: armHint, show: showArmHint } = useArmHint()
+
 const tapColumn = (colId: string) => {
-  if (props.disabled || !armedItem.value) return
+  if (props.disabled) return
+  // Колонка выглядит кликабельной, но без выбранного слова класть в неё нечего —
+  // подсказываем это вслух, иначе тап читается как «не работает».
+  if (!armedItem.value) {
+    showArmHint()
+    return
+  }
   placement.value = { ...placement.value, [armedItem.value]: colId }
   armedItem.value = null
 }
@@ -103,5 +112,12 @@ const chipOutcome = (id: string) => {
         <span v-if="it.label">{{ it.label }}</span>
       </button>
     </div>
+
+    <p
+      v-if="armHint"
+      class="text-center text-sm font-semibold text-amber-600"
+    >
+      Сначала нажми слово, потом колонку
+    </p>
   </div>
 </template>

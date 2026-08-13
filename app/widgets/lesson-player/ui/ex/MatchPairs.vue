@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LessonExercise, MatchPairsContent } from '~/entities/book'
 import type { ExerciseReveal } from '../../model/reveal'
+import { useArmHint } from '../../model/armHint'
 
 const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: ExerciseReveal | null, disabled: boolean }>()
 const emit = defineEmits<{ (e: 'change', v: { response: Record<string, unknown>, ready: boolean }): void }>()
@@ -39,6 +40,8 @@ const tapLeft = (id: string) => {
   }
   armedLeft.value = armedLeft.value === id ? null : id
 }
+const { hint: armHint, show: showArmHint } = useArmHint()
+
 const tapRight = (id: string) => {
   if (props.disabled) return
   const l = rightToLeft.value[id]
@@ -46,7 +49,11 @@ const tapRight = (id: string) => {
     pairs.value = omit(pairs.value, l)
     return
   }
-  if (!armedLeft.value) return
+  // Без выбранного слева пара не строится — говорим об этом вместо тишины.
+  if (!armedLeft.value) {
+    showArmHint()
+    return
+  }
   pairs.value = { ...pairs.value, [armedLeft.value]: id }
   armedLeft.value = null
 }
@@ -60,45 +67,57 @@ const leftOutcome = (id: string) => {
 </script>
 
 <template>
-  <div class="grid grid-cols-2 gap-4">
-    <div class="flex flex-col gap-2">
-      <button
-        v-for="o in content.left"
-        :key="o.id"
-        type="button"
-        :disabled="disabled"
-        class="flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-left font-semibold transition disabled:cursor-default"
-        :class="[
-          armedLeft === o.id ? 'border-primary bg-primary/10' : 'border-default hover:border-primary',
-          leftOutcome(o.id)
-        ]"
-        @click="tapLeft(o.id)"
-      >
-        <span
-          v-if="pairs[o.id]"
-          class="size-3 shrink-0 rounded-full"
-          :class="colorFor(o.id)"
-        />
-        <span class="min-w-0">{{ o.label }}</span>
-      </button>
+  <div>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="flex flex-col gap-2">
+        <button
+          v-for="o in content.left"
+          :key="o.id"
+          type="button"
+          :disabled="disabled"
+          class="flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-left font-semibold transition disabled:cursor-default"
+          :class="[
+            armedLeft === o.id ? 'border-primary bg-primary/10' : 'border-default hover:border-primary',
+            leftOutcome(o.id)
+          ]"
+          @click="tapLeft(o.id)"
+        >
+          <span
+            v-if="pairs[o.id]"
+            class="size-3 shrink-0 rounded-full"
+            :class="colorFor(o.id)"
+          />
+          <span class="min-w-0">{{ o.label }}</span>
+        </button>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button
+          v-for="o in content.right"
+          :key="o.id"
+          type="button"
+          :disabled="disabled"
+          class="flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-left font-semibold transition disabled:cursor-default"
+          :class="rightToLeft[o.id]
+            ? 'border-default'
+            : armedLeft
+              ? 'border-primary/40 hover:border-primary'
+              : 'border-default opacity-70 hover:border-primary'"
+          @click="tapRight(o.id)"
+        >
+          <span
+            v-if="rightToLeft[o.id]"
+            class="size-3 shrink-0 rounded-full"
+            :class="colorFor(rightToLeft[o.id] ?? '')"
+          />
+          <span class="min-w-0">{{ o.label }}</span>
+        </button>
+      </div>
     </div>
-    <div class="flex flex-col gap-2">
-      <button
-        v-for="o in content.right"
-        :key="o.id"
-        type="button"
-        :disabled="disabled"
-        class="flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-left font-semibold transition disabled:cursor-default"
-        :class="rightToLeft[o.id] ? 'border-default' : 'border-default hover:border-primary'"
-        @click="tapRight(o.id)"
-      >
-        <span
-          v-if="rightToLeft[o.id]"
-          class="size-3 shrink-0 rounded-full"
-          :class="colorFor(rightToLeft[o.id] ?? '')"
-        />
-        <span class="min-w-0">{{ o.label }}</span>
-      </button>
-    </div>
+    <p
+      v-if="armHint"
+      class="mt-3 text-center text-sm font-semibold text-amber-600"
+    >
+      Сначала нажми слово слева
+    </p>
   </div>
 </template>

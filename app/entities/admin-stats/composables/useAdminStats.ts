@@ -4,6 +4,8 @@ import type {
   AdminStudentGroup,
   AdminStudentSubscription,
   AdminStudentAttendance,
+  AdminStudentLesson,
+  AdminStudentParent,
   AdminTeacher,
   AdminGroup,
   AdminMedal,
@@ -422,6 +424,71 @@ export const useAdminStats = () => {
         }
       : null
 
+    // ─── Upcoming lessons ─────────────────────────────────────────────────────
+    // The group card shows the weekly template (Пн 10:00); the card also needs
+    // the concrete next dates, which is what AlfaCRM puts under «Расписание».
+    // Spans every active membership, not just the one group rendered above.
+    const { data: activeMemberships } = await supabase
+      .from('GroupMember')
+      .select('groupId')
+      .eq('studentId', studentId)
+      .eq('status', 'ACTIVE') as unknown as { data: { groupId: string }[] | null }
+
+    const activeGroupIds = (activeMemberships ?? []).map(m => m.groupId)
+    let upcomingLessons: AdminStudentLesson[] = []
+
+    if (activeGroupIds.length > 0) {
+      const { data: lessonRows } = await supabase
+        .from('Lesson')
+        .select('id, startsAt, durationMin, topic, type, Group!groupId ( name, Teacher!teacherId ( User!userId ( name, surname ) ) )')
+        .in('groupId', activeGroupIds)
+        .gte('startsAt', new Date().toISOString())
+        .neq('status', 'CANCELLED')
+        .order('startsAt', { ascending: true })
+        .limit(8) as unknown as {
+        data: {
+          id: string
+          startsAt: string
+          durationMin: number | null
+          topic: string | null
+          type: AdminStudentLesson['type']
+          Group: { name: string, Teacher: { User: { name: string, surname: string } | null } | null } | null
+        }[] | null
+      }
+
+      upcomingLessons = (lessonRows ?? []).map((l) => {
+        const lGroup = Array.isArray(l.Group) ? l.Group[0] : l.Group
+        const lTeacher = lGroup ? (Array.isArray(lGroup.Teacher) ? lGroup.Teacher[0] : lGroup.Teacher) : null
+        const lUser = lTeacher ? (Array.isArray(lTeacher.User) ? lTeacher.User[0] : lTeacher.User) : null
+        return {
+          id: l.id,
+          startsAt: l.startsAt,
+          durationMin: l.durationMin ?? 60,
+          topic: l.topic,
+          type: l.type,
+          groupName: lGroup?.name ?? '—',
+          teacherName: lUser ? `${lUser.name} ${lUser.surname}`.trim() : '—'
+        }
+      })
+    }
+
+    // ─── Linked parents (contacts) ────────────────────────────────────────────
+    const { data: parentRows } = await supabase
+      .from('ParentToStudent')
+      .select('Parent!parentId ( id, User!userId ( name, surname, phone, email ) )')
+      .eq('studentId', studentId) as unknown as {
+      data: {
+        Parent: { id: string, User: { name: string, surname: string, phone: string | null, email: string } | null } | null
+      }[] | null
+    }
+
+    const parents: AdminStudentParent[] = (parentRows ?? []).flatMap((row) => {
+      const p = Array.isArray(row.Parent) ? row.Parent[0] : row.Parent
+      const pUser = p ? (Array.isArray(p.User) ? p.User[0] : p.User) : null
+      if (!p || !pUser) return []
+      return [{ id: p.id, name: pUser.name, surname: pUser.surname, phone: pUser.phone ?? null, email: pUser.email }]
+    })
+
     // ─── Attendance history (last 30) ─────────────────────────────────────────
     const { data: attRows } = await supabase
       .from('Attendance')
@@ -454,6 +521,8 @@ export const useAdminStats = () => {
       group,
       subscription,
       attendance,
+      upcomingLessons,
+      parents,
       student: {
         id: data.id,
         userId: data.userId,

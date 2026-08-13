@@ -2,6 +2,8 @@ import { useSongProgress } from '~/entities/song'
 
 export interface GapResult {
   lineIndex: number
+  /** Позиция пропуска внутри строки — их может быть несколько. */
+  gapIndex?: number
   userAnswer: string
   correctAnswer: string
   correct: boolean

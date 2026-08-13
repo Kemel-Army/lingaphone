@@ -66,6 +66,26 @@ export interface AdminStudentAttendance {
   groupName: string
 }
 
+/** A concrete future lesson on the student's card — not the weekly template. */
+export interface AdminStudentLesson {
+  id: string
+  startsAt: string
+  durationMin: number
+  topic: string | null
+  type: 'GROUP' | 'INDIVIDUAL' | 'TRIAL' | 'MAKEUP' | 'SPEAKING_CLUB'
+  groupName: string
+  teacherName: string
+}
+
+/** Parent/guardian contact shown on the student card (AlfaCRM «Контакты»). */
+export interface AdminStudentParent {
+  id: string
+  name: string
+  surname: string
+  phone: string | null
+  email: string
+}
+
 export interface AdminTeacher {
   id: string
   userId: string

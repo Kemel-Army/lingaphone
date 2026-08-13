@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { SongWithProgress } from '../model/types'
-import { SONG_LEVEL_META, SONG_GENRE_LABELS } from '../model/types'
+import { songLevelMeta, SONG_GENRE_LABELS } from '../model/types'
 
 const props = defineProps<{ song: SongWithProgress }>()
 
-const levelMeta = computed(() => SONG_LEVEL_META[props.song.level])
+const levelMeta = computed(() => songLevelMeta(props.song.level))
 const gapCount = computed(() => props.song.lyrics.filter(l => l.hasGap).length)
 const isCompleted = computed(() => !!props.song.progress?.completedAt)
 const scorePercent = computed(() => {

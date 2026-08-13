@@ -23,6 +23,7 @@ interface ScheduleLesson {
   groupId: string
   groupName: string
   groupLevel: string
+  teacherId: string
   teacherName: string
   teacherAvatar: string | null
   isOnline: boolean
@@ -33,14 +34,30 @@ interface ScheduleLesson {
 const kzDate = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: TZ })
 const kzTime = (iso: string) => new Date(iso).toLocaleTimeString('ru-RU', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })
 
-// ─── Date navigation ──────────────────────────────────────────────────────────
+// ─── View mode + date navigation ──────────────────────────────────────────────
+
+/**
+ * Two views over the same week of data (AlfaCRM-style):
+ *   'week' — rows = start times, columns = weekdays
+ *   'day'  — rows = start times, columns = TEACHERS working that day
+ * Both read from one fetch keyed by the Monday of `anchor`'s week, so
+ * switching modes or stepping a day inside the week costs no extra request.
+ */
+type ViewMode = 'week' | 'day'
+const viewMode = ref<ViewMode>('week')
+
+const startOfDay = (d: Date) => {
+  const c = new Date(d)
+  c.setHours(0, 0, 0, 0)
+  return c
+}
 
 const today = new Date()
-const weekOffset = ref(0)
+const anchor = ref<Date>(startOfDay(today))
 
 const weekStart = computed(() => {
-  const d = new Date(today)
-  d.setDate(d.getDate() - d.getDay() + 1 + weekOffset.value * 7) // Mon
+  const d = new Date(anchor.value)
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)) // back to Monday
   d.setHours(0, 0, 0, 0)
   return d
 })
@@ -54,6 +71,7 @@ const weekDays = computed(() =>
 )
 
 const weekDayKeys = computed(() => weekDays.value.map(d => d.toLocaleDateString('en-CA', { timeZone: TZ })))
+const anchorKey = computed(() => anchor.value.toLocaleDateString('en-CA', { timeZone: TZ }))
 
 const weekLabel = computed(() => {
   const from = weekDays.value[0]!
@@ -61,10 +79,27 @@ const weekLabel = computed(() => {
   return `${from.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} — ${to.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}`
 })
 
+const dayLabel = computed(() =>
+  anchor.value.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+)
+
+const periodLabel = computed(() => viewMode.value === 'week' ? weekLabel.value : dayLabel.value)
+
+/** Step by a week or a day depending on the active view. */
+const shift = (dir: -1 | 1) => {
+  const d = new Date(anchor.value)
+  d.setDate(d.getDate() + dir * (viewMode.value === 'week' ? 7 : 1))
+  anchor.value = startOfDay(d)
+}
+const goToday = () => {
+  anchor.value = startOfDay(new Date())
+}
+const isAnchorToday = computed(() => anchor.value.toDateString() === today.toDateString())
+
 // ─── Fetch lessons ────────────────────────────────────────────────────────────
 
 const { data: lessons, pending, refresh } = await useAsyncData(
-  () => `admin-schedule-${weekOffset.value}`,
+  () => `admin-schedule-${weekDayKeys.value[0]}`,
   async () => {
     // Widen the range by ±1 day so KZ-evening lessons near the week edge are
     // not lost to the +5h UTC offset; bucketing by KZ date drops the extras.
@@ -77,7 +112,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
       .from('Lesson')
       .select(`
         id, startsAt, durationMin, topic, status, type, meetingUrl, groupId,
-        Group!groupId ( name, level, archivedAt, Teacher!teacherId ( User!userId ( name, surname, avatarUrl ) ) )
+        Group!groupId ( name, level, archivedAt, Teacher!teacherId ( id, User!userId ( name, surname, avatarUrl ) ) )
       `)
       .gte('startsAt', from.toISOString())
       .lt('startsAt', to.toISOString())
@@ -95,7 +130,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           name: string
           level: string
           archivedAt: string | null
-          Teacher: { User: { name: string, surname: string, avatarUrl: string | null } | null } | null
+          Teacher: { id: string, User: { name: string, surname: string, avatarUrl: string | null } | null } | null
         } | null
       }[] | null
       error: unknown
@@ -120,6 +155,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           groupId: l.groupId,
           groupName: group?.name ?? '—',
           groupLevel: group?.level ?? '',
+          teacherId: teacher?.id ?? '',
           teacherName: tUser ? `${tUser.name} ${tUser.surname}`.trim() : '—',
           teacherAvatar: tUser?.avatarUrl ?? null,
           isOnline: !!l.meetingUrl,
@@ -132,7 +168,8 @@ const { data: lessons, pending, refresh } = await useAsyncData(
   }
 )
 
-watch(weekOffset, () => refresh())
+// Only a change of week needs new rows — day-stepping inside the week reuses them.
+watch(() => weekDayKeys.value[0], () => refresh())
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
@@ -149,17 +186,45 @@ const filteredLessons = computed(() => {
   return filterValue.value ? list.filter(l => l.groupId === filterValue.value) : list
 })
 
-// ─── Time-grid (rows = start times, columns = days) ────────────────────────────
+// ─── Time-grid ─────────────────────────────────────────────────────────────────
+// Week view: rows = start times, columns = weekdays.
+// Day view:  rows = start times, columns = teachers working that day.
 
-// Distinct start times present in the week, sorted ascending.
+/** Lessons of the anchored day only — the source for the day view. */
+const dayLessons = computed(() => filteredLessons.value.filter(l => l.date === anchorKey.value))
+
+/** Rows are the distinct start times of whichever set the active view shows. */
 const timeRows = computed(() => {
+  const src = viewMode.value === 'week' ? filteredLessons.value : dayLessons.value
   const set = new Set<string>()
-  for (const l of filteredLessons.value) set.add(l.time)
+  for (const l of src) set.add(l.time)
   return [...set].sort((a, b) => a.localeCompare(b))
 })
 
 const lessonAt = (dayKey: string, time: string) =>
   filteredLessons.value.filter(l => l.date === dayKey && l.time === time)
+
+/**
+ * Teacher columns for the day view — only teachers who actually teach that
+ * day, sorted by name, so the grid stays as narrow as the day requires.
+ */
+const dayTeachers = computed(() => {
+  const seen = new Map<string, { id: string, name: string, avatar: string | null }>()
+  for (const l of dayLessons.value) {
+    if (!seen.has(l.teacherId)) seen.set(l.teacherId, { id: l.teacherId, name: l.teacherName, avatar: l.teacherAvatar })
+  }
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+})
+
+const lessonAtTeacher = (teacherId: string, time: string) =>
+  dayLessons.value.filter(l => l.teacherId === teacherId && l.time === time)
+
+/** "9:00" + 90 min → "10:30" — shown on the day-view cards like AlfaCRM. */
+const endTime = (l: ScheduleLesson) => {
+  const [h, m] = l.time.split(':').map(Number)
+  const total = (h! * 60 + m!) + (l.durationMin || 60)
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
 
 // ─── Per-group colors ──────────────────────────────────────────────────────────
 
@@ -189,6 +254,41 @@ const lessonCellClass = (l: ScheduleLesson) => {
   if (l.status === 'CANCELLED') return 'bg-red-500/5 border-red-300/50 opacity-60 line-through'
   return groupPalette(l.groupId).cell
 }
+
+// ─── Per-teacher colors (day view) ─────────────────────────────────────────────
+
+// In the day view columns are teachers, so the colour has to identify the
+// teacher — the way AlfaCRM tints each teacher's column and legend chip.
+const TEACHER_PALETTE = [
+  { dot: 'bg-emerald-600', bar: 'bg-emerald-600', tint: 'bg-emerald-500/5' },
+  { dot: 'bg-blue-600', bar: 'bg-blue-600', tint: 'bg-blue-500/5' },
+  { dot: 'bg-violet-600', bar: 'bg-violet-600', tint: 'bg-violet-500/5' },
+  { dot: 'bg-amber-500', bar: 'bg-amber-500', tint: 'bg-amber-500/5' },
+  { dot: 'bg-rose-600', bar: 'bg-rose-600', tint: 'bg-rose-500/5' },
+  { dot: 'bg-cyan-600', bar: 'bg-cyan-600', tint: 'bg-cyan-500/5' },
+  { dot: 'bg-fuchsia-600', bar: 'bg-fuchsia-600', tint: 'bg-fuchsia-500/5' },
+  { dot: 'bg-lime-600', bar: 'bg-lime-600', tint: 'bg-lime-500/5' },
+  { dot: 'bg-orange-600', bar: 'bg-orange-600', tint: 'bg-orange-500/5' },
+  { dot: 'bg-teal-600', bar: 'bg-teal-600', tint: 'bg-teal-500/5' }
+]
+
+// Keyed off every teacher who owns a group, not just the ones teaching today,
+// so a teacher keeps the same colour on every day you open.
+const teacherColorIndex = computed(() => {
+  const map = new Map<string, number>()
+  const ids = [...new Set((allGroups.value ?? []).map(g => g.teacherId))].sort()
+  ids.forEach((id, i) => map.set(id, i % TEACHER_PALETTE.length))
+  return map
+})
+
+const teacherPalette = (teacherId: string) => TEACHER_PALETTE[teacherColorIndex.value.get(teacherId) ?? 0]!
+
+/** Group roster size for the "(занято/мест)" badge on day-view cards. */
+const groupSize = computed(() => {
+  const map = new Map<string, { count: number, max: number }>()
+  for (const g of allGroups.value ?? []) map.set(g.id, { count: g.studentCount, max: g.maxStudents })
+  return map
+})
 
 // ─── Add lesson modal ──────────────────────────────────────────────────────────
 
@@ -335,31 +435,48 @@ const statusLabel: Record<string, string> = {
         </p>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <!-- Week nav -->
+        <!-- Period nav — steps a week or a day depending on the view -->
         <UButton
           icon="i-lucide-chevron-left"
           variant="ghost"
           color="neutral"
           size="sm"
-          @click="weekOffset--"
+          :aria-label="viewMode === 'week' ? 'Предыдущая неделя' : 'Предыдущий день'"
+          @click="shift(-1)"
         />
-        <span class="text-sm font-medium w-44 text-center">{{ weekLabel }}</span>
+        <span class="text-sm font-medium w-48 text-center">{{ periodLabel }}</span>
         <UButton
           icon="i-lucide-chevron-right"
           variant="ghost"
           color="neutral"
           size="sm"
-          @click="weekOffset++"
+          :aria-label="viewMode === 'week' ? 'Следующая неделя' : 'Следующий день'"
+          @click="shift(1)"
         />
         <UButton
-          v-if="weekOffset !== 0"
+          v-if="!isAnchorToday"
           variant="ghost"
           color="neutral"
           size="sm"
-          @click="weekOffset = 0"
+          @click="goToday"
         >
           Сегодня
         </UButton>
+
+        <!-- View toggle -->
+        <div class="inline-flex rounded-lg border border-default overflow-hidden">
+          <button
+            v-for="m in ([{ v: 'week', l: 'Неделя' }, { v: 'day', l: 'День' }] as const)"
+            :key="m.v"
+            type="button"
+            class="px-3 py-1.5 text-sm font-medium transition-colors"
+            :class="viewMode === m.v ? 'bg-primary text-inverted' : 'text-muted hover:bg-elevated'"
+            @click="viewMode = m.v"
+          >
+            {{ m.l }}
+          </button>
+        </div>
+
         <UButton
           icon="i-lucide-plus"
           @click="openAdd"
@@ -378,7 +495,9 @@ const statusLabel: Record<string, string> = {
         placeholder="Все группы"
       />
       <span class="text-sm text-muted ml-auto">
-        {{ filteredLessons.length }} урок(ов) за неделю
+        {{ viewMode === 'week'
+          ? `${filteredLessons.length} урок(ов) за неделю`
+          : `${dayLessons.length} урок(ов) · ${dayTeachers.length} преподавател(ей)` }}
       </span>
     </div>
 
@@ -390,9 +509,9 @@ const statusLabel: Record<string, string> = {
       Уроки создаются автоматически при создании группы с расписанием. Здесь можно добавить разовый урок или отменить существующий.
     </p>
 
-    <!-- Group legend -->
+    <!-- Legend: groups in the week view, teachers in the day view -->
     <div
-      v-if="!pending && groupOptions.length > 1"
+      v-if="!pending && viewMode === 'week' && groupOptions.length > 1"
       class="flex items-center gap-x-4 gap-y-1.5 flex-wrap"
     >
       <div
@@ -407,6 +526,22 @@ const statusLabel: Record<string, string> = {
         <span class="text-muted">{{ opt.label }}</span>
       </div>
     </div>
+    <div
+      v-else-if="!pending && viewMode === 'day' && dayTeachers.length"
+      class="flex items-center justify-center gap-x-4 gap-y-1.5 flex-wrap"
+    >
+      <div
+        v-for="t in dayTeachers"
+        :key="t.id"
+        class="flex items-center gap-1.5 text-xs"
+      >
+        <span
+          class="size-2.5 rounded-sm"
+          :class="teacherPalette(t.id).dot"
+        />
+        <span class="text-muted">{{ t.name }}</span>
+      </div>
+    </div>
 
     <!-- Loading -->
     <div
@@ -419,9 +554,9 @@ const statusLabel: Record<string, string> = {
       />
     </div>
 
-    <!-- Time-grid table -->
+    <!-- ── Week view: rows = times, columns = weekdays ───────────────────────── -->
     <div
-      v-else
+      v-else-if="viewMode === 'week'"
       class="overflow-x-auto rounded-2xl border border-default"
     >
       <div class="min-w-190">
@@ -499,6 +634,108 @@ const statusLabel: Record<string, string> = {
               </p>
               <p class="text-[10px] text-muted truncate">
                 {{ lesson.teacherName.split(' ')[0] }}
+              </p>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Day view: rows = times, columns = teachers (AlfaCRM layout) ───────── -->
+    <div
+      v-else
+      class="overflow-x-auto rounded-2xl border border-default"
+    >
+      <!-- Nobody teaches on this day -->
+      <div
+        v-if="!dayTeachers.length"
+        class="py-16 text-center text-sm text-muted"
+      >
+        <UIcon
+          name="i-lucide-calendar-x"
+          class="size-8 mx-auto mb-2 opacity-30"
+        />
+        В этот день уроков нет
+      </div>
+
+      <div
+        v-else
+        :style="{ minWidth: `${68 + dayTeachers.length * 150}px` }"
+      >
+        <!-- Header: corner + one column per teacher -->
+        <div
+          class="grid border-b border-default bg-elevated/50"
+          :style="{ gridTemplateColumns: `68px repeat(${dayTeachers.length}, minmax(150px, 1fr))` }"
+        >
+          <div class="px-2 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted flex items-end">
+            Время
+          </div>
+          <div
+            v-for="t in dayTeachers"
+            :key="t.id"
+            class="border-l border-default px-2 py-2"
+          >
+            <div class="flex items-center gap-2">
+              <span
+                class="h-6 w-1 shrink-0 rounded-full"
+                :class="teacherPalette(t.id).bar"
+              />
+              <UAvatar
+                :src="t.avatar ?? undefined"
+                :alt="t.name"
+                size="2xs"
+              />
+              <span class="truncate text-xs font-semibold">{{ t.name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time rows -->
+        <div
+          v-for="time in timeRows"
+          :key="time"
+          class="grid border-b border-default last:border-0"
+          :style="{ gridTemplateColumns: `68px repeat(${dayTeachers.length}, minmax(150px, 1fr))` }"
+        >
+          <div class="px-2 py-2 text-xs font-mono font-semibold text-muted flex items-start">
+            {{ time }}
+          </div>
+          <div
+            v-for="t in dayTeachers"
+            :key="`${time}-${t.id}`"
+            class="border-l border-default p-1 space-y-1 min-h-16"
+            :class="teacherPalette(t.id).tint"
+          >
+            <button
+              v-for="lesson in lessonAtTeacher(t.id, time)"
+              :key="lesson.id"
+              type="button"
+              class="w-full text-left rounded-lg border bg-default px-2 py-1.5 transition-colors cursor-pointer"
+              :class="lesson.status === 'CANCELLED'
+                ? 'border-red-300/50 opacity-60 line-through'
+                : 'border-default hover:border-primary/60'"
+              @click="openLesson(lesson)"
+            >
+              <p class="text-[11px] font-mono text-muted leading-tight">
+                {{ lesson.time }} – {{ endTime(lesson) }}
+              </p>
+              <p class="text-xs font-semibold leading-tight truncate flex items-center gap-1">
+                <UIcon
+                  :name="LESSON_TYPE_MAP[lesson.type].icon"
+                  class="size-3 shrink-0"
+                  :title="LESSON_TYPE_MAP[lesson.type].label"
+                />
+                <span class="truncate">{{ lesson.groupName }}</span>
+              </p>
+              <p
+                v-if="groupSize.get(lesson.groupId)"
+                class="text-[10px] text-muted"
+              >
+                {{ groupSize.get(lesson.groupId)!.count }} / {{ groupSize.get(lesson.groupId)!.max }}
+                <span
+                  v-if="lesson.groupLevel"
+                  class="ml-1"
+                >· {{ lesson.groupLevel }}</span>
               </p>
             </button>
           </div>

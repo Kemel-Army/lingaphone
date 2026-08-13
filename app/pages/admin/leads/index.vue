@@ -13,6 +13,7 @@ import {
   type LeadSource,
   type LeadStageHistoryRow
 } from '~/entities/lead'
+import { usePlacementTests, PlacementResultCard, type PlacementTestRecord } from '~/entities/placement-test'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -119,6 +120,8 @@ const submitCreate = async () => {
 // ─── Detail slideover ───────────────────────────────────────────────
 const selected = ref<LeadWithRelations | null>(null)
 const history = ref<LeadStageHistoryRow[]>([])
+const placementTests = ref<PlacementTestRecord[]>([])
+const { fetchByLead: fetchPlacementByLead } = usePlacementTests()
 const savingDetail = ref(false)
 const edit = reactive({
   fullName: '', phone: '', email: '', source: 'OTHER' as LeadSource,
@@ -141,12 +144,17 @@ const openDetail = async (lead: LeadWithRelations) => {
     notes: lead.notes ?? ''
   })
   history.value = []
+  placementTests.value = []
   try {
     history.value = await fetchStageHistory(lead.id)
   } catch { /* ignore history load errors */ }
+  try {
+    placementTests.value = await fetchPlacementByLead(lead.id)
+  } catch { /* результат теста не критичен для работы с лидом */ }
 }
 const closeDetail = () => {
   selected.value = null
+  placementTests.value = []
 }
 
 // WhatsApp/мессенджер чат по телефону лида (Wazzup, path A).
@@ -644,6 +652,18 @@ const respName = (l: LeadWithRelations) => l.responsible ? `${l.responsible.surn
             >
               Удалить
             </UButton>
+          </div>
+
+          <!-- Входное тестирование, если лид пришёл с сайта через тест -->
+          <div
+            v-if="placementTests.length"
+            class="space-y-2"
+          >
+            <PlacementResultCard
+              v-for="t in placementTests"
+              :key="t.id"
+              :test="t"
+            />
           </div>
 
           <UDivider />

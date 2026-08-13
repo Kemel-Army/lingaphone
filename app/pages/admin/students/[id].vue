@@ -22,6 +22,26 @@ const medals = computed(() => data.value?.medals ?? [])
 const group = computed(() => data.value?.group ?? null)
 const subscription = computed(() => data.value?.subscription ?? null)
 const attendance = computed(() => data.value?.attendance ?? [])
+const upcomingLessons = computed(() => data.value?.upcomingLessons ?? [])
+const parents = computed(() => data.value?.parents ?? [])
+
+/**
+ * "чт, 14.08 · 20:00" — KZ-local.
+ *
+ * Built from `en-CA`/`en-GB` parts and hard-coded Russian weekday names rather
+ * than a `ru-RU` locale format: Node's ICU and the browser disagree on the
+ * abbreviated Russian weekday/month, which shows up as a hydration mismatch.
+ */
+const MONTH_DAY_FMT = { timeZone: 'Asia/Almaty', day: '2-digit', month: '2-digit' } as const
+const TIME_FMT = { timeZone: 'Asia/Almaty', hour: '2-digit', minute: '2-digit', hour12: false } as const
+const formatLessonDate = (iso: string) => {
+  const d = new Date(iso)
+  // en-CA gives YYYY-MM-DD, so the weekday index is read in the Almaty zone too.
+  const kzIso = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
+  const weekday = WEEKDAY_LABEL[new Date(`${kzIso}T12:00:00Z`).getUTCDay()]
+  const date = d.toLocaleDateString('en-GB', MONTH_DAY_FMT).replace('/', '.')
+  return `${weekday}, ${date} · ${d.toLocaleTimeString('en-GB', TIME_FMT)}`
+}
 
 const WEEKDAY_LABEL = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 const SUBSCRIPTION_STATUS_META: Record<'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'EXPIRED', { label: string, color: 'success' | 'warning' | 'error' | 'neutral' }> = {
@@ -499,6 +519,119 @@ const computedAge = (birthdate: string | null) => {
               class="size-6 mx-auto mb-2 opacity-30"
             />
             Нет активного абонемента
+          </div>
+        </UCard>
+      </div>
+
+      <!-- Upcoming lessons + parent contacts -->
+      <div class="grid sm:grid-cols-2 gap-3">
+        <!-- Расписание занятий: конкретные ближайшие уроки, не шаблон недели -->
+        <UCard>
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-lucide-calendar-days"
+                class="size-4 text-primary"
+              />
+              <h3 class="font-semibold">
+                Ближайшие занятия
+              </h3>
+            </div>
+          </template>
+
+          <div
+            v-if="upcomingLessons.length"
+            class="divide-y divide-subtle"
+          >
+            <div
+              v-for="l in upcomingLessons"
+              :key="l.id"
+              class="flex items-center justify-between gap-3 py-2.5"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium truncate flex items-center gap-1.5">
+                  <UIcon
+                    :name="LESSON_TYPE_MAP[l.type].icon"
+                    class="size-3.5 shrink-0 text-muted"
+                    :title="LESSON_TYPE_MAP[l.type].label"
+                  />
+                  {{ formatLessonDate(l.startsAt) }}
+                </p>
+                <p class="text-xs text-muted truncate">
+                  {{ l.groupName }} · {{ l.teacherName }}
+                </p>
+              </div>
+              <UBadge
+                :color="LESSON_TYPE_MAP[l.type].color"
+                variant="subtle"
+                size="sm"
+                class="shrink-0"
+              >
+                {{ LESSON_TYPE_MAP[l.type].shortLabel }}
+              </UBadge>
+            </div>
+          </div>
+          <div
+            v-else
+            class="py-6 text-center text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-calendar-x"
+              class="size-6 mx-auto mb-2 opacity-30"
+            />
+            <p>Запланированных занятий нет</p>
+          </div>
+        </UCard>
+
+        <!-- Контакты: привязанные родители -->
+        <UCard>
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-lucide-contact"
+                class="size-4 text-primary"
+              />
+              <h3 class="font-semibold">
+                Контакты
+              </h3>
+            </div>
+          </template>
+
+          <div
+            v-if="parents.length"
+            class="divide-y divide-subtle"
+          >
+            <div
+              v-for="p in parents"
+              :key="p.id"
+              class="py-2.5"
+            >
+              <p class="text-sm font-medium truncate">
+                {{ p.surname }} {{ p.name }}
+              </p>
+              <p class="text-xs text-muted truncate">
+                <a
+                  v-if="p.phone"
+                  :href="`tel:${p.phone}`"
+                  class="hover:underline"
+                >{{ p.phone }}</a>
+                <span v-if="p.phone && p.email"> · </span>
+                <a
+                  :href="`mailto:${p.email}`"
+                  class="hover:underline"
+                >{{ p.email }}</a>
+              </p>
+            </div>
+          </div>
+          <div
+            v-else
+            class="py-6 text-center text-sm text-muted"
+          >
+            <UIcon
+              name="i-lucide-user-x"
+              class="size-6 mx-auto mb-2 opacity-30"
+            />
+            <p>Родитель не привязан</p>
           </div>
         </UCard>
       </div>

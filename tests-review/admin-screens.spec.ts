@@ -134,6 +134,29 @@ test.describe('Админ → Ученики', () => {
 
     expect(errors, errors.join('\n')).toEqual([])
   })
+
+  test('карточка ученика: блоки «Ближайшие занятия» и «Контакты» рисуются', async ({ page }) => {
+    const errors = watchErrors(page)
+    await login(page)
+    await page.goto('/admin/students', { waitUntil: 'domcontentloaded' })
+    await settle(page)
+    await page.locator('tbody tr').first().click()
+    await page.waitForURL(/\/admin\/students\/[0-9a-f-]{36}/, { timeout: 30_000 })
+    await settle(page)
+
+    await expect(page.getByText('Ближайшие занятия', { exact: true })).toBeVisible()
+    await expect(page.getByText('Контакты', { exact: true })).toBeVisible()
+
+    const body = await page.locator('body').innerText()
+    // Оба блока обязаны быть либо заполнены, либо в честном пустом стейте —
+    // «undefined»/«Invalid Date» тут означали бы сломанный маппинг.
+    expect(body).toMatch(/Ближайшие занятия[\s\S]{0,400}?(\d{2}\.\d{2} · \d{2}:\d{2}|Запланированных занятий нет)/)
+    expect(body).toMatch(/Контакты[\s\S]{0,300}?(@|Родитель не привязан)/)
+    expect(body).not.toContain('Invalid Date')
+    expect(body).not.toContain('undefined')
+
+    expect(errors, errors.join('\n')).toEqual([])
+  })
 })
 
 test.describe('Админ → Лиды', () => {
@@ -185,6 +208,45 @@ test.describe('Админ → Расписание', () => {
     // Селектор LessonType из LESSON_TYPE_OPTIONS (миграция 20260808200654).
     await expect(page.getByText(/Тип занятия/)).toBeVisible()
     await page.keyboard.press('Escape')
+
+    expect(errors, errors.join('\n')).toEqual([])
+  })
+
+  test('вид «День»: колонки по преподавателям, шаг навигации — сутки', async ({ page }) => {
+    const errors = watchErrors(page)
+    await login(page)
+    await page.goto('/admin/schedule', { waitUntil: 'domcontentloaded' })
+    await settle(page)
+
+    // Неделя — заголовок периода это диапазон дат.
+    const period = page.locator('span.w-48')
+    const weekLabel = (await period.innerText()).trim()
+    expect(weekLabel).toMatch(/—/)
+
+    await page.getByRole('button', { name: 'День', exact: true }).click()
+    await page.waitForTimeout(600)
+
+    // День — заголовок это одна дата, а не диапазон.
+    const dayLabel = (await period.innerText()).trim()
+    expect(dayLabel).not.toMatch(/—/)
+    expect(dayLabel).toMatch(/\d{4} г\.$/)
+
+    // Колонка «Время» + хотя бы одна колонка преподавателя (или пустой день).
+    const emptyDay = await page.getByText('В этот день уроков нет').isVisible().catch(() => false)
+    if (!emptyDay) {
+      // Отрисовано как «ВРЕМЯ» через CSS uppercase — в DOM лежит «Время».
+      await expect(page.getByText('Время', { exact: true }).first()).toBeVisible()
+      await expect(page.getByText(/\d+ урок\(ов\) · \d+ преподавател/)).toBeVisible()
+    }
+
+    // Стрелка сдвигает ровно на сутки, «Сегодня» возвращает обратно.
+    await page.getByRole('button', { name: 'Следующий день' }).click()
+    await page.waitForTimeout(600)
+    expect((await period.innerText()).trim()).not.toBe(dayLabel)
+
+    await page.getByRole('button', { name: 'Сегодня', exact: true }).click()
+    await page.waitForTimeout(600)
+    expect((await period.innerText()).trim()).toBe(dayLabel)
 
     expect(errors, errors.join('\n')).toEqual([])
   })

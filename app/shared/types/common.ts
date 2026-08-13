@@ -337,6 +337,7 @@ export const ADMIN_SIDEBAR: SidebarItem[] = [
   { label: 'Учителя', icon: 'i-lucide-users', to: '/admin/teachers' },
   { label: 'Группы', icon: 'i-lucide-layout-grid', to: '/admin/groups' },
   { label: 'Интерактивная книга', icon: 'i-lucide-book-open', to: '/admin/interactive-book' },
+  { label: 'Песни', icon: 'i-lucide-music', to: '/admin/songs', badge: 'NEW' },
   { label: 'Тестирование', icon: 'i-lucide-clipboard-list', to: '/admin/testing' },
   { label: 'Расписание', icon: 'i-lucide-calendar-days', to: '/admin/schedule' },
   { label: 'Настройки', icon: 'i-lucide-settings', to: '/admin/settings' }

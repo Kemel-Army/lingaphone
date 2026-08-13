@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useLevelTest, type AnswerRecord, type LevelTestSummary } from '~/shared/composables/useLevelTest'
 import type { LevelTestQuestion } from '~/shared/mock'
+import { PlacementTestRunner } from '~/features/placement-test'
+import { PLACEMENT_AGE_BANDS, type PlacementAgeBand } from '~/shared/lib/placementTest'
 
 definePageMeta({ layout: 'landing' })
 
@@ -21,8 +23,22 @@ const {
   summarize
 } = useLevelTest()
 
-type Stage = 'intro' | 'quiz' | 'result'
-const stage = ref<Stage>('intro')
+/**
+ * Одна точка входа на два теста.
+ *
+ * 'audience' → выбор возраста:
+ *   6–9 / 9–12 / 12–16  → методический placement-тест Lingaphone с заявкой
+ *                          (ФИО + телефон уходят в CRM, результат — в карточку лида)
+ *   16+ / взрослый      → анонимный тест на 50 вопросов A1–C1, как и был
+ */
+type Stage = 'audience' | 'placement' | 'intro' | 'quiz' | 'result'
+const stage = ref<Stage>('audience')
+
+const selectedBand = ref<PlacementAgeBand | null>(null)
+const pickBand = (band: PlacementAgeBand) => {
+  selectedBand.value = band
+  stage.value = 'placement'
+}
 
 const questions = ref<LevelTestQuestion[]>([])
 const currentIndex = ref(0)
@@ -123,10 +139,83 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleKeyDown))
 
     <div class="p-3 sm:p-6 lg:p-8 pb-16 max-w-3xl mx-auto">
       <!-- ════════════════════════════════════════════════════════ -->
+      <!-- AUDIENCE — какой из тестов проходим -->
+      <!-- ════════════════════════════════════════════════════════ -->
+      <section
+        v-if="stage === 'audience'"
+        class="pt-12 sm:pt-20 text-center"
+      >
+        <p class="text-sm font-black uppercase tracking-widest text-primary">
+          🇬🇧 Тест уровня английского
+        </p>
+        <h1 class="mt-3 text-4xl sm:text-5xl font-black tracking-tight">
+          Сколько лет ученику?
+        </h1>
+        <p class="mt-5 text-base sm:text-lg text-muted max-w-xl mx-auto">
+          Для каждого возраста — свой тест по методике Lingaphone. Определим уровень
+          и подберём группу
+        </p>
+        <LandingMascot
+          class="mx-auto mt-5"
+          state="progress-analyst"
+          size="sm"
+          label="Выбери возраст — и начнём"
+          alt="Линг помогает выбрать тест уровня"
+        />
+
+        <div class="mt-8 grid gap-3 sm:grid-cols-2">
+          <button
+            v-for="band in PLACEMENT_AGE_BANDS"
+            :key="band.value"
+            type="button"
+            class="flex items-center gap-4 rounded-2xl border-2 border-default bg-default p-5 text-left transition hover:border-primary hover:shadow-lg"
+            @click="pickBand(band.value)"
+          >
+            <UIcon
+              :name="band.icon"
+              class="size-8 shrink-0 text-primary"
+            />
+            <span>
+              <span class="block text-lg font-black">{{ band.label }}</span>
+              <span class="block text-sm text-muted">{{ band.hint }}</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="flex items-center gap-4 rounded-2xl border-2 border-default bg-default p-5 text-left transition hover:border-primary hover:shadow-lg"
+            @click="stage = 'intro'"
+          >
+            <UIcon
+              name="i-lucide-user-round"
+              class="size-8 shrink-0 text-primary"
+            />
+            <span>
+              <span class="block text-lg font-black">16+ / взрослый</span>
+              <span class="block text-sm text-muted">50 вопросов A1–C1, без регистрации</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════ -->
+      <!-- PLACEMENT — возрастной тест с заявкой -->
+      <!-- ════════════════════════════════════════════════════════ -->
+      <section
+        v-else-if="stage === 'placement' && selectedBand"
+        class="pt-8 sm:pt-12"
+      >
+        <PlacementTestRunner
+          :age-band="selectedBand"
+          @back="stage = 'audience'"
+        />
+      </section>
+
+      <!-- ════════════════════════════════════════════════════════ -->
       <!-- INTRO -->
       <!-- ════════════════════════════════════════════════════════ -->
       <section
-        v-if="stage === 'intro'"
+        v-else-if="stage === 'intro'"
         class="pt-12 sm:pt-20 text-center"
       >
         <p class="text-sm font-black uppercase tracking-widest text-primary">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LessonExercise, WordImageMatchContent } from '~/entities/book'
 import type { ExerciseReveal } from '../../model/reveal'
+import { useArmHint } from '../../model/armHint'
 
 const props = defineProps<{ exercise: LessonExercise, status: 'idle' | 'correct' | 'wrong', reveal: ExerciseReveal | null, disabled: boolean }>()
 const emit = defineEmits<{ (e: 'change', v: { response: Record<string, unknown>, ready: boolean }): void }>()
@@ -30,13 +31,19 @@ const omit = (o: Record<string, string>, k: string) => {
 const tapWord = (id: string) => {
   if (!props.disabled && !usedWords.value.has(id)) armedWord.value = armedWord.value === id ? null : id
 }
+const { hint: armHint, show: showArmHint } = useArmHint()
+
 const tapImage = (imgId: string) => {
   if (props.disabled) return
   if (placement.value[imgId]) {
     placement.value = omit(placement.value, imgId)
     return
   }
-  if (!armedWord.value) return
+  // Картинка без выбранного слова ничего не принимает — объясняем вместо тишины.
+  if (!armedWord.value) {
+    showArmHint()
+    return
+  }
   placement.value = { ...placement.value, [imgId]: armedWord.value }
   armedWord.value = null
 }
@@ -85,5 +92,12 @@ const imgOutcome = (imgId: string) => {
         {{ w.word }}
       </button>
     </div>
+
+    <p
+      v-if="armHint"
+      class="text-center text-sm font-semibold text-amber-600"
+    >
+      Сначала нажми слово, потом картинку
+    </p>
   </div>
 </template>
