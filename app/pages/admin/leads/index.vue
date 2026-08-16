@@ -187,6 +187,22 @@ const saveDetail = async () => {
   }
 }
 
+// Точечная замена лида в кэше useAsyncData: карточка перерисовывается сама,
+// без refresh() → без pending-спиннера на весь board.
+// useAsyncData здесь — shallowRef (Nuxt 4 default deep:false): мутация
+// вложенного data.value.leads[i] ничего не триггерит, нужно переприсвоить
+// сам data.value целиком, чтобы Vue заметил изменение.
+// Также поэтому — замена объекта, а не мутация: вызывающий код держит
+// ссылку на прежний лид (moveStage читает из неё fromStage для истории).
+const patchLocal = (id: string, patch: Partial<LeadWithRelations>) => {
+  if (!data.value) return
+  const i = data.value.leads.findIndex(l => l.id === id)
+  if (i === -1) return
+  const nextLeads = [...data.value.leads]
+  nextLeads[i] = { ...nextLeads[i], ...patch } as LeadWithRelations
+  data.value = { ...data.value, leads: nextLeads }
+}
+
 const changeStage = async (lead: LeadWithRelations, toStage: LeadStage) => {
   // Перевод в «Активный ученик» = реальная конвертация лида в аккаунт
   // ученика (иначе лид просто исчезнет из вида, а Student не появится).
@@ -194,16 +210,22 @@ const changeStage = async (lead: LeadWithRelations, toStage: LeadStage) => {
     openConvert(lead)
     return
   }
+  const prevStage = lead.stage
+  // Оптимистично: карточка встаёт в новую колонку сразу на drop.
+  patchLocal(lead.id, { stage: toStage })
+  if (selected.value?.id === lead.id) selected.value = { ...selected.value, stage: toStage }
   try {
-    await moveStage(lead, toStage)
+    const updated = await moveStage(lead, toStage)
+    if (updated) patchLocal(lead.id, updated)
     const label = LEAD_STAGE_MAP[toStage].label
     toast.add({ title: `Этап: ${label}`, color: 'success', icon: 'i-lucide-check' })
     if (selected.value?.id === lead.id) {
-      selected.value = { ...selected.value, stage: toStage }
       history.value = await fetchStageHistory(lead.id)
     }
-    await refresh()
   } catch (e: unknown) {
+    // Откат: сервер не принял — карточка возвращается в исходную колонку.
+    patchLocal(lead.id, { stage: prevStage })
+    if (selected.value?.id === lead.id) selected.value = { ...selected.value, stage: prevStage }
     toast.add({ title: 'Ошибка', description: errMsg(e), color: 'error', icon: 'i-lucide-x' })
   }
 }
@@ -335,9 +357,10 @@ const respName = (l: LeadWithRelations) => l.responsible ? `${l.responsible.surn
       </UButton>
     </div>
 
-    <!-- Loading -->
+    <!-- Loading: только первая загрузка. При refresh() после создания/удаления
+         данные уже есть — board не подменяется спиннером. -->
     <div
-      v-if="pending"
+      v-if="pending && !data"
       class="flex justify-center py-16"
     >
       <UIcon

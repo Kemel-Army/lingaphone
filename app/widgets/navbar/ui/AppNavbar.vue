@@ -39,6 +39,15 @@ const notificationsOpen = ref(false)
 const notifications = ref<AppNotification[]>([])
 const unreadCount = ref(0)
 const notifLoading = ref(false)
+// unreadCount приходит асинхронно после монтирования (не ждём его в SSR —
+// лишний DB round-trip ради бейджика). Пока badge завязан на v-if="unreadCount > 0"
+// без этого флага, он иногда успевал прийти ДО того, как Vue досериализует SSR-вывод,
+// и тогда сервер рендерил бейдж, а клиент на первом hydration-проходе — ещё нет
+// (гонка) → "Hydration node mismatch". Рендерим бейдж только после mount.
+const mounted = ref(false)
+onMounted(() => {
+  mounted.value = true
+})
 
 const loadNotifications = async () => {
   if (!internalId.value) return
@@ -144,7 +153,7 @@ const userMenuItems = computed(() => [
             class="size-4.5"
           />
           <span
-            v-if="unreadCount > 0"
+            v-if="mounted && unreadCount > 0"
             class="absolute -top-0.5 -right-0.5 size-4 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center"
           >
             {{ unreadCount > 9 ? '9+' : unreadCount }}

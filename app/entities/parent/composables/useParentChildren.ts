@@ -31,7 +31,10 @@ export const useParentChildren = () => {
 
     const [gradesRes, attRes, hwRes, subsRes, payRes, memRes] = await Promise.all([
       supabase.from('Grade').select('studentId, value, gradedAt').in('studentId', ids),
-      supabase.from('Attendance').select('id, studentId, status, markedAt, lesson:Lesson(startsAt, topic)').in('studentId', ids),
+      // Attendance has no `id` column (PK is studentId+lessonId) — selecting
+      // it 400s the whole query, which Promise.all swallows into `data ?? []`,
+      // silently showing 0/0 attendance for every parent.
+      supabase.from('Attendance').select('lessonId, studentId, status, markedAt, lesson:Lesson(startsAt, topic)').in('studentId', ids),
       supabase.from('HomeworkSubmission').select('studentId, status').in('studentId', ids),
       supabase.from('Subscription').select('studentId, plan, price, status, nextPaymentAt, lessonsUsed, lessonsTotal, createdAt').in('studentId', ids),
       supabase.from('Payment').select('id, studentId, amount, paidAt, status').in('studentId', ids).order('paidAt', { ascending: false }),
@@ -39,7 +42,7 @@ export const useParentChildren = () => {
     ])
 
     const grades = gradesRes.data ?? []
-    const att = (attRes.data ?? []) as unknown as Array<{ id: string, studentId: string, status: AttendanceStatus, markedAt: string, lesson: { startsAt: string, topic: string } | null }>
+    const att = (attRes.data ?? []) as unknown as Array<{ lessonId: string, studentId: string, status: AttendanceStatus, markedAt: string, lesson: { startsAt: string, topic: string } | null }>
     const hw = hwRes.data ?? []
     const subs = (subsRes.data ?? []) as unknown as Array<{ studentId: string, plan: string, price: number, status: SubscriptionStatus, nextPaymentAt: string | null, lessonsUsed: number, lessonsTotal: number, createdAt: string }>
     const pay = (payRes.data ?? []) as unknown as Array<{ id: string, studentId: string, amount: number, paidAt: string, status: PaymentStatus }>
@@ -58,7 +61,7 @@ export const useParentChildren = () => {
         .sort((a, b) => new Date(b.markedAt).getTime() - new Date(a.markedAt).getTime())
         .slice(0, 30)
         .map(a => ({
-          id: a.id,
+          id: a.lessonId,
           status: a.status,
           markedAt: a.markedAt,
           date: a.lesson?.startsAt ?? null,

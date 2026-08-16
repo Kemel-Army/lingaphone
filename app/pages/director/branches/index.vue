@@ -5,7 +5,9 @@ definePageMeta({ layout: 'dashboard' })
 
 const toast = useToast()
 const { fetchBranches, createBranch, updateBranch } = useDirector()
-const { data: branches, pending, refresh } = await useAsyncData('director-branches', fetchBranches)
+// server:false — см. комментарий в director/index.vue: SSR $fetch к
+// /api/director/* не получает auth-cookie, requireRole падает молча.
+const { data: branches, pending, refresh } = await useAsyncData('director-branches', fetchBranches, { server: false })
 
 const kindOptions = [
   { label: 'Офлайн', value: 'OFFLINE' },

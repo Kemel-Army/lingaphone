@@ -6,10 +6,14 @@ definePageMeta({ layout: 'dashboard' })
 
 const branch = useDirectorBranch()
 const { fetchStats } = useDirector()
+// server:false — /api/director/* требует auth-cookie, а SSR-вызов $fetch
+// внутри useAsyncData её не прокидывает (Nuxt их не форвардит по умолчанию),
+// requireRole тихо падает и страница остаётся пустой. Тот же фикс что и в
+// admin/interactive-book.vue.
 const { data: stats, pending } = await useAsyncData(
   () => `director-stats-${branch.value}`,
   () => fetchStats(branchToId(branch.value)),
-  { watch: [branch] }
+  { watch: [branch], server: false }
 )
 const isFiltered = computed(() => branch.value !== ALL_BRANCHES)
 </script>

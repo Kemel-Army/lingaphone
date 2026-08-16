@@ -6,10 +6,12 @@ definePageMeta({ layout: 'dashboard' })
 
 const branch = useDirectorBranch()
 const { fetchReports } = useDirector()
+// server:false — см. комментарий в director/index.vue: SSR $fetch к
+// /api/director/* не получает auth-cookie, requireRole падает молча.
 const { data, pending } = await useAsyncData(
   () => `director-reports-${branch.value}`,
   () => fetchReports(branchToId(branch.value)),
-  { watch: [branch] }
+  { watch: [branch], server: false }
 )
 const isFiltered = computed(() => branch.value !== ALL_BRANCHES)
 const leads = computed(() => data.value?.leads ?? [])

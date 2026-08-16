@@ -6,6 +6,7 @@ import {
   TASK_STATUSES,
   TASK_STATUS_MAP,
   TASK_RELATED_TYPES,
+  computeEffectiveStatus,
   type TaskWithRelations,
   type TaskStatus,
   type TaskRelatedType
@@ -18,7 +19,7 @@ const { internalId } = useCurrentUser()
 const { fetchTasks, createTask, setStatus, deleteTask } = useTasks()
 const { fetchAdmins } = useLeads()
 
-const { data, pending, refresh } = await useAsyncData('admin-tasks', async () => {
+const { data, pending } = await useAsyncData('admin-tasks', async () => {
   const [tasks, admins] = await Promise.all([fetchTasks(), fetchAdmins()])
   return { tasks, admins }
 })
@@ -70,16 +71,16 @@ const submitCreate = async () => {
   if (!canCreate.value) return
   creating.value = true
   try {
-    await createTask({
+    const created = await createTask({
       title: form.title.trim(),
       description: form.description.trim() || null,
       assigneeId: noneToNull(form.assigneeId),
       dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : null,
       relatedType: form.relatedType
     })
+    if (data.value) data.value = { ...data.value, tasks: [created, ...data.value.tasks] }
     toast.add({ title: 'Задача создана', color: 'success', icon: 'i-lucide-check' })
     showCreate.value = false
-    await refresh()
   } catch (e: unknown) {
     toast.add({ title: 'Ошибка', description: errMsg(e), color: 'error', icon: 'i-lucide-x' })
   } finally {
@@ -87,11 +88,33 @@ const submitCreate = async () => {
   }
 }
 
+// useAsyncData здесь — shallowRef (Nuxt 4 default deep:false): мутация
+// вложенного data.value.tasks[i] ничего не триггерит, надо переприсвоить
+// сам data.value целиком, чтобы Vue заметил изменение (см. тот же фикс
+// в admin/leads).
+const patchLocal = (id: string, patch: Partial<TaskWithRelations>) => {
+  if (!data.value) return
+  const i = data.value.tasks.findIndex(t => t.id === id)
+  if (i === -1) return
+  const nextTasks = [...data.value.tasks]
+  nextTasks[i] = { ...nextTasks[i], ...patch } as TaskWithRelations
+  data.value = { ...data.value, tasks: nextTasks }
+}
+const removeLocal = (id: string) => {
+  if (!data.value) return
+  data.value = { ...data.value, tasks: data.value.tasks.filter(t => t.id !== id) }
+}
+
 const changeStatus = async (task: TaskWithRelations, status: TaskStatus) => {
+  const prevStatus = task.status
+  // effectiveStatus зависит от status — оптимистичный патч должен пересчитать
+  // и его, иначе бейдж/фильтр «Просрочена» ещё секунду показывают старое.
+  patchLocal(task.id, { status, effectiveStatus: computeEffectiveStatus({ status, dueAt: task.dueAt }) })
   try {
-    await setStatus(task.id, status)
-    await refresh()
+    const updated = await setStatus(task.id, status)
+    patchLocal(task.id, updated)
   } catch (e: unknown) {
+    patchLocal(task.id, { status: prevStatus, effectiveStatus: computeEffectiveStatus({ status: prevStatus, dueAt: task.dueAt }) })
     toast.add({ title: 'Ошибка', description: errMsg(e), color: 'error', icon: 'i-lucide-x' })
   }
 }
@@ -100,8 +123,8 @@ const remove = async (task: TaskWithRelations) => {
   if (!confirm(`Удалить задачу «${task.title}»?`)) return
   try {
     await deleteTask(task.id)
+    removeLocal(task.id)
     toast.add({ title: 'Задача удалена', color: 'success', icon: 'i-lucide-trash' })
-    await refresh()
   } catch (e: unknown) {
     toast.add({ title: 'Ошибка', description: errMsg(e), color: 'error', icon: 'i-lucide-x' })
   }
@@ -159,9 +182,10 @@ const fmtDue = (d: string | null) => d
       </UButton>
     </div>
 
-    <!-- Loading -->
+    <!-- Loading: только первая загрузка, чтобы смена статуса/фильтра/создание
+         не подменяли всю таблицу спиннером. -->
     <div
-      v-if="pending"
+      v-if="pending && !data"
       class="flex justify-center py-16"
     >
       <UIcon
@@ -170,12 +194,14 @@ const fmtDue = (d: string | null) => d
       />
     </div>
 
-    <!-- Table -->
+    <!-- Table. min-h держит карточку одной высоты между фильтрами — иначе
+         переключение с «Все» на фильтр с 1 задачей резко схлопывает страницу
+         и она «прыгает». -->
     <UCard
       v-else
       :ui="{ body: 'p-0' }"
     >
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto min-h-[16rem]">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-subtle bg-muted/20 text-left">
