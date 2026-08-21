@@ -42,7 +42,7 @@ const colorFor = (lvl: number) => {
 const phrases = [
   '— за 90 дней',
   '— с британским произношением',
-  '— с AI-тренером Феми',
+  '— с AI-тренером',
   '— без слёз и принуждения',
   '— уже с первого урока'
 ]
@@ -164,10 +164,12 @@ onBeforeUnmount(() => {
 
         <div class="femo-hero-trust">
           <div class="femo-hero-trust-lingo">
-            <span
+            <img
+              src="/images/brand/mascot-states/01-welcome-transparent.webp"
               class="femo-hero-trust-lingo-avatar"
+              alt=""
               aria-hidden="true"
-            >🦜</span>
+            >
             <span>👋 Привет! Я <strong>Lingo</strong>, твой&nbsp;гид</span>
           </div>
           <div class="femo-hero-trust-item">
@@ -260,10 +262,12 @@ onBeforeUnmount(() => {
           <div class="femo-hero-browser-screen">
             <!-- Greeting strip -->
             <div class="femo-hero-greet">
-              <span
+              <img
+                src="/images/brand/mascot-states/01-welcome-transparent.webp"
                 class="femo-hero-greet-mascot"
+                alt=""
                 aria-hidden="true"
-              >🦜</span>
+              >
               <div class="femo-hero-greet-text">
                 <p class="femo-hero-greet-title">
                   Привет, Айгерим! 👋
@@ -646,10 +650,8 @@ onBeforeUnmount(() => {
   height: 1.7rem;
   border-radius: 50%;
   background: white;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
+  object-fit: contain;
+  padding: 2px;
   box-shadow: 0 4px 8px -2px rgba(14, 165, 233, 0.3);
   flex: none;
 }
@@ -763,8 +765,9 @@ onBeforeUnmount(() => {
 }
 
 .femo-hero-greet-mascot {
-  font-size: 2rem;
-  line-height: 1;
+  width: 2.4rem;
+  height: 2.4rem;
+  object-fit: contain;
 }
 
 .femo-hero-greet-text { min-width: 0; }

@@ -157,10 +157,10 @@ useScrollReveal(sectionRef, { stagger: 70 })
       <header class="femo-section-head stagger-item">
         <span class="femo-chip">Попробуй прямо сейчас · без регистрации</span>
         <h2 class="femo-section-title femo-display">
-          Поговори с <span class="femo-text-gradient">Феми</span> — твоим AI-тренером
+          Поговори с <span class="femo-text-gradient">Lingo</span> — твоим AI-тренером
         </h2>
         <p class="femo-section-sub">
-          Кликни на вопрос — Феми ответит за секунды, как в реальном продукте. Это не видео, это живой интерфейс.
+          Кликни на вопрос — Lingo ответит за секунды, как в реальном продукте. Это не видео, это живой интерфейс.
         </p>
       </header>
 
@@ -169,11 +169,9 @@ useScrollReveal(sectionRef, { stagger: 70 })
         <div class="femo-aid-chat">
           <div class="femo-aid-chat-head">
             <span class="femo-aid-chat-mascot">
-              <FemiMascot
-                state="teach"
+              <LandingMascot
+                state="method-teacher"
                 size="xs"
-                silent
-                ignore-reactions
               />
             </span>
             <div class="femo-aid-chat-meta">
@@ -213,11 +211,9 @@ useScrollReveal(sectionRef, { stagger: 70 })
                 v-if="msg.role === 'assistant'"
                 class="femo-aid-msg-avatar"
               >
-                <FemiMascot
-                  state="teach"
+                <LandingMascot
+                  state="method-teacher"
                   size="xs"
-                  silent
-                  ignore-reactions
                 />
               </span>
               <span
@@ -259,11 +255,9 @@ useScrollReveal(sectionRef, { stagger: 70 })
               class="femo-aid-msg is-assistant"
             >
               <span class="femo-aid-msg-avatar">
-                <FemiMascot
-                  state="think"
+                <LandingMascot
+                  state="progress-analyst"
                   size="xs"
-                  silent
-                  ignore-reactions
                 />
               </span>
               <div class="femo-aid-msg-bubble">
@@ -292,7 +286,7 @@ useScrollReveal(sectionRef, { stagger: 70 })
                 name="i-lucide-message-circle-question"
                 class="size-3"
               />
-              Спроси Феми:
+              Спроси Lingo:
             </p>
             <div class="femo-aid-chips">
               <button
@@ -324,10 +318,10 @@ useScrollReveal(sectionRef, { stagger: 70 })
               />
             </div>
             <p class="femo-aid-side-title">
-              Это сокращённый Феми
+              Это сокращённый Lingo
             </p>
             <p class="femo-aid-side-text">
-              В продукте Феми объясняет любую тему, разбирает фото, понимает голос и адаптирует сложность под ребёнка.
+              В продукте Lingo объясняет любую тему, разбирает фото, понимает голос и адаптирует сложность под ребёнка.
             </p>
           </div>
 
@@ -342,7 +336,7 @@ useScrollReveal(sectionRef, { stagger: 70 })
               Хочешь увидеть всё?
             </p>
             <p class="femo-aid-side-text">
-              Бесплатная диагностика за 5 минут — и Феми построит карту знаний под твоего ребёнка.
+              Бесплатная диагностика за 5 минут — и Lingo построит карту знаний под твоего ребёнка.
             </p>
             <NuxtLink
               to="/register"

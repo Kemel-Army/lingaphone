@@ -175,11 +175,9 @@ useScrollReveal(railRef, { stagger: 90 })
       <div class="femo-test-video">
         <div class="femo-test-video-poster">
           <div class="femo-test-video-mascot">
-            <FemiMascot
+            <LandingMascot
               state="celebrate"
               size="sm"
-              silent
-              ignore-reactions
             />
           </div>
           <button

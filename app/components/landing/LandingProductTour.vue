@@ -5,9 +5,9 @@ import { useTemplateRef } from 'vue'
 // Заголовки и хайлайт — что именно показываем.
 
 const screens = [
-  { code: 'home', label: 'Главный экран', highlight: 'Карта знаний · квесты · streak · Феми' },
+  { code: 'home', label: 'Главный экран', highlight: 'Карта знаний · квесты · streak · Lingo' },
   { code: 'diagnostic', label: 'Диагностика', highlight: 'Tap-correct · сердечки · адаптация' },
-  { code: 'aichat', label: 'AI-чат с Феми', highlight: 'Голос · фото · формулы · подсказки' },
+  { code: 'aichat', label: 'AI-чат с Lingo', highlight: 'Голос · фото · формулы · подсказки' },
   { code: 'capsule', label: 'Капсула знания', highlight: '11 слоёв · слой Тренажёр · +XP' },
   { code: 'mastery', label: 'Мастери-чек', highlight: 'Финал темы · трофей gold/silver' }
 ] as const
@@ -159,11 +159,9 @@ const isActive = (code: ScreenCode) =>
                 <template v-if="screen.code === 'home'">
                   <header class="ts-home-head">
                     <div class="ts-home-greet">
-                      <FemiMascot
-                        state="greet"
+                      <LandingMascot
+                        state="welcome"
                         size="xs"
-                        silent
-                        ignore-reactions
                       />
                       <div>
                         <p class="ts-home-hi">
@@ -295,11 +293,9 @@ const isActive = (code: ScreenCode) =>
 
                   <div class="ts-diag-card">
                     <div class="ts-diag-mascot">
-                      <FemiMascot
-                        state="teach"
+                      <LandingMascot
+                        state="method-teacher"
                         size="xs"
-                        silent
-                        ignore-reactions
                       />
                     </div>
                     <p class="ts-diag-q">
@@ -371,11 +367,9 @@ const isActive = (code: ScreenCode) =>
                     </div>
                     <div class="ts-msg ts-msg--ai">
                       <span class="ts-msg-avatar">
-                        <FemiMascot
-                          state="teach"
+                        <LandingMascot
+                          state="method-teacher"
                           size="xs"
-                          silent
-                          ignore-reactions
                         />
                       </span>
                       <span class="ts-msg-bubble">
@@ -397,11 +391,9 @@ const isActive = (code: ScreenCode) =>
                     </div>
                     <div class="ts-msg ts-msg--ai ts-typing">
                       <span class="ts-msg-avatar">
-                        <FemiMascot
-                          state="think"
+                        <LandingMascot
+                          state="progress-analyst"
                           size="xs"
-                          silent
-                          ignore-reactions
                         />
                       </span>
                       <span class="ts-typing-bubble">
@@ -539,11 +531,9 @@ const isActive = (code: ScreenCode) =>
                   </div>
 
                   <div class="ts-mast-mascot">
-                    <FemiMascot
-                      state="trophy"
+                    <LandingMascot
+                      state="celebrate"
                       size="sm"
-                      silent
-                      ignore-reactions
                     />
                     <span class="ts-mast-bubble">
                       Алишер, ты разнёс эту тему! +40 XP

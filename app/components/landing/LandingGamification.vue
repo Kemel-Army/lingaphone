@@ -39,7 +39,7 @@ const pathNodes = [
   { state: 'locked', icon: 'i-lucide-trophy' }
 ] as const
 
-const mascotStates = ['celebrate', 'wink', 'proud', 'dance', 'think', 'trophy'] as const
+const mascotStates = ['celebrate', 'onboarding-guide', 'encourage', 'trial-invite', 'progress-analyst', 'platform-guide'] as const
 
 // Live activity feed — animated marquee
 const liveFeed = [
@@ -79,11 +79,9 @@ const liveFeed = [
         <article class="femo-gam-card femo-gam-card--mascot stagger-item">
           <div class="femo-gam-mas">
             <div class="femo-gam-mas-hero">
-              <FemiMascot
+              <LandingMascot
                 state="celebrate"
                 size="md"
-                silent
-                ignore-reactions
               />
               <span class="femo-gam-mas-bubble">
                 +50&nbsp;XP! 🎉
@@ -92,7 +90,7 @@ const liveFeed = [
             <div class="femo-gam-mas-meta">
               <span class="femo-chip">Маскот · Lingo</span>
               <h3 class="femo-gam-card-title">
-                Попугай <span class="femo-text-coral">Lingo</span> помогает
+                Маскот <span class="femo-text-coral">Lingo</span> помогает
               </h3>
               <p class="femo-gam-card-text">
                 Радуется правильному произношению, переживает за streak, празднует новый уровень и подбадривает после ошибок.
@@ -104,11 +102,9 @@ const liveFeed = [
                   class="femo-gam-mas-mini"
                   :title="s"
                 >
-                  <FemiMascot
+                  <LandingMascot
                     :state="s"
                     size="xs"
-                    silent
-                    ignore-reactions
                   />
                 </div>
               </div>
@@ -304,7 +300,7 @@ const liveFeed = [
         <!-- 8. SHOP — dress-up Femi -->
         <article class="femo-gam-card femo-gam-card--shop stagger-item">
           <div class="femo-gam-card-head">
-            <span class="femo-chip femo-chip--amber">Магазин Феми</span>
+            <span class="femo-chip femo-chip--amber">Магазин Lingo</span>
             <span class="femo-gam-gems">
               <span class="femo-gam-gems-emoji">💎</span>
               <strong>280</strong>
@@ -316,11 +312,9 @@ const liveFeed = [
           <div class="femo-gam-shop-stage">
             <div class="femo-gam-shop-femi">
               <span class="femo-gam-shop-femi-hat">🎩</span>
-              <FemiMascot
-                state="proud"
+              <LandingMascot
+                state="encourage"
                 size="sm"
-                silent
-                ignore-reactions
               />
             </div>
             <div class="femo-gam-shop-grid">

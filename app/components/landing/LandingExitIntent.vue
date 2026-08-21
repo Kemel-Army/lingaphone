@@ -106,11 +106,9 @@ onBeforeUnmount(() => {
         <!-- Mascot + headline -->
         <div class="femo-exit-intent-head">
           <div class="femo-exit-intent-mascot">
-            <FemiMascot
-              :state="submitted ? 'celebrate' : 'warn'"
+            <LandingMascot
+              :state="submitted ? 'celebrate' : 'encourage'"
               size="md"
-              silent
-              ignore-reactions
             />
           </div>
           <span class="femo-exit-intent-chip">Подождите!</span>

@@ -124,7 +124,12 @@ const activeIndex = ref(0)
       <!-- Bottom CTA strip -->
       <div class="lm-bottom stagger-item">
         <div class="lm-bottom-text">
-          <span class="lm-bottom-logo">🦜</span>
+          <img
+            src="/images/brand/mascot-states/01-welcome-transparent.webp"
+            class="lm-bottom-logo"
+            alt=""
+            aria-hidden="true"
+          >
           <span>Запишитесь на <strong>бесплатный пробный урок</strong> — и сами убедитесь в методике</span>
         </div>
         <NuxtLink
@@ -289,7 +294,7 @@ const activeIndex = ref(0)
   line-height: 1.5;
 }
 
-.lm-bottom-logo { font-size: 1.4rem; flex: none; }
+.lm-bottom-logo { width: 1.8rem; height: 1.8rem; object-fit: contain; flex: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .lm-card,

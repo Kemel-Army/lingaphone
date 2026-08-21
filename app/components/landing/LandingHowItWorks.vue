@@ -200,11 +200,9 @@ useScrollReveal(containerRef, { stagger: 130 })
                   <i style="width: 35%" />
                 </div>
                 <div class="hm-diag-q">
-                  <FemiMascot
-                    state="teach"
+                  <LandingMascot
+                    state="method-teacher"
                     size="xs"
-                    silent
-                    ignore-reactions
                   />
                   <p>Choose the correct form</p>
                 </div>
@@ -258,11 +256,9 @@ useScrollReveal(containerRef, { stagger: 130 })
                   </div>
                 </div>
                 <div class="hm-cap-mascot">
-                  <FemiMascot
+                  <LandingMascot
                     state="celebrate"
                     size="xs"
-                    silent
-                    ignore-reactions
                   />
                   <span>Верно! Идём дальше</span>
                 </div>
