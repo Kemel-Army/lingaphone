@@ -23,11 +23,12 @@ export default defineEventHandler(async (event) => {
 
   const body = await readValidatedBody(event, bodySchema.parse)
 
+  const authId = (caller.sub as string | undefined) ?? caller.id
   const supabase = serverSupabaseServiceRole<Database>(event)
   const { data: userRow } = await supabase
     .from('User')
     .select('id, name, surname')
-    .eq('authId', caller.id)
+    .eq('authId', authId)
     .maybeSingle()
   if (!userRow) throw createError({ statusCode: 404, message: 'User not found' })
 
