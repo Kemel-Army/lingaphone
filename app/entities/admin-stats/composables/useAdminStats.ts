@@ -185,13 +185,16 @@ export const useAdminStats = () => {
 
     let rows = data ?? []
 
-    // Client-side Kazakh-aware filtering when search term provided
+    // Client-side Kazakh-aware filtering when search term provided (ФИО/email/ИИН + phone)
     if (search?.trim()) {
       const q = normalizeKz(search.trim())
+      const qDigits = search.replace(/\D/g, '')
       rows = rows.filter((s) => {
         const user = pickUser(s)
         const full = normalizeKz(`${user?.surname ?? ''} ${user?.name ?? ''} ${user?.patronymic ?? ''} ${user?.email ?? ''} ${user?.iin ?? ''} ${s.level}`)
-        return full.includes(q)
+        if (full.includes(q)) return true
+        const phoneDigits = (user?.phone ?? '').replace(/\D/g, '')
+        return qDigits.length >= 3 && phoneDigits.includes(qDigits)
       })
     }
 

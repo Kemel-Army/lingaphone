@@ -310,7 +310,7 @@ const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('ru-
         <UInput
           v-model="search"
           icon="i-lucide-search"
-          placeholder="ФИО, email, ИИН (Қ/К работает)..."
+          placeholder="ФИО, телефон, email, ИИН (Қ/К работает)..."
           class="w-64"
         />
         <UButton
