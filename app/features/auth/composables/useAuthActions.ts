@@ -31,6 +31,15 @@ export const useAuthActions = () => {
       const { data: refreshData } = await supabase.auth.refreshSession()
       toast.success('Успешный вход', 'Добро пожаловать!')
 
+      // useSupabaseUser() updates via an async onAuthStateChange listener, which
+      // hasn't necessarily fired yet at this point. navigateTo() right after
+      // refreshSession() used to race it: role-guard.global.ts would run before
+      // the ref updated, see user.value === null, and bounce straight back to
+      // /login?redirect=... — the "everything appears empty after logging in"
+      // symptom. Wait for the ref itself before navigating.
+      const supabaseUser = useSupabaseUser()
+      await until(supabaseUser).toBeTruthy({ timeout: 3000 })
+
       const refreshedUser = refreshData.session?.user ?? authData.user
       const jwtRole = (refreshedUser as unknown as Record<string, unknown>)?.user_role as UserRole | undefined
       const metaRole = refreshedUser?.user_metadata?.role as UserRole | undefined
@@ -89,6 +98,9 @@ export const useAuthActions = () => {
       if (authData.session) {
         // Refresh session so JWT hook populates custom claims (user_role)
         await supabase.auth.refreshSession()
+        // Same race as login() — wait for useSupabaseUser() before navigating.
+        const supabaseUser = useSupabaseUser()
+        await until(supabaseUser).toBeTruthy({ timeout: 3000 })
         toast.success('Регистрация успешна', 'Добро пожаловать!')
         const role = data.role as UserRole
         // Respect ?next= query param (e.g. from /checkout redirect). Strip to path only for security.
