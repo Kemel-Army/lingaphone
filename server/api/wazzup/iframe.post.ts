@@ -27,13 +27,28 @@ export default defineEventHandler(async (event) => {
   const supabase = serverSupabaseServiceRole<Database>(event)
   const { data: userRow } = await supabase
     .from('User')
-    .select('id, name, surname')
+    .select('id, name, surname, phone')
     .eq('authId', authId)
     .maybeSingle()
   if (!userRow) throw createError({ statusCode: 404, message: 'User not found' })
 
+  const wazzupUserName = `${userRow.surname} ${userRow.name}`.trim()
+
+  try {
+    // Wazzup требует, чтобы юзер был известен CRM-интеграции до запроса iframe.
+    await $fetch('https://api.wazzup24.com/v3/users', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: [{ id: userRow.id, name: wazzupUserName, phone: userRow.phone ?? undefined }]
+    })
+  } catch (e: unknown) {
+    const msg = (e as { data?: { description?: string }, message?: string })?.data?.description
+      ?? (e as { message?: string })?.message ?? 'Ошибка Wazzup'
+    throw createError({ statusCode: 502, message: `Wazzup (sync-users): ${msg}` })
+  }
+
   const payload: Record<string, unknown> = {
-    user: { id: userRow.id, name: `${userRow.surname} ${userRow.name}`.trim() },
+    user: { id: userRow.id, name: wazzupUserName },
     scope: body.scope
   }
   if (body.scope === 'card' && body.chatType && body.chatId) {
