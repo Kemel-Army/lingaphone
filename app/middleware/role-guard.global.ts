@@ -38,6 +38,18 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // 2. Authenticated — extract role from JWT claims (with metadata fallback)
   const role = (user.value as unknown as { user_role?: string }).user_role as UserRole | undefined
+  const status = (user.value as unknown as { user_status?: string }).user_status
+
+  // 2b. PENDING/REJECTED/BANNED accounts (family self-registration awaiting
+  // admin approval, or a rejected/banned account) can't reach any role-scoped
+  // page — bounce to the waiting-room page instead.
+  if (status && status !== 'ACTIVE' && path !== '/pending-approval') {
+    return navigateTo('/pending-approval')
+  }
+  if ((!status || status === 'ACTIVE') && path === '/pending-approval') {
+    return navigateTo(role ? ROLE_HOME_ROUTES[role] : '/')
+  }
+
   if (!role) return
 
   // 3. Cross-role: if authenticated as STUDENT and trying to open /admin, send home.

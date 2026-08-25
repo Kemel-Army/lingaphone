@@ -186,12 +186,12 @@ async function onSubmit() {
 
     <!-- Footer -->
     <p class="lf-footer">
-      Нет аккаунта?
+      {{ $t('auth.familyRegister.linkFromLogin') }}
       <NuxtLink
-        to="/register"
+        to="/register-family"
         class="lf-footer-link"
       >
-        Зарегистрироваться бесплатно
+        {{ $t('auth.familyRegister.linkCta') }}
       </NuxtLink>
     </p>
   </div>

@@ -326,6 +326,7 @@ export const TEACHER_SIDEBAR: SidebarItem[] = [
 
 export const ADMIN_SIDEBAR: SidebarItem[] = [
   { label: 'Дашборд', icon: 'i-lucide-layout-dashboard', to: '/admin' },
+  { label: 'Заявки на регистрацию', icon: 'i-lucide-user-check', to: '/admin/registrations', badge: 'NEW' },
   { label: 'Обзор директора', icon: 'i-lucide-crown', to: '/admin/director', badge: 'NEW' },
   { label: 'Лиды', icon: 'i-lucide-user-plus', to: '/admin/leads', badge: 'NEW' },
   { label: 'Задачи', icon: 'i-lucide-check-square', to: '/admin/tasks', badge: 'NEW' },
