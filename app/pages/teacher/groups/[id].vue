@@ -2,6 +2,7 @@
 import { useTeacher, type TeacherStudent, type TeacherLesson } from '~/entities/teacher'
 import { useGradeStudent } from '~/features/grade-student'
 import { useLessonMaterials, type LessonMaterial } from '~/features/lesson-materials'
+import { useBooks } from '~/entities/book'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -9,7 +10,7 @@ const route = useRoute()
 const toast = useToast()
 const groupId = String(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id)
 
-const { fetchGroupById, fetchAttendanceForLesson, createLesson } = useTeacher()
+const { fetchGroupById, fetchAttendanceForLesson, createLesson, assignGroupBook } = useTeacher()
 const { markAttendance, awardXp } = useGradeStudent()
 const { list: listMaterials, upload: uploadMaterial, remove: removeMaterial, downloadUrl, uploading: materialUploading } = useLessonMaterials()
 
@@ -53,6 +54,33 @@ const { data, pending, error, refresh } = await useAsyncData(
 const group = computed(() => data.value?.group ?? null)
 const members = computed(() => data.value?.members ?? [])
 const lessons = computed(() => data.value?.lessons ?? [])
+
+// ── Group book assignment ────────────────────────────────────────────────────
+const { fetchBooks } = useBooks()
+const { data: publishedBooks } = await useAsyncData('teacher-published-books', () => fetchBooks())
+const NO_BOOK = '__none__'
+const bookOptions = computed(() => [
+  { label: 'Не назначена', value: NO_BOOK },
+  ...(publishedBooks.value ?? []).map(b => ({ label: b.title, value: b.id }))
+])
+const selectedBookId = ref(NO_BOOK)
+const bookSaving = ref(false)
+watch(() => group.value?.bookId, (id) => {
+  selectedBookId.value = id ?? NO_BOOK
+}, { immediate: true })
+
+const saveGroupBook = async () => {
+  bookSaving.value = true
+  try {
+    await assignGroupBook(groupId, selectedBookId.value === NO_BOOK ? null : selectedBookId.value)
+    toast.add({ title: 'Учебник группы обновлён', color: 'success', icon: 'i-lucide-check-circle' })
+    await refresh()
+  } catch (e) {
+    toast.add({ title: 'Ошибка сохранения', description: String(e), color: 'error', icon: 'i-lucide-x-circle' })
+  } finally {
+    bookSaving.value = false
+  }
+}
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
 const activeTab = ref('members')
@@ -367,6 +395,38 @@ const formatSchedule = (schedule: unknown): string => {
           </div>
         </div>
       </div>
+
+      <!-- Group book assignment -->
+      <UCard>
+        <div class="flex flex-wrap items-center gap-3">
+          <UIcon
+            name="i-lucide-book-open"
+            class="size-5 text-primary shrink-0"
+          />
+          <div class="min-w-0">
+            <p class="font-semibold text-sm">
+              Учебник группы
+            </p>
+            <p class="text-xs text-muted">
+              Ученики без личного назначения видят эту книгу на «Моём пути»
+            </p>
+          </div>
+          <USelect
+            v-model="selectedBookId"
+            :items="bookOptions"
+            class="ml-auto w-full sm:w-64"
+          />
+          <UButton
+            icon="i-lucide-save"
+            size="sm"
+            :loading="bookSaving"
+            :disabled="selectedBookId === (group.bookId ?? NO_BOOK)"
+            @click="saveGroupBook"
+          >
+            Сохранить
+          </UButton>
+        </div>
+      </UCard>
 
       <!-- Tabs -->
       <UTabs

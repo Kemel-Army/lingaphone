@@ -1,20 +1,49 @@
 <script setup lang="ts">
 import { useTeacher } from '~/entities/teacher'
+import { useBooks } from '~/entities/book'
 
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
+const toast = useToast()
 const studentId = String(Array.isArray(route.params.id) ? route.params.id[0] : route.params.id)
 
-const { fetchStudentById } = useTeacher()
+const { fetchStudentById, assignStudentBook } = useTeacher()
 
-const { data, pending, error } = await useAsyncData(
+const { data, pending, error, refresh } = await useAsyncData(
   `teacher-student-${studentId}`,
   () => fetchStudentById(studentId)
 )
 
 const student = computed(() => data.value?.student ?? null)
 const grades = computed(() => data.value?.grades ?? [])
+
+// ── Book override ─────────────────────────────────────────────────────────────
+const { fetchBooks } = useBooks()
+const { data: publishedBooks } = await useAsyncData('teacher-published-books', () => fetchBooks())
+const NO_BOOK = '__inherit__'
+const bookOptions = computed(() => [
+  { label: 'Наследовать от группы', value: NO_BOOK },
+  ...(publishedBooks.value ?? []).map(b => ({ label: b.title, value: b.id }))
+])
+const selectedBookId = ref(NO_BOOK)
+const bookSaving = ref(false)
+watch(() => student.value?.assignedBookId, (id) => {
+  selectedBookId.value = id ?? NO_BOOK
+}, { immediate: true })
+
+const saveStudentBook = async () => {
+  bookSaving.value = true
+  try {
+    await assignStudentBook(studentId, selectedBookId.value === NO_BOOK ? null : selectedBookId.value)
+    toast.add({ title: 'Учебник ученика обновлён', color: 'success', icon: 'i-lucide-check-circle' })
+    await refresh()
+  } catch (e) {
+    toast.add({ title: 'Ошибка сохранения', description: String(e), color: 'error', icon: 'i-lucide-x-circle' })
+  } finally {
+    bookSaving.value = false
+  }
+}
 
 const avgGrade = computed(() => {
   if (!grades.value.length) return null
@@ -118,6 +147,38 @@ const gradeColor = (v: number) => {
               </p>
             </div>
           </div>
+        </div>
+      </UCard>
+
+      <!-- Book override -->
+      <UCard>
+        <div class="flex flex-wrap items-center gap-3">
+          <UIcon
+            name="i-lucide-book-open"
+            class="size-5 text-primary shrink-0"
+          />
+          <div class="min-w-0">
+            <p class="font-semibold text-sm">
+              Учебник ученика
+            </p>
+            <p class="text-xs text-muted">
+              Переопределяет книгу группы только для этого ученика
+            </p>
+          </div>
+          <USelect
+            v-model="selectedBookId"
+            :items="bookOptions"
+            class="ml-auto w-full sm:w-64"
+          />
+          <UButton
+            icon="i-lucide-save"
+            size="sm"
+            :loading="bookSaving"
+            :disabled="selectedBookId === (student.assignedBookId ?? NO_BOOK)"
+            @click="saveStudentBook"
+          >
+            Сохранить
+          </UButton>
         </div>
       </UCard>
 

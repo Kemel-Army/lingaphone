@@ -15,6 +15,7 @@ interface RawGroupRow {
   schedule: unknown
   branchId: string
   createdAt: string
+  bookId: string | null
 }
 
 interface RawMemberRow {
@@ -194,7 +195,7 @@ export const useTeacher = () => {
 
     const { data, error } = await supabase
       .from('Group')
-      .select('id, name, level, maxStudents, schedule, branchId, createdAt')
+      .select('id, name, level, maxStudents, schedule, branchId, createdAt, bookId')
       .in('id', groupIds)
       .order('name') as unknown as { data: RawGroupRow[] | null, error: unknown }
 
@@ -219,7 +220,8 @@ export const useTeacher = () => {
       studentCount: countMap[g.id] ?? 0,
       schedule: g.schedule as Record<string, unknown>,
       branchId: g.branchId,
-      createdAt: g.createdAt
+      createdAt: g.createdAt,
+      bookId: g.bookId
     }))
   }
 
@@ -231,7 +233,7 @@ export const useTeacher = () => {
     const [{ data: gData, error: gErr }, { data: mData }, { data: lData }] = await Promise.all([
       supabase
         .from('Group')
-        .select('id, name, level, maxStudents, schedule, branchId, createdAt')
+        .select('id, name, level, maxStudents, schedule, branchId, createdAt, bookId')
         .eq('id', groupId)
         .single() as unknown as { data: RawGroupRow | null, error: unknown },
 
@@ -251,6 +253,16 @@ export const useTeacher = () => {
 
     if (gErr || !gData) throw new Error('Group not found')
 
+    const studentIds = (mData ?? []).map(m => m.studentId)
+    const { data: overrides } = studentIds.length
+      ? await supabase
+        .from('StudentBook')
+        .select('studentId, bookId')
+        .in('studentId', studentIds) as unknown as { data: { studentId: string, bookId: string }[] | null }
+      : { data: [] as { studentId: string, bookId: string }[] }
+    const overrideMap: Record<string, string> = {}
+    for (const o of overrides ?? []) overrideMap[o.studentId] = o.bookId
+
     const members: TeacherStudent[] = (mData ?? []).map((m) => {
       const student = pickRelation(m.Student)
       const user = student ? pickRelation(student.User) : null
@@ -268,7 +280,8 @@ export const useTeacher = () => {
         totalEarnings: student?.totalEarnings ?? 0,
         lastActiveDate: student?.lastActiveDate ?? null,
         groupId,
-        groupName: gData.name
+        groupName: gData.name,
+        assignedBookId: overrideMap[m.studentId] ?? null
       }
     })
 
@@ -294,7 +307,8 @@ export const useTeacher = () => {
         studentCount: members.length,
         schedule: gData.schedule as Record<string, unknown>,
         branchId: gData.branchId,
-        createdAt: gData.createdAt
+        createdAt: gData.createdAt,
+        bookId: gData.bookId
       },
       members,
       lessons
@@ -323,6 +337,16 @@ export const useTeacher = () => {
 
     if (error) throw error
 
+    const allStudentIds = [...new Set((data ?? []).map(m => m.studentId))]
+    const { data: overrides } = allStudentIds.length
+      ? await supabase
+        .from('StudentBook')
+        .select('studentId, bookId')
+        .in('studentId', allStudentIds) as unknown as { data: { studentId: string, bookId: string }[] | null }
+      : { data: [] as { studentId: string, bookId: string }[] }
+    const overrideMap: Record<string, string> = {}
+    for (const o of overrides ?? []) overrideMap[o.studentId] = o.bookId
+
     const seen = new Set<string>()
     const result: TeacherStudent[] = []
 
@@ -345,7 +369,8 @@ export const useTeacher = () => {
         totalEarnings: student?.totalEarnings ?? 0,
         lastActiveDate: student?.lastActiveDate ?? null,
         groupId: m.groupId,
-        groupName: nameMap[m.groupId] ?? ''
+        groupName: nameMap[m.groupId] ?? '',
+        assignedBookId: overrideMap[m.studentId] ?? null
       })
     }
 
@@ -353,7 +378,7 @@ export const useTeacher = () => {
   }
 
   const fetchStudentById = async (studentId: string) => {
-    const [{ data: sData }, { data: gradeRows }] = await Promise.all([
+    const [{ data: sData }, { data: gradeRows }, { data: overrideRow }] = await Promise.all([
       supabase
         .from('Student')
         .select('id, userId, level, totalXp, dailyStreak, goldStreak, totalEarnings, lastActiveDate, createdAt, User!userId ( name, surname, email, avatarUrl )')
@@ -379,7 +404,13 @@ export const useTeacher = () => {
         .select('lessonId, studentId, value, comment, gradedAt, Lesson!lessonId ( topic, startsAt )')
         .eq('studentId', studentId)
         .order('gradedAt', { ascending: false })
-        .limit(50) as unknown as { data: RawGradeRow[] | null, error: unknown }
+        .limit(50) as unknown as { data: RawGradeRow[] | null, error: unknown },
+
+      supabase
+        .from('StudentBook')
+        .select('bookId')
+        .eq('studentId', studentId)
+        .maybeSingle() as unknown as { data: { bookId: string } | null }
     ])
 
     const user = sData ? pickRelation(sData.User) : null
@@ -414,7 +445,8 @@ export const useTeacher = () => {
             totalEarnings: sData.totalEarnings,
             lastActiveDate: sData.lastActiveDate,
             groupId: '',
-            groupName: ''
+            groupName: '',
+            assignedBookId: overrideRow?.bookId ?? null
           } as TeacherStudent
         : null,
       grades
@@ -870,6 +902,18 @@ export const useTeacher = () => {
     return data
   }
 
+  // ─── Book assignments ─────────────────────────────────────────────────────────
+
+  /** Sets (or clears, bookId=null) the default book for a whole group. */
+  const assignGroupBook = async (groupId: string, bookId: string | null): Promise<void> => {
+    await $fetch(`/api/teacher/groups/${groupId}/book`, { method: 'PATCH', body: { bookId } })
+  }
+
+  /** Sets (or clears, bookId=null) a per-student book override. */
+  const assignStudentBook = async (studentId: string, bookId: string | null): Promise<void> => {
+    await $fetch(`/api/teacher/students/${studentId}/book`, { method: 'PATCH', body: { bookId } })
+  }
+
   return {
     fetchKpi,
     fetchMyGroups,
@@ -888,6 +932,8 @@ export const useTeacher = () => {
     fetchTestSubmissions,
     resetTestSubmission,
     createLesson,
+    assignGroupBook,
+    assignStudentBook,
     getGroupIds,
     getLessonIds
   }

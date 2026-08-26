@@ -760,6 +760,7 @@ export type Database = {
       Group: {
         Row: {
           archivedAt: string | null
+          bookId: string | null
           branchId: string | null
           createdAt: string
           id: string
@@ -772,6 +773,7 @@ export type Database = {
         }
         Insert: {
           archivedAt?: string | null
+          bookId?: string | null
           branchId?: string | null
           createdAt?: string
           id?: string
@@ -784,6 +786,7 @@ export type Database = {
         }
         Update: {
           archivedAt?: string | null
+          bookId?: string | null
           branchId?: string | null
           createdAt?: string
           id?: string
@@ -795,6 +798,13 @@ export type Database = {
           updatedAt?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "Group_bookId_fkey"
+            columns: ["bookId"]
+            isOneToOne: false
+            referencedRelation: "Book"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "Group_branchId_fkey"
             columns: ["branchId"]
@@ -2596,6 +2606,52 @@ export type Database = {
             columns: ["testUnitId"]
             isOneToOne: false
             referencedRelation: "LessonUnit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      StudentBook: {
+        Row: {
+          assignedByTeacherId: string | null
+          bookId: string
+          createdAt: string
+          studentId: string
+          updatedAt: string
+        }
+        Insert: {
+          assignedByTeacherId?: string | null
+          bookId: string
+          createdAt?: string
+          studentId: string
+          updatedAt?: string
+        }
+        Update: {
+          assignedByTeacherId?: string | null
+          bookId?: string
+          createdAt?: string
+          studentId?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "StudentBook_assignedByTeacherId_fkey"
+            columns: ["assignedByTeacherId"]
+            isOneToOne: false
+            referencedRelation: "Teacher"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "StudentBook_bookId_fkey"
+            columns: ["bookId"]
+            isOneToOne: false
+            referencedRelation: "Book"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "StudentBook_studentId_fkey"
+            columns: ["studentId"]
+            isOneToOne: true
+            referencedRelation: "Student"
             referencedColumns: ["id"]
           },
         ]

@@ -17,6 +17,8 @@ export interface Book {
   coverUrl: string | null
   isPublished: boolean
   createdAt: string
+  trackKey: string | null
+  cefrTier: string | null
 }
 
 export interface BookWithModules extends Book {

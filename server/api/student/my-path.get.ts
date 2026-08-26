@@ -1,16 +1,19 @@
 /**
  * GET /api/student/my-path   (STUDENT)  — «Мой путь»
  *
- * Returns the student's bound course book (Book.trackKey == Student.level) as a
- * sequential map of blocks (Modules). Each block carries its lessons + block
- * test and a computed lock state:
+ * Returns the student's assigned course book as a sequential map of blocks
+ * (Modules). Each block carries its lessons + block test and a computed
+ * lock state:
  *   - block[0]        → AVAILABLE (COMPLETED if its test is passed)
  *   - block[i>0]      → LOCKED until block[i-1]'s test is passed, then AVAILABLE
  *   - any block       → COMPLETED once its own test is passed
  * Gating source is StudentBlockResult (written by /api/book/submit-block-test).
  *
- * If no published book matches the student's level, `book` is null and the UI
- * shows an "awaiting curator" state.
+ * Book resolution (teacher-controlled, see 20260826000000_book_assignments.sql):
+ *   1. StudentBook.bookId  — teacher's per-student override, if any.
+ *   2. Group.bookId        — teacher's default book for the student's active group.
+ *   3. null                — UI shows an "awaiting curator" state.
+ * Either way the resolved book must still be isPublished.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -43,10 +46,27 @@ export default defineEventHandler(async (event) => {
   }
   if (!level) return base
 
-  // Bound book: one published book per track.
+  // Resolve assigned book: StudentBook override → student's active group's
+  // default book → none. Only ever surfaces isPublished books.
+  const { data: override } = await supabase
+    .from('StudentBook').select('bookId').eq('studentId', studentId).maybeSingle() as unknown as
+    { data: { bookId: string } | null }
+
+  let bookId = override?.bookId ?? null
+  if (!bookId) {
+    const { data: membership } = await supabase
+      .from('GroupMember')
+      .select('Group!groupId ( bookId )')
+      .eq('studentId', studentId).eq('status', 'ACTIVE').maybeSingle() as unknown as
+      { data: { Group: { bookId: string | null } | { bookId: string | null }[] | null } | null }
+    const group = Array.isArray(membership?.Group) ? membership?.Group[0] : membership?.Group
+    bookId = group?.bookId ?? null
+  }
+  if (!bookId) return base
+
   const { data: book } = await supabase
-    .from('Book').select('id, title, cefrTier, trackKey')
-    .eq('trackKey', level).eq('isPublished', true).maybeSingle() as unknown as
+    .from('Book').select('id, title, cefrTier')
+    .eq('id', bookId).eq('isPublished', true).maybeSingle() as unknown as
     { data: { id: string, title: string, cefrTier: string | null } | null }
   if (!book) return base
   base.book = { id: book.id, title: book.title, cefrTier: book.cefrTier }

@@ -19,6 +19,7 @@ export interface TeacherGroup {
   schedule: Record<string, unknown>
   branchId: string
   createdAt: string
+  bookId: string | null
 }
 
 export interface TeacherStudent {
@@ -36,6 +37,8 @@ export interface TeacherStudent {
   lastActiveDate: string | null
   groupId: string
   groupName: string
+  /** Per-student book override (StudentBook); null = inherits the group's book. */
+  assignedBookId: string | null
 }
 
 export interface TeacherLesson {
