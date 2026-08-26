@@ -11,14 +11,45 @@ import {
 export type OpenPayload
   = | { kind: 'scan', moduleId: string, title: string }
     | { kind: 'unit', unitId: string, title: string }
+const props = withDefaults(defineProps<{ adminMode?: boolean }>(), { adminMode: false })
 const emit = defineEmits<{
   (e: 'open', payload: OpenPayload): void
 }>()
 
-const { fetchAllBooksWithModules } = useBooks()
+const toast = useAppToast()
+const { fetchAllBooksWithModules, setBookPublished, hideAllBooks } = useBooks()
 const { fetchModuleUnits } = useLessons()
-const { data, pending } = await useAsyncData('book-library', fetchAllBooksWithModules)
+const { data, pending, refresh } = await useAsyncData('book-library', fetchAllBooksWithModules)
 const books = computed<LibraryBook[]>(() => data.value ?? [])
+
+const togglingId = ref<string | null>(null)
+const togglePublished = async (book: LibraryBook) => {
+  togglingId.value = book.id
+  try {
+    await setBookPublished(book.id, !book.isPublished)
+    await refresh()
+  } catch {
+    toast.error('Не удалось изменить видимость книги')
+  } finally {
+    togglingId.value = null
+  }
+}
+
+const hidingAll = ref(false)
+const hideAllConfirmOpen = ref(false)
+const confirmHideAll = async () => {
+  hidingAll.value = true
+  try {
+    const { hidden } = await hideAllBooks()
+    toast.success(`Скрыто книг: ${hidden}`)
+    await refresh()
+  } catch {
+    toast.error('Не удалось скрыть книги')
+  } finally {
+    hidingAll.value = false
+    hideAllConfirmOpen.value = false
+  }
+}
 
 const LEVEL_ORDER: BookLevel[] = ['A1', 'A2', 'B1', 'B2']
 const byLevel = computed(() => LEVEL_ORDER
@@ -52,6 +83,50 @@ const openScan = (book: LibraryBook, m: LibraryModule) =>
 
 <template>
   <div>
+    <div
+      v-if="props.adminMode && !pending && books.length"
+      class="flex justify-end mb-3"
+    >
+      <UButton
+        icon="i-lucide-eye-off"
+        color="neutral"
+        variant="soft"
+        size="sm"
+        @click="hideAllConfirmOpen = true"
+      >
+        Скрыть все книги от учеников
+      </UButton>
+      <UModal v-model:open="hideAllConfirmOpen">
+        <template #content>
+          <div class="p-5 space-y-4">
+            <p class="font-semibold">
+              Скрыть все опубликованные книги?
+            </p>
+            <p class="text-sm text-muted">
+              Книги останутся в базе (не удаляются), но ученики перестанут их видеть. Каждую можно будет включить обратно по отдельности.
+            </p>
+            <div class="flex justify-end gap-2">
+              <UButton
+                variant="ghost"
+                color="neutral"
+                :disabled="hidingAll"
+                @click="hideAllConfirmOpen = false"
+              >
+                Отмена
+              </UButton>
+              <UButton
+                color="error"
+                :loading="hidingAll"
+                @click="confirmHideAll"
+              >
+                Скрыть все
+              </UButton>
+            </div>
+          </div>
+        </template>
+      </UModal>
+    </div>
+
     <div
       v-if="pending"
       class="flex h-40 items-center justify-center"
@@ -103,13 +178,26 @@ const openScan = (book: LibraryBook, m: LibraryModule) =>
                 <p class="font-bold truncate">
                   {{ book.title }}
                 </p>
-                <UBadge
-                  :color="book.isPublished ? 'success' : 'neutral'"
-                  variant="subtle"
-                  size="sm"
-                >
-                  {{ book.isPublished ? 'Опубликована' : 'Черновик' }}
-                </UBadge>
+                <div class="flex items-center gap-2 shrink-0">
+                  <UBadge
+                    :color="book.isPublished ? 'success' : 'neutral'"
+                    variant="subtle"
+                    size="sm"
+                  >
+                    {{ book.isPublished ? 'Видна ученикам' : 'Скрыта' }}
+                  </UBadge>
+                  <UButton
+                    v-if="props.adminMode"
+                    :icon="book.isPublished ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    :color="book.isPublished ? 'neutral' : 'primary'"
+                    variant="soft"
+                    size="xs"
+                    :loading="togglingId === book.id"
+                    @click="togglePublished(book)"
+                  >
+                    {{ book.isPublished ? 'Скрыть' : 'Показать' }}
+                  </UButton>
+                </div>
               </div>
             </template>
 

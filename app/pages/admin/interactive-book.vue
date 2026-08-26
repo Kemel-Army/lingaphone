@@ -73,6 +73,7 @@ watch(modules, (list) => {
     <!-- ─── Книги ─── -->
     <BookLibrary
       v-if="tab === 'library'"
+      admin-mode
       @open="openReader"
     />
 

@@ -100,5 +100,24 @@ export const useBooks = () => {
     await $fetch(`/api/admin/books/${id}`, { method: 'DELETE' })
   }
 
-  return { fetchBooks, fetchAllBooks, fetchAllBooksWithModules, fetchBookWithModules, uploadBook, deleteBook }
+  /** Show/hide one book from students without deleting it. */
+  const setBookPublished = async (id: string, isPublished: boolean): Promise<void> => {
+    await $fetch(`/api/admin/books/${id}`, { method: 'PATCH', body: { isPublished } })
+  }
+
+  /** Hide every currently-published book from students in one shot. */
+  const hideAllBooks = async (): Promise<{ hidden: number }> => {
+    return await $fetch('/api/admin/books/hide-all', { method: 'POST' })
+  }
+
+  return {
+    fetchBooks,
+    fetchAllBooks,
+    fetchAllBooksWithModules,
+    fetchBookWithModules,
+    uploadBook,
+    deleteBook,
+    setBookPublished,
+    hideAllBooks
+  }
 }
