@@ -17,5 +17,8 @@ export type {
   ManagerParamKey,
   MotivationRow,
   MonthlySummary,
-  CriteriaJournal
+  CriteriaJournal,
+  StudentMonth,
+  StudentLessonGrades,
+  MedalHistoryEntry
 } from './model/types'

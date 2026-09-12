@@ -92,6 +92,31 @@ export interface MonthlySummary {
   totals: { bronze: number, silver: number, gold: number, none: number, payout: number }
 }
 
+export interface StudentLessonGrades {
+  lessonId: string
+  topic: string
+  startsAt: string
+  groupName: string
+  grades: Partial<Record<GradeCriterion, number>>
+  /** null — за урок ещё ничего не выставлено. */
+  average: number | null
+  filled: number
+}
+
+export interface MedalHistoryEntry {
+  month: string
+  medal: MedalKind
+  averageGrade: number
+  payout: number
+}
+
+export interface StudentMonth {
+  month: string
+  summary: MotivationRow | null
+  lessons: StudentLessonGrades[]
+  history: MedalHistoryEntry[]
+}
+
 export interface CriteriaJournal {
   month: string
   lessons: { id: string, topic: string, startsAt: string }[]

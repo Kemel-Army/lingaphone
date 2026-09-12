@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useParentChildren, type AttendanceStatus } from '~/entities/parent'
+import { useMotivation, MEDAL_MAP, currentMonthKey, formatMonth } from '~/entities/motivation'
+import { StudentMotivationCard } from '~/widgets/motivation-summary'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -10,12 +12,39 @@ const { fetchChildren } = useParentChildren()
 const { data: children, pending } = await useAsyncData('parent-children', fetchChildren)
 const child = computed(() => (children.value ?? []).find(c => c.studentId === childId.value) ?? null)
 
-const tab = ref<'progress' | 'attendance' | 'finance'>('progress')
+const tab = ref<'motivation' | 'progress' | 'attendance' | 'finance'>('motivation')
 const tabs = [
+  { value: 'motivation' as const, label: 'Мотивация', icon: 'i-lucide-medal' },
   { value: 'progress' as const, label: 'Прогресс', icon: 'i-lucide-line-chart' },
   { value: 'attendance' as const, label: 'Посещаемость', icon: 'i-lucide-calendar-check' },
   { value: 'finance' as const, label: 'Финансы', icon: 'i-lucide-wallet' }
 ]
+
+// ─── Мотивация ребёнка ──────────────────────────────────────────────────────
+// Тот же расчёт, что видят преподаватель и менеджер: родителю нельзя
+// показывать балл, который не сойдётся с итогом месяца в школе.
+const { fetchStudentMonth } = useMotivation()
+const month = ref(currentMonthKey())
+
+const { data: motivation, pending: motivationPending } = await useAsyncData(
+  () => `parent-child-motivation-${childId.value}`,
+  () => fetchStudentMonth(month.value, childId.value),
+  { watch: [month, childId] }
+)
+
+const monthOptions = computed(() => {
+  const out: { value: string, label: string }[] = []
+  const now = new Date()
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    out.push({ value: key, label: formatMonth(key) })
+  }
+  return out
+})
+
+const motivationSummary = computed(() => motivation.value?.summary ?? null)
+const childMedal = computed(() => MEDAL_MAP[motivationSummary.value?.medal ?? 'NONE'])
 
 const ATT_META: Record<AttendanceStatus, { label: string, color: 'success' | 'error' | 'warning', icon: string }> = {
   PRESENT: { label: 'Был на уроке', color: 'success', icon: 'i-lucide-check' },
@@ -107,20 +136,46 @@ const fmtTime = (d: string) => new Date(d).toLocaleTimeString('ru-RU', { hour: '
         </UButton>
       </div>
 
+      <!-- Мотивация -->
+      <template v-if="tab === 'motivation'">
+        <div class="flex justify-end">
+          <USelect
+            v-model="month"
+            :items="monthOptions"
+            icon="i-lucide-calendar"
+            class="min-w-44"
+          />
+        </div>
+        <div
+          v-if="motivationPending"
+          class="flex justify-center py-16"
+        >
+          <UIcon
+            name="i-lucide-loader-2"
+            class="size-8 animate-spin text-muted"
+          />
+        </div>
+        <StudentMotivationCard
+          v-else
+          :data="motivation"
+          voice="parent"
+        />
+      </template>
+
       <!-- Progress -->
       <div
-        v-if="tab === 'progress'"
+        v-else-if="tab === 'progress'"
         class="grid grid-cols-2 sm:grid-cols-3 gap-3"
       >
         <UCard>
           <p class="text-xs text-muted uppercase tracking-wide">
-            Средний балл
+            Балл за месяц
           </p>
           <p class="text-3xl font-black mt-1">
-            {{ child.avgGrade ? child.avgGrade.toFixed(1) : '—' }}
+            {{ motivationSummary?.participates ? motivationSummary.average.toFixed(2) : '—' }}
           </p>
           <p class="text-xs text-muted mt-1">
-            {{ child.gradeCount }} оценок
+            {{ childMedal.emoji }} {{ childMedal.label }}
           </p>
         </UCard>
         <UCard>

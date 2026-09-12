@@ -1,7 +1,8 @@
 import type {
   CriteriaJournal,
   GradeCriterion,
-  MonthlySummary
+  MonthlySummary,
+  StudentMonth
 } from '../model/types'
 
 /**
@@ -28,6 +29,16 @@ export const useMotivation = () => {
     $fetch<{ ok: boolean, saved: number, cleared: number }>('/api/teacher/criteria-grades', {
       method: 'POST',
       body: { lessonId, studentId, values }
+    })
+
+  /**
+   * Мотивация одного ученика за месяц: уроки с пятью оценками, итог и история
+   * медалей. `studentId` нужен родителю и преподавателю; ученик всегда
+   * получает свой дневник, что бы ни передал.
+   */
+  const fetchStudentMonth = (month?: string, studentId?: string) =>
+    request<StudentMonth>('/api/student/motivation', {
+      query: { ...(month ? { month } : {}), ...(studentId ? { studentId } : {}) }
     })
 
   /** Сводная за месяц — считается на лету, ничего не фиксирует. */
@@ -57,5 +68,12 @@ export const useMotivation = () => {
       coinsAwarded: number
     }>('/api/admin/motivation/recompute', { method: 'POST', body: { month, awardCoins } })
 
-  return { fetchJournal, saveCriteriaGrades, fetchSummary, saveManagerInputs, recompute }
+  return {
+    fetchJournal,
+    saveCriteriaGrades,
+    fetchStudentMonth,
+    fetchSummary,
+    saveManagerInputs,
+    recompute
+  }
 }

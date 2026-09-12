@@ -23,10 +23,15 @@ const MEDAL_PAYOUT: Record<Database['public']['Enums']['MedalKind'], number> = {
   GOLD: 5000, SILVER: 3000, BRONZE: 1000, NONE: 0
 }
 
+/**
+ * Пороги медалей школы (те же, что в entities/motivation и на сервере).
+ * Раньше здесь стояли 4.6 / 4.0 / 3.6 — не те, по которым реально считаются
+ * бонусы, и прогноз расходился с итогом месяца.
+ */
 const computeMedal = (avg: number): Database['public']['Enums']['MedalKind'] => {
   if (avg >= 4.6) return 'GOLD'
-  if (avg >= 4.0) return 'SILVER'
-  if (avg >= 3.6) return 'BRONZE'
+  if (avg >= 3.8) return 'SILVER'
+  if (avg >= 2.7) return 'BRONZE'
   return 'NONE'
 }
 

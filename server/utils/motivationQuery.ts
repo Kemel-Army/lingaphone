@@ -6,7 +6,7 @@
  * (`POST /api/admin/motivation/recompute`).
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { computeMotivation, monthRange, type MedalKind } from './motivation'
+import { computeMotivation, monthRange, type GradeCriterion, type MedalKind } from './motivation'
 
 export interface MotivationRow {
   studentId: string
@@ -233,4 +233,152 @@ export const buildMonthlySummary = async (
   )
 
   return { month, rows, totals }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Разрез одного ученика — для его собственного дневника и для родителя.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface StudentLessonGrades {
+  lessonId: string
+  topic: string
+  startsAt: string
+  groupName: string
+  grades: Partial<Record<GradeCriterion, number>>
+  /** Средняя за урок по выставленным критериям; null — оценок ещё нет. */
+  average: number | null
+  filled: number
+}
+
+export interface StudentMonth {
+  month: string
+  summary: MotivationRow | null
+  lessons: StudentLessonGrades[]
+}
+
+/**
+ * Месяц глазами ученика: каждый урок с пятью оценками плюс тот же итог,
+ * который видит менеджер. Считаем тем же `computeMotivation`, что и сводную —
+ * иначе ученик и школа будут смотреть на разные числа.
+ */
+export const buildStudentMonth = async (
+  supabase: any,
+  studentId: string,
+  month: string
+): Promise<StudentMonth> => {
+  const { from, to } = monthRange(month)
+
+  const { data: memberRows } = await supabase
+    .from('GroupMember')
+    .select('groupId, Group!groupId ( name )')
+    .eq('studentId', studentId)
+    .eq('status', 'ACTIVE') as { data: { groupId: string, Group: any }[] | null }
+
+  const groups = memberRows ?? []
+  const groupIds = groups.map(g => g.groupId)
+  const groupName = new Map(groups.map(g => [g.groupId, pick<{ name: string }>(g.Group)?.name ?? '']))
+
+  if (!groupIds.length) return { month, summary: null, lessons: [] }
+
+  const { data: lessonRows } = await supabase
+    .from('Lesson')
+    .select('id, topic, startsAt, groupId')
+    .in('groupId', groupIds)
+    .gte('startsAt', from)
+    .lt('startsAt', to)
+    .order('startsAt', { ascending: true }) as {
+    data: { id: string, topic: string, startsAt: string, groupId: string }[] | null
+  }
+
+  const lessons = lessonRows ?? []
+  const lessonIds = lessons.map(l => l.id)
+
+  const [{ data: gradeRows }, { data: attendanceRows }, { data: inputRow }] = await Promise.all([
+    supabase
+      .from('LessonCriterionGrade')
+      .select('lessonId, criterion, value')
+      .eq('studentId', studentId)
+      .in('lessonId', lessonIds.length ? lessonIds : NO_MATCH) as Promise<{
+      data: { lessonId: string, criterion: GradeCriterion, value: number }[] | null
+    }>,
+    supabase
+      .from('Attendance')
+      .select('lessonId, status')
+      .eq('studentId', studentId)
+      .in('lessonId', lessonIds.length ? lessonIds : NO_MATCH) as Promise<{
+      data: { lessonId: string, status: string }[] | null
+    }>,
+    supabase
+      .from('MonthlyMotivationInput')
+      .select('instagram, paidOnTime, books, subscriptionLessons')
+      .eq('studentId', studentId)
+      .eq('month', month)
+      .maybeSingle() as Promise<{
+      data: {
+        instagram: boolean
+        paidOnTime: boolean
+        books: boolean
+        subscriptionLessons: number
+      } | null
+    }>
+  ])
+
+  const byLesson = new Map<string, Partial<Record<GradeCriterion, number>>>()
+  let gradeSum = 0
+  let gradesCount = 0
+  for (const g of gradeRows ?? []) {
+    const bucket = byLesson.get(g.lessonId) ?? {}
+    bucket[g.criterion] = g.value
+    byLesson.set(g.lessonId, bucket)
+    gradeSum += g.value
+    gradesCount++
+  }
+
+  const attendedLessons = (attendanceRows ?? []).filter(a => a.status !== 'ABSENT').length
+  const subscriptionLessons = inputRow?.subscriptionLessons ?? lessons.length
+
+  const calc = computeMotivation({
+    gradeSum,
+    gradesCount,
+    attendedLessons,
+    subscriptionLessons,
+    instagram: inputRow?.instagram ?? false,
+    paidOnTime: inputRow?.paidOnTime ?? false,
+    books: inputRow?.books ?? false
+  })
+
+  const detail: StudentLessonGrades[] = lessons.map((l) => {
+    const grades = byLesson.get(l.id) ?? {}
+    const values = Object.values(grades).filter((v): v is number => typeof v === 'number')
+    return {
+      lessonId: l.id,
+      topic: l.topic,
+      startsAt: l.startsAt,
+      groupName: groupName.get(l.groupId) ?? '',
+      grades,
+      average: values.length ? round2(values.reduce((a, b) => a + b, 0) / values.length) : null,
+      filled: values.length
+    }
+  })
+
+  const summary: MotivationRow = {
+    studentId,
+    name: '',
+    surname: '',
+    fullName: '',
+    groupId: groupIds[0] ?? null,
+    groupName: [...new Set(groups.map(g => groupName.get(g.groupId)).filter(Boolean))].join(', '),
+    gradeSum,
+    gradesCount,
+    attendedLessons,
+    lessonsInMonth: lessons.length,
+    subscriptionLessons,
+    instagram: inputRow?.instagram ?? false,
+    paidOnTime: inputRow?.paidOnTime ?? false,
+    books: inputRow?.books ?? false,
+    avgGradesPerLesson: attendedLessons > 0 ? round2(gradesCount / attendedLessons) : 0,
+    ...calc
+  }
+
+  return { month, summary, lessons: detail }
 }
