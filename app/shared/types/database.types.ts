@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1211,6 +1211,55 @@ export type Database = {
           },
         ]
       }
+      LessonCriterionGrade: {
+        Row: {
+          criterion: Database["public"]["Enums"]["GradeCriterion"]
+          gradedAt: string
+          gradedBy: string | null
+          lessonId: string
+          studentId: string
+          value: number
+        }
+        Insert: {
+          criterion: Database["public"]["Enums"]["GradeCriterion"]
+          gradedAt?: string
+          gradedBy?: string | null
+          lessonId: string
+          studentId: string
+          value: number
+        }
+        Update: {
+          criterion?: Database["public"]["Enums"]["GradeCriterion"]
+          gradedAt?: string
+          gradedBy?: string | null
+          lessonId?: string
+          studentId?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "LessonCriterionGrade_gradedBy_fkey"
+            columns: ["gradedBy"]
+            isOneToOne: false
+            referencedRelation: "Teacher"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "LessonCriterionGrade_lessonId_fkey"
+            columns: ["lessonId"]
+            isOneToOne: false
+            referencedRelation: "Lesson"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "LessonCriterionGrade_studentId_fkey"
+            columns: ["studentId"]
+            isOneToOne: false
+            referencedRelation: "Student"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       LessonExercise: {
         Row: {
           content: Json
@@ -1283,6 +1332,73 @@ export type Database = {
             columns: ["exerciseId"]
             isOneToOne: true
             referencedRelation: "LessonExercise"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      LessonGuestInvite: {
+        Row: {
+          createdAt: string
+          createdBy: string | null
+          expiresAt: string
+          guestName: string | null
+          id: string
+          lastUsedAt: string | null
+          leadId: string | null
+          lessonId: string
+          maxUses: number
+          revokedAt: string | null
+          token: string
+          usedCount: number
+        }
+        Insert: {
+          createdAt?: string
+          createdBy?: string | null
+          expiresAt: string
+          guestName?: string | null
+          id?: string
+          lastUsedAt?: string | null
+          leadId?: string | null
+          lessonId: string
+          maxUses?: number
+          revokedAt?: string | null
+          token: string
+          usedCount?: number
+        }
+        Update: {
+          createdAt?: string
+          createdBy?: string | null
+          expiresAt?: string
+          guestName?: string | null
+          id?: string
+          lastUsedAt?: string | null
+          leadId?: string | null
+          lessonId?: string
+          maxUses?: number
+          revokedAt?: string | null
+          token?: string
+          usedCount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "LessonGuestInvite_createdBy_fkey"
+            columns: ["createdBy"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "LessonGuestInvite_leadId_fkey"
+            columns: ["leadId"]
+            isOneToOne: false
+            referencedRelation: "Lead"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "LessonGuestInvite_lessonId_fkey"
+            columns: ["lessonId"]
+            isOneToOne: false
+            referencedRelation: "Lesson"
             referencedColumns: ["id"]
           },
         ]
@@ -1552,33 +1668,54 @@ export type Database = {
       MonthlyMedal: {
         Row: {
           averageGrade: number
+          bookPoints: number
           confirmedAt: string
           confirmedBy: string | null
+          gradesCount: number
           id: string
+          instagramPoints: number
+          lessonsCounted: number
           medal: Database["public"]["Enums"]["MedalKind"]
           month: string
+          participates: boolean
+          paymentPoints: number
           payout: number
           studentId: string
+          teacherAvg: number
         }
         Insert: {
           averageGrade: number
+          bookPoints?: number
           confirmedAt?: string
           confirmedBy?: string | null
+          gradesCount?: number
           id?: string
+          instagramPoints?: number
+          lessonsCounted?: number
           medal: Database["public"]["Enums"]["MedalKind"]
           month: string
+          participates?: boolean
+          paymentPoints?: number
           payout?: number
           studentId: string
+          teacherAvg?: number
         }
         Update: {
           averageGrade?: number
+          bookPoints?: number
           confirmedAt?: string
           confirmedBy?: string | null
+          gradesCount?: number
           id?: string
+          instagramPoints?: number
+          lessonsCounted?: number
           medal?: Database["public"]["Enums"]["MedalKind"]
           month?: string
+          participates?: boolean
+          paymentPoints?: number
           payout?: number
           studentId?: string
+          teacherAvg?: number
         }
         Relationships: [
           {
@@ -1593,6 +1730,57 @@ export type Database = {
             columns: ["studentId"]
             isOneToOne: false
             referencedRelation: "Student"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      MonthlyMotivationInput: {
+        Row: {
+          books: boolean
+          instagram: boolean
+          month: string
+          note: string | null
+          paidOnTime: boolean
+          studentId: string
+          subscriptionLessons: number
+          updatedAt: string
+          updatedBy: string | null
+        }
+        Insert: {
+          books?: boolean
+          instagram?: boolean
+          month: string
+          note?: string | null
+          paidOnTime?: boolean
+          studentId: string
+          subscriptionLessons?: number
+          updatedAt?: string
+          updatedBy?: string | null
+        }
+        Update: {
+          books?: boolean
+          instagram?: boolean
+          month?: string
+          note?: string | null
+          paidOnTime?: boolean
+          studentId?: string
+          subscriptionLessons?: number
+          updatedAt?: string
+          updatedBy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "MonthlyMotivationInput_studentId_fkey"
+            columns: ["studentId"]
+            isOneToOne: false
+            referencedRelation: "Student"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "MonthlyMotivationInput_updatedBy_fkey"
+            columns: ["updatedBy"]
+            isOneToOne: false
+            referencedRelation: "User"
             referencedColumns: ["id"]
           },
         ]
@@ -3249,6 +3437,7 @@ export type Database = {
         | "LEVEL_UP"
         | "SHOP_PURCHASE"
         | "SHOP_REFUND"
+      GradeCriterion: "ATTENDANCE" | "BEHAVIOR" | "HOMEWORK" | "DIARY" | "EBOOK"
       GroupMemberStatus: "ACTIVE" | "LEFT"
       HomeworkFormat:
         | "TEST"
@@ -3411,12 +3600,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3440,11 +3629,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3465,11 +3654,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3490,11 +3679,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3507,11 +3696,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3537,6 +3726,7 @@ export const Constants = {
         "SHOP_PURCHASE",
         "SHOP_REFUND",
       ],
+      GradeCriterion: ["ATTENDANCE", "BEHAVIOR", "HOMEWORK", "DIARY", "EBOOK"],
       GroupMemberStatus: ["ACTIVE", "LEFT"],
       HomeworkFormat: ["TEST", "INPUT", "TEXT", "ORAL", "FILE", "INTERACTIVE"],
       HomeworkStatus: [

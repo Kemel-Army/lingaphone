@@ -159,7 +159,8 @@ const closeDetail = () => {
 
 // WhatsApp/мессенджер чат по телефону лида (Wazzup, path A).
 const chatOpen = ref(false)
-const chatPhone = computed(() => (selected.value?.phone ?? '').replace(/\D/g, ''))
+// Wazzup ищет чат по точному номеру: «8777…» он не найдёт, нужен «7777…».
+const chatPhone = computed(() => normalizeKzPhone(selected.value?.phone ?? ''))
 
 const saveDetail = async () => {
   if (!selected.value) return

@@ -56,10 +56,15 @@ const gradeColor = (v: number) => {
   return 'bg-linear-to-br from-red-400 to-red-600 text-white'
 }
 
+/**
+ * Пороги медалей были 4.6 / 4.0 / 3.6 — не те, по которым школа реально
+ * считает бонусы (2.7 / 3.8 / 4.6, см. entities/motivation). Ученик видел
+ * «Серебро» там, где по факту выходила «Бронза».
+ */
 const predictedMedalFromAvg = (avg: number) => {
   if (avg >= 4.6) return { label: '🥇 Золото', color: 'text-yellow-700 dark:text-yellow-300' }
-  if (avg >= 4.0) return { label: '🥈 Серебро', color: 'text-gray-600 dark:text-gray-300' }
-  if (avg >= 3.6) return { label: '🥉 Бронза', color: 'text-amber-700 dark:text-amber-400' }
+  if (avg >= 3.8) return { label: '🥈 Серебро', color: 'text-gray-600 dark:text-gray-300' }
+  if (avg >= 2.7) return { label: '🥉 Бронза', color: 'text-amber-700 dark:text-amber-400' }
   return { label: 'Без медали', color: 'text-muted' }
 }
 </script>

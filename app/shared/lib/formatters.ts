@@ -143,3 +143,21 @@ export const getMasteryLabel = (mastery: number): string => {
   if (mastery > 0) return 'Критично'
   return 'Не изучено'
 }
+
+/**
+ * Канонический вид казахстанского номера — цифры, начинающиеся с 7.
+ *
+ * Тот же алгоритм, что в server/utils/phoneKz.ts и в generated-колонке
+ * `Lead."phoneDigits"`. Нужен там, где номер уходит во внешнюю систему
+ * (Wazzup ищет чат по точному совпадению, и «8777…» ему не подходит).
+ *
+ *   +7 700 111-22-33 → 77001112233
+ *   8 700 111 22 33  → 77001112233
+ *   700 111 22 33    → 77001112233
+ */
+export const normalizeKzPhone = (phone: string): string => {
+  const digits = (phone ?? '').replace(/\D/g, '')
+  if (digits.length === 11 && digits.startsWith('8')) return `7${digits.slice(1)}`
+  if (digits.length === 10) return `7${digits}`
+  return digits
+}

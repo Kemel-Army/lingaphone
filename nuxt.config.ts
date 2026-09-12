@@ -71,6 +71,13 @@ export default defineNuxtConfig({
     // never be reachable from the public internet require this header.
     internalApiKey: process.env.INTERNAL_API_KEY ?? '',
     sentryDsn: process.env.SENTRY_DSN ?? '',
+    // Jitsi. Публичный meet.jit.si рвёт встроенный звонок через 5 минут
+    // («only meant for demo purposes»), поэтому для продакшна нужен JaaS (8x8)
+    // или свой сервер — и тому, и другому нужен JWT. См. server/utils/jitsi.ts.
+    jitsiAppId: process.env.JITSI_APP_ID ?? '',
+    jitsiKeyId: process.env.JITSI_KEY_ID ?? '',
+    jitsiPrivateKey: process.env.JITSI_PRIVATE_KEY ?? '',
+    jitsiAppSecret: process.env.JITSI_APP_SECRET ?? '',
     public: {
       appName: 'Lingaphone',
       jitsiDomain: process.env.JITSI_DOMAIN ?? 'meet.jit.si',
@@ -82,6 +89,13 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
+    // Permissions-Policy для комнат урока живёт в server/middleware/security.ts:
+    // тот middleware выполняется после routeRules и перетирал бы заголовок,
+    // заданный здесь.
+    //
+    // Гостевой вход — только на клиенте: страница читает токен из URL и сразу
+    // идёт в getUserMedia, серверный рендер ей ничего не даёт.
+    '/join/**': { ssr: false },
     '/': { isr: 3600 },
     '/about': { isr: 86400 },
     '/contact': { isr: 86400 },
@@ -162,7 +176,7 @@ export default defineNuxtConfig({
   },
 
   robots: {
-    disallow: ['/student/', '/parent/', '/teacher/', '/admin/', '/lesson/', '/messenger/', '/confirm']
+    disallow: ['/student/', '/parent/', '/teacher/', '/admin/', '/lesson/', '/join/', '/messenger/', '/confirm']
   },
 
   sitemap: {
@@ -172,6 +186,7 @@ export default defineNuxtConfig({
       '/teacher/**',
       '/admin/**',
       '/lesson/**',
+      '/join/**',
       '/messenger/**',
       '/confirm'
     ]
@@ -209,7 +224,9 @@ export default defineNuxtConfig({
         '/diagnostics(/*)?',
         '/trial(/*)?',
         '/play(/*)?',
-        '/battle(/*)?'
+        '/battle(/*)?',
+        // Гостевой вход на урок по ссылке — смысл в том, чтобы аккаунт был не нужен.
+        '/join(/*)?'
       ]
     },
     cookieOptions: {

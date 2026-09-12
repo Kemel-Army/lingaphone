@@ -41,6 +41,28 @@ setInterval(() => {
   }
 }, 300_000)
 
+/**
+ * Страницы, где во вложенном iframe работает видеосвязь Jitsi.
+ *
+ * На них общий `camera=(self)` не годится: `self` не покрывает сторонний
+ * origin, поэтому Chrome молча не отдаёт камеру в iframe, а пользователь
+ * видит «Вам необходимо включить доступ к микрофону и камере» и починить это
+ * из интерфейса не может. Задавать заголовок через `routeRules` бесполезно —
+ * этот middleware выполняется позже и перетирает его.
+ */
+const MEDIA_ROUTE_PREFIXES = ['/lesson/', '/join/']
+
+const mediaPermissionsPolicy = (): string => {
+  const jitsiDomain = (useRuntimeConfig().public.jitsiDomain as string) || 'meet.jit.si'
+  // 8x8.vc нужен всегда: на него переключается JaaS, даже когда JITSI_DOMAIN
+  // остался дефолтным.
+  const origins = [...new Set([`https://${jitsiDomain}`, 'https://8x8.vc'])]
+    .map(o => `"${o}"`)
+    .join(' ')
+  const allow = `(self ${origins})`
+  return `camera=${allow}, microphone=${allow}, display-capture=${allow}, autoplay=(self), geolocation=()`
+}
+
 export default defineEventHandler((event) => {
   const path = getRequestURL(event).pathname
   const isDev = process.env.NODE_ENV !== 'production'
@@ -50,7 +72,13 @@ export default defineEventHandler((event) => {
   setResponseHeader(event, 'X-Frame-Options', 'DENY')
   setResponseHeader(event, 'Referrer-Policy', 'strict-origin-when-cross-origin')
   setResponseHeader(event, 'X-XSS-Protection', '1; mode=block')
-  setResponseHeader(event, 'Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()')
+
+  const needsMedia = MEDIA_ROUTE_PREFIXES.some(p => path.startsWith(p))
+  setResponseHeader(
+    event,
+    'Permissions-Policy',
+    needsMedia ? mediaPermissionsPolicy() : 'camera=(self), microphone=(self), geolocation=()'
+  )
 
   // HSTS — only in production
   if (!isDev) {
