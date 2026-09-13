@@ -6,7 +6,7 @@
  * In the tutor-less platform we notify the student and linked parents only:
  *  1. Inactivity (no Progress events for > 3 days) → student + parent
  *  2. Streak about to expire → student
- *  3. Mastery drop (≥ 3 weak topics in any StudentModel) → parent
+ *  3. Просевшие направления (≥ 3 критерия со средней < 3 за месяц) → parent
  *
  * Run via Supabase pg_cron, Nitro cron, or manual GET /api/early-warning/check.
  */
@@ -105,30 +105,31 @@ export default defineTask({
         }
       }
 
-      // 3. Mastery drop → notify parent
-      const { data: studentModels } = await supabase
-        .from('StudentModel')
-        .select('knowledgeMap')
+      // 3. Просевшие направления → родителю.
+      //
+      // Правило раньше читало StudentModel — таблицу прежней математической
+      // модели, которой в базе нет: запрос возвращал 404, ошибка не
+      // проверялась, и предупреждение не отправлялось ни разу. Теперь смотрим
+      // на оценки по критериям и называем родителю, что именно просело.
+      const { from: monthFrom, to: monthTo } = monthRange(monthKey(now))
+      const { data: criterionRows } = await supabase
+        .from('LessonCriterionGrade')
+        .select('criterion, value')
         .eq('studentId', student.id)
+        .gte('gradedAt', monthFrom)
+        .lt('gradedAt', monthTo)
 
-      if (studentModels?.length) {
-        for (const sm of studentModels as any[]) {
-          const km = sm.knowledgeMap as Record<string, number> | null
-          if (km) {
-            const weakTopics = Object.entries(km).filter(([_, v]) => v < 40)
-            if (weakTopics.length >= 3) {
-              const parentUserIds = await fetchParentUserIds()
-              for (const userId of parentUserIds) {
-                notifications.push({
-                  userId,
-                  type: 'EARLY_WARNING',
-                  title: `Слабые темы: ${studentName}`,
-                  message: `${studentName} имеет ${weakTopics.length} тем с уровнем <40%`
-                })
-              }
-              break
-            }
-          }
+      const weak = weakCriteria((criterionRows ?? []) as any[])
+      if (weak.length >= MIN_WEAK_CRITERIA) {
+        const names = weak.map(w => `${CRITERION_LABELS[w.criterion]} (${w.average.toFixed(1)})`).join(', ')
+        const parentUserIds = await fetchParentUserIds()
+        for (const userId of parentUserIds) {
+          notifications.push({
+            userId,
+            type: 'EARLY_WARNING',
+            title: `Нужно подтянуть: ${studentName}`,
+            message: `За этот месяц просели ${weak.length} направления — ${names}. Средняя ниже ${WEAK_CRITERION_THRESHOLD}.`
+          })
         }
       }
     }

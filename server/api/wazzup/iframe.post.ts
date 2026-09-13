@@ -41,19 +41,33 @@ export default defineEventHandler(async (event) => {
   const phoneDigits = userRow.phone ? normalizeKzPhone(userRow.phone) : ''
   const phone = isUsablePhone(phoneDigits) ? phoneDigits : undefined
 
-  try {
-    // Wazzup требует, чтобы юзер был известен CRM-интеграции до запроса iframe.
-    await $fetch('https://api.wazzup24.com/v3/users', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: [{ id: userRow.id, name: wazzupUserName, phone }]
-    })
-  } catch (e: unknown) {
-    throw createError({ statusCode: 502, message: `Wazzup (sync-users): ${wazzupError(e)}` })
+  // Роли в Wazzup назначаются вручную в их личном кабинете, через API их не
+  // выставить. Пользователь, которого заводит платформа, роли не имеет — и
+  // Wazzup встречает его экраном «У вас не выбрана роль».
+  //
+  // Поэтому сначала пытаемся войти под УЖЕ существующим сотрудником Wazzup,
+  // сопоставив его по номеру телефона: у него роль и каналы настроены. И
+  // только если совпадения нет, заводим технического пользователя.
+  const matched = phone ? await findWazzupUserByPhone(key, phone, userRow.id) : null
+
+  if (!matched) {
+    try {
+      // Wazzup требует, чтобы юзер был известен CRM-интеграции до запроса iframe.
+      await $fetch('https://api.wazzup24.com/v3/users', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: [{ id: userRow.id, name: wazzupUserName, phone }]
+      })
+    } catch (e: unknown) {
+      throw createError({ statusCode: 502, message: `Wazzup (sync-users): ${wazzupError(e)}` })
+    }
   }
 
   const payload: Record<string, unknown> = {
-    user: { id: userRow.id, name: wazzupUserName },
+    user: {
+      id: matched?.id ?? userRow.id,
+      name: matched?.name || wazzupUserName
+    },
     scope: body.scope
   }
   if (body.scope === 'card' && body.chatType && body.chatId) {
@@ -67,11 +81,48 @@ export default defineEventHandler(async (event) => {
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: payload
     })
-    return { url: res.url }
+    // `linkedToWazzupUser` показываем в интерфейсе: если false, а Wazzup внутри
+    // iframe жалуется на роль — понятно, что чинить (указать телефон в профиле
+    // или выдать роль техническому пользователю).
+    return {
+      url: res.url,
+      linkedToWazzupUser: !!matched,
+      wazzupUserName: matched?.name ?? wazzupUserName
+    }
   } catch (e: unknown) {
     throw createError({ statusCode: 502, message: `Wazzup: ${wazzupError(e)}` })
   }
 })
+
+/**
+ * Ищет сотрудника Wazzup с таким же номером.
+ *
+ * Список пользователей отдаётся целиком и меняется редко, отдельного поиска по
+ * телефону у Wazzup нет. Сбой этого запроса не должен ронять мессенджер —
+ * в худшем случае просто не найдём совпадение.
+ */
+async function findWazzupUserByPhone(
+  key: string,
+  phone: string,
+  ownTechnicalId: string
+): Promise<{ id: string, name: string } | null> {
+  try {
+    const users = await $fetch<{ id: string | number, name: string, phone?: string }[]>(
+      'https://api.wazzup24.com/v3/users',
+      { headers: { Authorization: `Bearer ${key}` } }
+    )
+    const hit = (users ?? []).find(u =>
+      // Технического пользователя мы сами и завели — вместе с телефоном,
+      // поэтому он всегда «совпадает» с собой. Роли у него нет, так что толку
+      // от такого совпадения ноль: ищем именно живого сотрудника Wazzup.
+      String(u.id) !== ownTechnicalId
+      && u.phone && normalizeKzPhone(String(u.phone)) === phone
+    )
+    return hit ? { id: String(hit.id), name: hit.name } : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Wazzup возвращает ошибки тремя разными способами (`description`, `error`,

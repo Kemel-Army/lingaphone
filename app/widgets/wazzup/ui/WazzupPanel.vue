@@ -17,6 +17,14 @@ const url = ref('')
 const loading = ref(true)
 const notConfigured = ref(false)
 const error = ref('')
+/**
+ * false = вошли под техническим пользователем, которого создала платформа.
+ * У него нет роли в Wazzup, и внутри iframe появится «Нет доступа к
+ * приложению». Причина не видна снаружи (чужой origin), поэтому подсказываем
+ * сами — иначе это выглядит как поломка платформы.
+ */
+const linkedToWazzupUser = ref(true)
+const wazzupUserName = ref('')
 
 const load = async () => {
   loading.value = true
@@ -25,6 +33,8 @@ const load = async () => {
   try {
     const res = await getUrl({ scope: props.scope, chatType: props.chatType, chatId: props.chatId })
     url.value = res.url
+    linkedToWazzupUser.value = res.linkedToWazzupUser !== false
+    wazzupUserName.value = res.wazzupUserName ?? ''
   } catch (e: unknown) {
     const status = (e as { statusCode?: number, response?: { status?: number } })?.statusCode
       ?? (e as { response?: { status?: number } })?.response?.status
@@ -94,11 +104,34 @@ onMounted(load)
       </div>
     </div>
 
-    <iframe
+    <div
       v-else
-      :src="url"
-      class="w-full h-full min-h-96 rounded-lg border border-subtle"
-      allow="microphone *; clipboard-write *; autoplay *"
-    />
+      class="flex h-full min-h-96 flex-col gap-2"
+    >
+      <UAlert
+        v-if="!linkedToWazzupUser"
+        color="warning"
+        variant="subtle"
+        icon="i-lucide-user-cog"
+        title="Если Wazzup пишет «Нет доступа к приложению»"
+      >
+        <template #description>
+          Платформа вошла под техническим пользователем
+          <b>«{{ wazzupUserName }}»</b> — роли в Wazzup у него нет, их можно
+          назначить только в личном кабинете Wazzup.
+          <br>
+          Быстрее всего: укажите свой рабочий номер в профиле на платформе — тот
+          же, что у вас в Wazzup. Тогда переписка откроется под вашим
+          сотрудником, где роль и каналы уже настроены. Либо выдайте роль
+          пользователю «{{ wazzupUserName }}» в ЛК Wazzup.
+        </template>
+      </UAlert>
+
+      <iframe
+        :src="url"
+        class="w-full flex-1 min-h-96 rounded-lg border border-subtle"
+        allow="microphone *; clipboard-write *; autoplay *"
+      />
+    </div>
   </div>
 </template>

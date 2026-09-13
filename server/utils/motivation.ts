@@ -137,3 +137,62 @@ export const monthRange = (month: string): { from: string, to: string } => {
   const to = new Date(Date.UTC(y!, m!, 1))
   return { from: from.toISOString(), to: to.toISOString() }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Слабые критерии — сигнал для Early Warning.
+//
+// Раньше это правило смотрело в таблицу StudentModel («≥ 3 слабые темы»), но
+// та осталась от прежней математической модели и в базе её нет: запрос молча
+// возвращал 404, и правило не срабатывало ни разу. Смысл сохраняем, источник
+// меняем на оценки по критериям — заодно письмо родителю может назвать, что
+// именно просело: поведение, домашние задания или работа с e-book.
+//
+// Порог намеренно отличается от «низкой успеваемости» в notify-daily: там
+// средний балл по всем критериям сразу, здесь — отдельные проваленные
+// направления, чтобы уведомления не дублировали друг друга.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Ниже этой средней критерий считается проваленным. */
+export const WEAK_CRITERION_THRESHOLD = 3
+
+/** Сколько направлений должно просесть, чтобы поднимать тревогу. */
+export const MIN_WEAK_CRITERIA = 3
+
+/** Меньше этого числа оценок по критерию — выборка не показательна. */
+export const MIN_GRADES_PER_CRITERION = 2
+
+export interface CriterionAverage {
+  criterion: GradeCriterion
+  average: number
+  count: number
+}
+
+/** Средняя по каждому критерию. Невыставленные критерии не попадают в выдачу. */
+export const criterionAverages = (
+  rows: { criterion: GradeCriterion, value: number }[]
+): CriterionAverage[] => {
+  const acc = new Map<GradeCriterion, { sum: number, n: number }>()
+  for (const r of rows) {
+    const rec = acc.get(r.criterion) ?? { sum: 0, n: 0 }
+    rec.sum += r.value
+    rec.n += 1
+    acc.set(r.criterion, rec)
+  }
+  return [...acc.entries()].map(([criterion, { sum, n }]) => ({
+    criterion,
+    average: Math.round((sum / n) * 100) / 100,
+    count: n
+  }))
+}
+
+/**
+ * Критерии, просевшие ниже порога. Одна случайная двойка тревогу не поднимает:
+ * критерий учитывается только начиная с `MIN_GRADES_PER_CRITERION` оценок.
+ */
+export const weakCriteria = (
+  rows: { criterion: GradeCriterion, value: number }[],
+  threshold = WEAK_CRITERION_THRESHOLD
+): CriterionAverage[] =>
+  criterionAverages(rows)
+    .filter(c => c.count >= MIN_GRADES_PER_CRITERION && c.average < threshold)
+    .sort((a, b) => a.average - b.average)

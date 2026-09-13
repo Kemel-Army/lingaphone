@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
   computeMotivation,
+  criterionAverages,
   medalForAverage,
   monthKey,
-  monthRange
+  monthRange,
+  weakCriteria,
+  MIN_WEAK_CRITERIA
 } from '../../server/utils/motivation'
 
 /**
@@ -166,5 +169,74 @@ describe('monthKey / monthRange', () => {
   it('переходит через год в декабре', () => {
     const { to } = monthRange('2026-12')
     expect(to).toBe('2027-01-01T00:00:00.000Z')
+  })
+})
+
+describe('weakCriteria — сигнал Early Warning', () => {
+  const g = (criterion: string, ...values: number[]) =>
+    values.map(value => ({ criterion: criterion as never, value }))
+
+  it('находит критерии со средней ниже 3 и не трогает сильные', () => {
+    const weak = weakCriteria([
+      ...g('BEHAVIOR', 2, 3), // 2.5 — слабый
+      ...g('HOMEWORK', 1, 1), // 1.0 — самый слабый
+      ...g('ATTENDANCE', 5, 5) // 5.0 — в выдачу не попадает
+    ])
+    expect(weak.map(w => w.criterion)).toEqual(['HOMEWORK', 'BEHAVIOR'])
+    expect(weak.map(w => w.average)).toEqual([1, 2.5])
+  })
+
+  it('сортирует от самого слабого', () => {
+    const weak = weakCriteria([...g('BEHAVIOR', 2, 2), ...g('DIARY', 1, 1)])
+    expect(weak[0]!.criterion).toBe('DIARY')
+  })
+
+  it('одна случайная двойка тревогу не поднимает', () => {
+    // Единственная оценка по критерию — выборка не показательна.
+    expect(weakCriteria(g('BEHAVIOR', 1))).toEqual([])
+  })
+
+  it('ровно на пороге 3.0 критерий слабым не считается', () => {
+    expect(weakCriteria([...g('HOMEWORK', 3, 3)])).toEqual([])
+  })
+
+  it('не придумывает слабость там, где оценок нет', () => {
+    expect(weakCriteria([])).toEqual([])
+  })
+
+  it('порог настраивается', () => {
+    const rows = [...g('EBOOK', 3, 4)]
+    expect(weakCriteria(rows)).toEqual([])
+    expect(weakCriteria(rows, 4).map(w => w.criterion)).toEqual(['EBOOK'])
+  })
+
+  it('тревога поднимается только от трёх просевших направлений', () => {
+    const two = weakCriteria([...g('BEHAVIOR', 2, 2), ...g('DIARY', 2, 2)])
+    const three = weakCriteria([...g('BEHAVIOR', 2, 2), ...g('DIARY', 2, 2), ...g('HOMEWORK', 2, 2)])
+    expect(two.length).toBeLessThan(MIN_WEAK_CRITERIA)
+    expect(three.length).toBeGreaterThanOrEqual(MIN_WEAK_CRITERIA)
+  })
+})
+
+describe('criterionAverages', () => {
+  it('считает среднюю и количество по каждому критерию', () => {
+    const out = criterionAverages([
+      { criterion: 'ATTENDANCE' as never, value: 5 },
+      { criterion: 'ATTENDANCE' as never, value: 4 },
+      { criterion: 'DIARY' as never, value: 3 }
+    ])
+    const att = out.find(o => o.criterion === 'ATTENDANCE')!
+    expect(att.average).toBe(4.5)
+    expect(att.count).toBe(2)
+    expect(out).toHaveLength(2)
+  })
+
+  it('округляет до сотых', () => {
+    const out = criterionAverages([
+      { criterion: 'EBOOK' as never, value: 5 },
+      { criterion: 'EBOOK' as never, value: 4 },
+      { criterion: 'EBOOK' as never, value: 4 }
+    ])
+    expect(out[0]!.average).toBe(4.33)
   })
 })
