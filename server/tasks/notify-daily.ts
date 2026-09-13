@@ -83,16 +83,27 @@ export default defineTask({
 
     // ─── Низкая успеваемость (текущий месяц) ─────────────────────────
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    // Оценки живут в LessonCriterionGrade — по пять строк на урок. Сначала
+    // усредняем внутри урока, иначе MIN_GRADES срабатывал бы впятеро раньше,
+    // чем задумано («3 оценки» превратились бы в 3 критерия одного занятия).
     const { data: grades } = await supabase
-      .from('Grade')
-      .select('studentId, value')
+      .from('LessonCriterionGrade')
+      .select('studentId, lessonId, value')
       .gte('gradedAt', iso(monthStart))
-    const acc = new Map<string, { sum: number, n: number }>()
+    const perLesson = new Map<string, { sum: number, n: number, studentId: string }>()
     for (const g of (grades ?? []) as any[]) {
-      const rec = acc.get(g.studentId) ?? { sum: 0, n: 0 }
+      const key = `${g.studentId}|${g.lessonId}`
+      const rec = perLesson.get(key) ?? { sum: 0, n: 0, studentId: g.studentId }
       rec.sum += g.value
       rec.n += 1
-      acc.set(g.studentId, rec)
+      perLesson.set(key, rec)
+    }
+    const acc = new Map<string, { sum: number, n: number }>()
+    for (const l of perLesson.values()) {
+      const rec = acc.get(l.studentId) ?? { sum: 0, n: 0 }
+      rec.sum += l.sum / l.n
+      rec.n += 1
+      acc.set(l.studentId, rec)
     }
     for (const [studentId, rec] of acc) {
       if (rec.n < MIN_GRADES) continue

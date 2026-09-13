@@ -38,7 +38,9 @@ export const useTeacherAnalytics = () => {
     if (!studentIds.length) return []
 
     const [gradesRes, attRes, hwRes] = await Promise.all([
-      supabase.from('Grade').select('studentId, value').in('studentId', studentIds),
+      // Оценки по критериям (шкала та же, 1-5). Старая таблица Grade больше
+      // не заполняется, и средний балл по ней всегда выходил нулевым.
+      supabase.from('LessonCriterionGrade').select('studentId, value').in('studentId', studentIds),
       supabase.from('Attendance').select('studentId, status').in('studentId', studentIds),
       supabase.from('HomeworkSubmission').select('studentId, status').in('studentId', studentIds)
     ])

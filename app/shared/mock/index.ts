@@ -41,12 +41,16 @@ export const useMockStudent = () => {
 
   const nextLesson = upcomingLessons[0] ?? null
 
-  /** Predicted medal for current month based on running average */
+  /**
+   * Predicted medal for current month based on running average.
+   * Пороги школы: 2.7 / 3.8 / 4.6 (см. server/utils/motivation.ts). Здесь
+   * стояли 3.6 / 4.0 / 4.6 — устаревшие, расходились с реальным расчётом.
+   */
   const predictedMedal = (() => {
     const a = profile.currentMonthAverage
     if (a >= 4.6) return 'GOLD'
-    if (a >= 4.0) return 'SILVER'
-    if (a >= 3.6) return 'BRONZE'
+    if (a >= 3.8) return 'SILVER'
+    if (a >= 2.7) return 'BRONZE'
     return 'NONE'
   })() as 'GOLD' | 'SILVER' | 'BRONZE' | 'NONE'
 

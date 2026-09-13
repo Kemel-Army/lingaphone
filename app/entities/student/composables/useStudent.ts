@@ -9,7 +9,6 @@ type TeacherRow = Tables['Teacher']['Row']
 type BranchRow = Tables['Branch']['Row']
 type GroupRow = Tables['Group']['Row']
 type LessonRow = Tables['Lesson']['Row']
-type GradeRow = Tables['Grade']['Row']
 type MedalRow = Tables['MonthlyMedal']['Row']
 type PayoutRow = Tables['Payout']['Row']
 type HomeworkRow = Tables['Homework']['Row']
@@ -19,20 +18,20 @@ type VocabRow = Tables['VocabularyEntry']['Row']
 type ConversationRow = Tables['Conversation']['Row']
 type UserRow = Tables['User']['Row']
 
-const MEDAL_PAYOUT: Record<Database['public']['Enums']['MedalKind'], number> = {
-  GOLD: 5000, SILVER: 3000, BRONZE: 1000, NONE: 0
-}
-
 /**
- * Пороги медалей школы (те же, что в entities/motivation и на сервере).
- * Раньше здесь стояли 4.6 / 4.0 / 3.6 — не те, по которым реально считаются
- * бонусы, и прогноз расходился с итогом месяца.
+ * Ровно то, что нужно от `/api/student/motivation` для прогноза медали.
+ *
+ * Ходим в маршрут напрямую, а не через `entities/motivation`: горизонтальные
+ * импорты между слайсами одного слоя запрещены (см. CLAUDE.md), поэтому форму
+ * ответа описываем локально.
  */
-const computeMedal = (avg: number): Database['public']['Enums']['MedalKind'] => {
-  if (avg >= 4.6) return 'GOLD'
-  if (avg >= 3.8) return 'SILVER'
-  if (avg >= 2.7) return 'BRONZE'
-  return 'NONE'
+interface MotivationMonthSlim {
+  summary: {
+    average: number
+    participates: boolean
+    medal: Database['public']['Enums']['MedalKind']
+    payout: number
+  } | null
 }
 
 export const useStudent = () => {
@@ -75,10 +74,12 @@ export const useStudent = () => {
           .select('*')
           .order('startsAt', { ascending: true }),
         supabase
-          .from('Grade')
-          .select('*')
+          // Оценки по критериям — схлопываем в один балл за урок ниже.
+          // Таблица Grade в проекте больше не заполняется.
+          .from('LessonCriterionGrade')
+          .select('studentId, lessonId, value, gradedAt')
           .order('gradedAt', { ascending: false })
-          .limit(50),
+          .limit(250),
         supabase
           .from('MonthlyMedal')
           .select('*')
@@ -218,7 +219,7 @@ export const useStudent = () => {
         groups,
         classmatesByGroup,
         lessons: (lessonsRes.data ?? []) as LessonRow[],
-        grades: (gradesRes.data ?? []) as GradeRow[],
+        grades: collapseCriterionGrades((gradesRes.data ?? []) as unknown as CriterionGradeRow[]),
         medals: (medalsRes.data ?? []) as MedalRow[],
         payouts: (payoutsRes.data ?? []) as PayoutRow[],
         homeworks: (homeworkRes.data ?? []) as HomeworkRow[],
@@ -238,6 +239,19 @@ export const useStudent = () => {
 
   const studentId = computed(() => data.value?.studentId ?? null)
 
+  /**
+   * Прогноз медали считает сервер — тем же кодом, что видят преподаватель и
+   * менеджер. По таблице Grade его не получить: она не знает ни пяти
+   * критериев, ни баллов менеджера, и ученик видел бы на главной одно число,
+   * а в дневнике другое.
+   */
+  const request = useRequestFetch()
+  const { data: motivationMonth } = useAsyncData<MotivationMonthSlim | null>(
+    'student-motivation-current',
+    () => request<MotivationMonthSlim>('/api/student/motivation'),
+    { default: () => null }
+  )
+
   const profile = computed(() => {
     const s = data.value?.studentRow
     if (!s || !user.value) return null
@@ -249,12 +263,10 @@ export const useStudent = () => {
       level: s.level,
       goldStreak: s.goldStreak,
       totalEarnings: s.totalEarnings,
-      currentMonthAverage: (() => {
-        const yyyymm = new Date().toISOString().slice(0, 7)
-        const monthGrades = (data.value?.grades ?? []).filter(g => g.gradedAt.startsWith(yyyymm))
-        if (!monthGrades.length) return 0
-        return monthGrades.reduce((s, g) => s + g.value, 0) / monthGrades.length
-      })(),
+      // Балл «мотивашки» с сервера, а не среднее по старой таблице Grade.
+      currentMonthAverage: motivationMonth.value?.summary?.participates
+        ? motivationMonth.value.summary.average
+        : 0,
       dailyStreak: data.value?.dailyStreak ?? s.dailyStreak,
       totalXp: data.value?.totalXp ?? s.totalXp
     }
@@ -347,9 +359,9 @@ export const useStudent = () => {
   const payouts = computed(() => data.value?.payouts ?? [])
 
   const predictedMedal = computed<Database['public']['Enums']['MedalKind']>(() =>
-    computeMedal(profile.value?.currentMonthAverage ?? 0)
+    motivationMonth.value?.summary?.medal ?? 'NONE'
   )
-  const predictedPayout = computed(() => MEDAL_PAYOUT[predictedMedal.value])
+  const predictedPayout = computed(() => motivationMonth.value?.summary?.payout ?? 0)
 
   const homeworkList = computed(() => {
     const subs = data.value?.submissions ?? []

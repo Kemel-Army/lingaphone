@@ -7,7 +7,6 @@ import type {
   StoryStats
 } from '../model/types'
 
-type GradeRow = Database['public']['Tables']['Grade']['Row']
 type LessonRow = Database['public']['Tables']['Lesson']['Row']
 type PracticeAttemptRow = Database['public']['Tables']['PracticeAttempt']['Row']
 type VocabRow = Database['public']['Tables']['VocabularyEntry']['Row']
@@ -24,8 +23,10 @@ export const useStudentProgress = () => {
 
       const [gradesRes, lessonsRes, attemptsRes, vocabRes, storiesRes] = await Promise.all([
         supabase
-          .from('Grade')
-          .select('studentId, lessonId, value, comment, gradedAt')
+          // Оценки по критериям; в один балл за урок их схлопывает
+          // collapseCriterionGrades ниже. Таблица Grade больше не пополняется.
+          .from('LessonCriterionGrade')
+          .select('studentId, lessonId, value, gradedAt')
           .order('gradedAt', { ascending: true }),
         supabase
           .from('Lesson')
@@ -44,7 +45,7 @@ export const useStudentProgress = () => {
       ])
 
       return {
-        grades: (gradesRes.data ?? []) as Pick<GradeRow, 'studentId' | 'lessonId' | 'value' | 'comment' | 'gradedAt'>[],
+        grades: collapseCriterionGrades((gradesRes.data ?? []) as unknown as CriterionGradeRow[]),
         lessons: (lessonsRes.data ?? []) as Pick<LessonRow, 'id' | 'topic' | 'groupId' | 'startsAt'>[],
         attempts: (attemptsRes.data ?? []) as Pick<PracticeAttemptRow, 'cardId' | 'target' | 'score' | 'attemptedAt'>[],
         vocab: (vocabRes.data ?? []) as Pick<VocabRow, 'word' | 'bestScore' | 'reviewCount' | 'addedAt'>[],

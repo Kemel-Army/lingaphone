@@ -30,7 +30,9 @@ export const useParentChildren = () => {
     if (!ids.length) return []
 
     const [gradesRes, attRes, hwRes, subsRes, payRes, memRes] = await Promise.all([
-      supabase.from('Grade').select('studentId, value, gradedAt').in('studentId', ids),
+      // Оценки теперь по пяти критериям — схлопываем в один балл за урок.
+      // Старая таблица Grade больше не заполняется.
+      supabase.from('LessonCriterionGrade').select('studentId, lessonId, value, gradedAt').in('studentId', ids),
       // Attendance has no `id` column (PK is studentId+lessonId) — selecting
       // it 400s the whole query, which Promise.all swallows into `data ?? []`,
       // silently showing 0/0 attendance for every parent.
@@ -41,7 +43,7 @@ export const useParentChildren = () => {
       supabase.from('GroupMember').select('studentId, group:Group(id, name)').in('studentId', ids).eq('status', 'ACTIVE')
     ])
 
-    const grades = gradesRes.data ?? []
+    const grades = collapseCriterionGrades((gradesRes.data ?? []) as unknown as CriterionGradeRow[])
     const att = (attRes.data ?? []) as unknown as Array<{ lessonId: string, studentId: string, status: AttendanceStatus, markedAt: string, lesson: { startsAt: string, topic: string } | null }>
     const hw = hwRes.data ?? []
     const subs = (subsRes.data ?? []) as unknown as Array<{ studentId: string, plan: string, price: number, status: SubscriptionStatus, nextPaymentAt: string | null, lessonsUsed: number, lessonsTotal: number, createdAt: string }>

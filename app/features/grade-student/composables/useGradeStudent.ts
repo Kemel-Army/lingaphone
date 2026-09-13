@@ -31,35 +31,6 @@ export const useGradeStudent = () => {
     if (error) throw error
   }
 
-  const saveGrade = async (
-    lessonId: string,
-    studentId: string,
-    value: number,
-    comment?: string
-  ) => {
-    const user = useSupabaseUser()
-    const authId = user.value?.sub ?? null
-
-    // Grade.gradedBy is a FK to Teacher.id (not User.id) — resolve it.
-    const gradedBy = await resolveTeacherId(authId)
-
-    const { error } = await supabase
-      .from('Grade')
-      .upsert(
-        {
-          lessonId,
-          studentId,
-          value,
-          comment: comment || null,
-          gradedBy,
-          gradedAt: new Date().toISOString()
-        },
-        { onConflict: 'lessonId,studentId' }
-      )
-
-    if (error) throw error
-  }
-
   const markAttendance = async (
     lessonId: string,
     studentId: string,
@@ -135,7 +106,6 @@ export const useGradeStudent = () => {
 
   return {
     gradeSubmission,
-    saveGrade,
     markAttendance,
     createHomework,
     awardXp

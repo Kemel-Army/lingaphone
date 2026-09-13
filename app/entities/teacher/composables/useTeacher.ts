@@ -399,12 +399,14 @@ export const useTeacher = () => {
         error: unknown
       },
 
+      // Оценки по пяти критериям; в один балл за урок их сводит
+      // collapseCriterionGrades. Таблица Grade больше не заполняется.
       supabase
-        .from('Grade')
-        .select('lessonId, studentId, value, comment, gradedAt, Lesson!lessonId ( topic, startsAt )')
+        .from('LessonCriterionGrade')
+        .select('lessonId, studentId, value, gradedAt, Lesson!lessonId ( topic, startsAt )')
         .eq('studentId', studentId)
         .order('gradedAt', { ascending: false })
-        .limit(50) as unknown as { data: RawGradeRow[] | null, error: unknown },
+        .limit(250) as unknown as { data: RawGradeRow[] | null, error: unknown },
 
       supabase
         .from('StudentBook')
@@ -414,20 +416,24 @@ export const useTeacher = () => {
     ])
 
     const user = sData ? pickRelation(sData.User) : null
-    const grades = (gradeRows ?? []).map((g) => {
+    // Пять строк на урок сводим в одну оценку, иначе карточка ученика
+    // показывала бы каждый критерий отдельной записью.
+    const lessonMeta = new Map<string, { topic: string, startsAt: string }>()
+    for (const g of gradeRows ?? []) {
       const lesson = pickRelation(g.Lesson)
-      return {
-        lessonId: g.lessonId,
-        lessonTopic: lesson?.topic ?? '',
-        lessonStartsAt: lesson?.startsAt ?? '',
-        studentId: g.studentId,
-        studentName: '',
-        studentSurname: '',
-        value: g.value,
-        comment: g.comment,
-        gradedAt: g.gradedAt
-      }
-    })
+      if (lesson) lessonMeta.set(g.lessonId, { topic: lesson.topic, startsAt: lesson.startsAt })
+    }
+    const grades = collapseCriterionGrades((gradeRows ?? []) as unknown as CriterionGradeRow[]).map(g => ({
+      lessonId: g.lessonId,
+      lessonTopic: lessonMeta.get(g.lessonId)?.topic ?? '',
+      lessonStartsAt: lessonMeta.get(g.lessonId)?.startsAt ?? '',
+      studentId: g.studentId,
+      studentName: '',
+      studentSurname: '',
+      value: g.value,
+      comment: g.comment,
+      gradedAt: g.gradedAt
+    }))
 
     return {
       student: sData
@@ -620,60 +626,6 @@ export const useTeacher = () => {
   }
 
   // ─── Grades journal ───────────────────────────────────────────────────────────
-
-  const fetchGradesForGroup = async (groupId: string) => {
-    const [{ data: lRows }, { data: mRows }] = await Promise.all([
-      supabase
-        .from('Lesson')
-        .select('id, topic, startsAt')
-        .eq('groupId', groupId)
-        .order('startsAt', { ascending: true })
-        .limit(60) as unknown as { data: { id: string, topic: string, startsAt: string }[] | null },
-
-      supabase
-        .from('GroupMember')
-        .select('studentId, Student!studentId ( User!userId ( name, surname ) )')
-        .eq('groupId', groupId)
-        .eq('status', 'ACTIVE') as unknown as {
-        data: {
-          studentId: string
-          Student: { User: { name: string, surname: string } | null } | null
-        }[] | null
-      }
-    ])
-
-    const lessons = lRows ?? []
-    const lessonIds = lessons.map(l => l.id)
-
-    const students = (mRows ?? []).map((m) => {
-      const student = pickRelation(m.Student)
-      const user = student ? pickRelation(student.User) : null
-      return {
-        studentId: m.studentId,
-        name: (user as { name: string } | null)?.name ?? '',
-        surname: (user as { surname: string } | null)?.surname ?? ''
-      }
-    }).sort((a, b) => a.surname.localeCompare(b.surname))
-
-    let grades: { lessonId: string, studentId: string, value: number, comment: string | null }[] = []
-    if (lessonIds.length > 0) {
-      const { data: gRows } = await supabase
-        .from('Grade')
-        .select('lessonId, studentId, value, comment')
-        .in('lessonId', lessonIds) as unknown as {
-        data: { lessonId: string, studentId: string, value: number, comment: string | null }[] | null
-      }
-      grades = gRows ?? []
-    }
-
-    const gradeMap: Record<string, Record<string, { value: number, comment: string | null }>> = {}
-    for (const g of grades) {
-      if (!gradeMap[g.studentId]) gradeMap[g.studentId] = {}
-      gradeMap[g.studentId]![g.lessonId] = { value: g.value, comment: g.comment }
-    }
-
-    return { lessons, students, gradeMap }
-  }
 
   // ─── Teacher Profile ─────────────────────────────────────────────────────────
 
@@ -923,7 +875,6 @@ export const useTeacher = () => {
     fetchMyLessons,
     fetchMyHomework,
     fetchSubmissions,
-    fetchGradesForGroup,
     fetchTeacherProfile,
     updateTeacherProfile,
     fetchAttendanceForLesson,

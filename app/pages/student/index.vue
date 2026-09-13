@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useLingafonStudent } from '~/shared/composables/useLingafonStudent'
 import { useGamificationSync } from '~/entities/game-profile'
+import { MEDALS } from '~/entities/motivation'
 import type { Database } from '~/shared/types/database.types'
 
 definePageMeta({ layout: 'dashboard' })
@@ -19,6 +20,16 @@ const {
   medalHistory, homeworkList, wordOfDay, dailyQuests,
   level, xpInCurrentLevel, xpToNextLevel
 } = useLingafonStudent()
+
+/**
+ * Балл и медаль приходят из «мотивашки» (useStudent тянет их с сервера) — тот
+ * же расчёт, что в дневнике и у менеджера.
+ *
+ * Подписи шкалы берём из общего справочника: раньше здесь были захардкоженные
+ * 3.6 / 4.0 / 4.6 — не те пороги, по которым школа реально платит бонусы.
+ */
+const monthAverage = computed(() => profile.value?.currentMonthAverage ?? 0)
+const medalMarkers = MEDALS.filter(m => m.value !== 'NONE').map(m => ({ emoji: m.emoji, min: m.min }))
 
 const dailyQuestsCompleted = computed(() => dailyQuests.value.filter(q => q.done).length)
 const dailyXpEarned = computed(() => dailyQuests.value.filter(q => q.done).reduce((s, q) => s + q.rewardXp, 0))
@@ -130,8 +141,9 @@ const formatSchedule = (schedule: unknown): string => {
   return ''
 }
 
-const goldProgressPct = computed(() => Math.max(0, Math.min(100, ((profile.value?.currentMonthAverage ?? 0) / 5.0) * 100)))
-const goldRemaining = computed(() => Math.max(0, 4.6 - (profile.value?.currentMonthAverage ?? 0)))
+const GOLD_MIN = MEDALS.find(m => m.value === 'GOLD')!.min
+const goldProgressPct = computed(() => Math.max(0, Math.min(100, (monthAverage.value / 5.0) * 100)))
+const goldRemaining = computed(() => Math.max(0, GOLD_MIN - monthAverage.value))
 
 const currentMonthLabel = computed(() =>
   new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
@@ -254,7 +266,7 @@ const greeting = computed(() => {
               <div class="mt-5">
                 <div class="flex justify-between text-xs font-semibold opacity-80 mb-1.5">
                   <span>Средний балл</span>
-                  <span class="tabular-nums">{{ profile.currentMonthAverage.toFixed(1) }} / 5.0</span>
+                  <span class="tabular-nums">{{ monthAverage.toFixed(2) }} / 5.0</span>
                 </div>
                 <div class="relative h-3 rounded-full bg-white/40 dark:bg-black/30 overflow-hidden">
                   <div
@@ -263,16 +275,17 @@ const greeting = computed(() => {
                   />
                   <!-- Threshold markers -->
                   <div
-                    v-for="(t, i) in [3.6, 4.0, 4.6]"
-                    :key="i"
+                    v-for="m in medalMarkers"
+                    :key="m.min"
                     class="absolute top-0 h-3 w-px bg-black/40 dark:bg-white/40"
-                    :style="{ left: `${(t / 5.0) * 100}%` }"
+                    :style="{ left: `${(m.min / 5.0) * 100}%` }"
                   />
                 </div>
                 <div class="flex justify-between text-[10px] font-semibold opacity-70 mt-1">
-                  <span>🥉 3.6</span>
-                  <span>🥈 4.0</span>
-                  <span>🥇 4.6</span>
+                  <span
+                    v-for="m in medalMarkers"
+                    :key="m.min"
+                  >{{ m.emoji }} {{ m.min.toFixed(1) }}</span>
                   <span>5.0</span>
                 </div>
                 <p

@@ -86,8 +86,19 @@ const paramTiles = computed(() => {
           <p class="text-xs uppercase tracking-wider text-muted font-bold">
             Средний балл за {{ formatMonth(month) }}
           </p>
-          <p class="text-5xl font-black tabular-nums mt-1">
-            {{ summary?.participates ? summary.average.toFixed(2) : '—' }}
+          <!-- Прочерк рисуем отдельно: в 5xl font-black «—» превращается в
+               жирную чёрную полосу и читается как артефакт вёрстки. -->
+          <p
+            v-if="summary?.participates"
+            class="text-5xl font-black tabular-nums mt-1"
+          >
+            {{ summary.average.toFixed(2) }}
+          </p>
+          <p
+            v-else
+            class="text-3xl font-semibold text-muted mt-2"
+          >
+            нет данных
           </p>
         </div>
         <div class="text-right">
