@@ -106,30 +106,26 @@ onMounted(load)
 
     <div
       v-else
-      class="flex h-full min-h-96 flex-col gap-2"
+      class="flex h-full min-h-96 flex-col gap-3"
     >
+      <!-- shrink-0 обязателен: страница задаёт фиксированную высоту, а iframe
+           ниже тянет `flex-1`. Без этого подсказку сжимает до одной строки и
+           текст обрезается — видно только заголовок. -->
       <UAlert
         v-if="!linkedToWazzupUser"
         color="warning"
         variant="subtle"
         icon="i-lucide-user-cog"
-        title="Если Wazzup пишет «Нет доступа к приложению»"
-      >
-        <template #description>
-          Платформа вошла под техническим пользователем
-          <b>«{{ wazzupUserName }}»</b> — роли в Wazzup у него нет, их можно
-          назначить только в личном кабинете Wazzup.
-          <br>
-          Быстрее всего: укажите свой рабочий номер в профиле на платформе — тот
-          же, что у вас в Wazzup. Тогда переписка откроется под вашим
-          сотрудником, где роль и каналы уже настроены. Либо выдайте роль
-          пользователю «{{ wazzupUserName }}» в ЛК Wazzup.
-        </template>
-      </UAlert>
+        class="shrink-0"
+        title="Wazzup пишет «Нет доступа к приложению»?"
+        :description="`Платформа вошла под техническим пользователем «${wazzupUserName}» — роли в Wazzup у него нет. Выдайте ему роль в ЛК Wazzup (Настройки аккаунта → Пользователи) либо укажите свой рабочий номер в профиле на платформе — тот же, что в Wazzup, тогда чат откроется под вашим сотрудником.`"
+      />
 
+      <!-- min-h-0 позволяет iframe отдавать место подсказке: иначе он требует
+           свою минимальную высоту и выдавливает её из контейнера. -->
       <iframe
         :src="url"
-        class="w-full flex-1 min-h-96 rounded-lg border border-subtle"
+        class="w-full flex-1 min-h-0 rounded-lg border border-subtle"
         allow="microphone *; clipboard-write *; autoplay *"
       />
     </div>
