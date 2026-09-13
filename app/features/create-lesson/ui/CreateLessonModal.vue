@@ -41,6 +41,10 @@ const form = reactive({
   type: 'GROUP' as typeof LESSON_TYPES[number]['value']
 })
 
+// Группу выбираем только для GROUP — остальным типам (пробный/индивидуальный/
+// отработка/speaking club) сервер сам подставит служебную группу учителя.
+const isGroupType = computed(() => form.type === 'GROUP')
+
 watch(open, (v) => {
   if (!v) return
   form.groupId = props.groups[0]?.id ?? ''
@@ -53,14 +57,16 @@ watch(open, (v) => {
 const groupOptions = computed(() => props.groups.map(g => ({ value: g.id, label: g.name })))
 
 const saving = ref(false)
-const canSubmit = computed(() => !!form.groupId && form.topic.trim().length >= 2 && !!form.startsAt)
+const canSubmit = computed(() =>
+  (isGroupType.value ? !!form.groupId : true) && form.topic.trim().length >= 2 && !!form.startsAt
+)
 
 const submit = async () => {
   if (!canSubmit.value) return
   saving.value = true
   try {
     await createLesson({
-      groupId: form.groupId,
+      groupId: isGroupType.value ? form.groupId : undefined,
       topic: form.topic.trim(),
       // datetime-local отдаёт локальное время без зоны — переводим в ISO,
       // иначе урок уедет на несколько часов.
@@ -93,6 +99,7 @@ const submit = async () => {
     <template #body>
       <div class="space-y-4">
         <UFormField
+          v-if="isGroupType"
           label="Группа"
           required
         >

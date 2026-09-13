@@ -5,7 +5,7 @@ definePageMeta({ layout: 'dashboard' })
 
 const supabase = useTypedSupabaseClient()
 const toast = useToast()
-const { fetchGroups } = useAdminStats()
+const { fetchGroups, fetchTeachers } = useAdminStats()
 
 const TZ = 'Asia/Almaty'
 
@@ -28,6 +28,7 @@ interface ScheduleLesson {
   teacherAvatar: string | null
   isOnline: boolean
   meetLink: string | null
+  isServiceGroup: boolean
 }
 
 // Render the KZ-local date/time for a stored UTC timestamp.
@@ -112,7 +113,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
       .from('Lesson')
       .select(`
         id, startsAt, durationMin, topic, status, type, meetingUrl, groupId,
-        Group!groupId ( name, level, archivedAt, Teacher!teacherId ( id, User!userId ( name, surname, avatarUrl ) ) )
+        Group!groupId ( name, level, archivedAt, isService, Teacher!teacherId ( id, User!userId ( name, surname, avatarUrl ) ) )
       `)
       .gte('startsAt', from.toISOString())
       .lt('startsAt', to.toISOString())
@@ -130,6 +131,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           name: string
           level: string
           archivedAt: string | null
+          isService: boolean
           Teacher: { id: string, User: { name: string, surname: string, avatarUrl: string | null } | null } | null
         } | null
       }[] | null
@@ -143,6 +145,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
         const group = Array.isArray(l.Group) ? l.Group[0] : l.Group
         const teacher = group ? (Array.isArray(group.Teacher) ? group.Teacher[0] : group.Teacher) : null
         const tUser = teacher ? (Array.isArray(teacher.User) ? teacher.User[0] : teacher.User) : null
+        const isServiceGroup = !!group?.isService
         return {
           id: l.id,
           date: kzDate(l.startsAt),
@@ -153,13 +156,15 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           status: l.status,
           type: l.type,
           groupId: l.groupId,
-          groupName: group?.name ?? '—',
-          groupLevel: group?.level ?? '',
+          // Служебная группа — не настоящая группа, в ячейке показываем тип занятия.
+          groupName: isServiceGroup ? LESSON_TYPE_MAP[l.type].label : (group?.name ?? '—'),
+          groupLevel: isServiceGroup ? '' : (group?.level ?? ''),
           teacherId: teacher?.id ?? '',
           teacherName: tUser ? `${tUser.name} ${tUser.surname}`.trim() : '—',
           teacherAvatar: tUser?.avatarUrl ?? null,
           isOnline: !!l.meetingUrl,
           meetLink: l.meetingUrl,
+          isServiceGroup,
           _archived: !!group?.archivedAt
         }
       })
@@ -177,7 +182,10 @@ const filterValue = ref<string | null>(null)
 
 const groupOptions = computed(() => {
   const seen = new Map<string, string>()
-  for (const l of lessons.value ?? []) seen.set(l.groupId, l.groupName)
+  for (const l of lessons.value ?? []) {
+    if (l.isServiceGroup) continue
+    seen.set(l.groupId, l.groupName)
+  }
   return [{ label: 'Все группы', value: null }, ...[...seen.entries()].map(([id, name]) => ({ label: name, value: id }))]
 })
 
@@ -250,8 +258,19 @@ const groupColorIndex = computed(() => {
 
 const groupPalette = (groupId: string) => GROUP_PALETTE[groupColorIndex.value.get(groupId) ?? 0]!
 
+// Служебная группа не входит в GROUP_PALETTE (не настоящая группа) — цвет ячейки
+// берём по типу занятия, чтобы TRIAL/INDIVIDUAL/MAKEUP/SPEAKING_CLUB визуально не путались.
+const SERVICE_TYPE_CELL_CLASS: Record<LessonKind, string> = {
+  GROUP: '',
+  TRIAL: 'bg-emerald-500/10 border-emerald-400/60 hover:bg-emerald-500/20 dark:bg-emerald-500/15',
+  INDIVIDUAL: 'bg-sky-500/10 border-sky-400/60 hover:bg-sky-500/20 dark:bg-sky-500/15',
+  MAKEUP: 'bg-amber-500/10 border-amber-400/60 hover:bg-amber-500/20 dark:bg-amber-500/15',
+  SPEAKING_CLUB: 'bg-fuchsia-500/10 border-fuchsia-400/60 hover:bg-fuchsia-500/20 dark:bg-fuchsia-500/15'
+}
+
 const lessonCellClass = (l: ScheduleLesson) => {
   if (l.status === 'CANCELLED') return 'bg-red-500/5 border-red-300/50 opacity-60 line-through'
+  if (l.isServiceGroup) return SERVICE_TYPE_CELL_CLASS[l.type]
   return groupPalette(l.groupId).cell
 }
 
@@ -296,6 +315,7 @@ const showAdd = ref(false)
 const adding = ref(false)
 const addForm = reactive({
   groupId: '',
+  teacherId: '',
   date: '',
   time: '',
   durationMin: 60,
@@ -304,19 +324,31 @@ const addForm = reactive({
   repeat: 'once' as 'once' | 'weekly'
 })
 
+// Группу выбираем только для типа GROUP — для остальных (пробный/индивидуальный/
+// отработка/speaking club) она физически всё равно нужна (Lesson.groupId NOT NULL),
+// но выбирать её вручную нелогично: резолвим служебную группу учителя автоматом.
+const isGroupType = computed(() => addForm.type === 'GROUP')
+
 const RECUR_WEEKS = 12
 
 const { data: allGroups } = await useAsyncData('admin-schedule-groups', fetchGroups)
+const { data: allTeachers } = await useAsyncData('admin-schedule-teachers', fetchTeachers)
 const activeGroupItems = computed(() =>
   (allGroups.value ?? [])
     .filter(g => !g.archivedAt)
     .map(g => ({ label: `${g.name} · ${g.level}`, value: g.id }))
 )
+const teacherItems = computed(() =>
+  (allTeachers.value ?? []).map(t => ({ label: `${t.surname} ${t.name}`.trim(), value: t.id }))
+)
 
-const canAdd = computed(() => addForm.groupId && addForm.date && addForm.time)
+const canAdd = computed(() =>
+  (isGroupType.value ? !!addForm.groupId : !!addForm.teacherId) && addForm.date && addForm.time
+)
 
 const openAdd = () => {
   addForm.groupId = ''
+  addForm.teacherId = ''
   addForm.date = ''
   addForm.time = ''
   addForm.durationMin = 60
@@ -337,8 +369,16 @@ const submitAdd = async () => {
   if (!canAdd.value) return
   adding.value = true
   try {
+    let groupId = addForm.groupId
+    if (!isGroupType.value) {
+      const { data: serviceGroupId, error: rpcError } = await supabase
+        .rpc('get_or_create_service_group', { p_teacher_id: addForm.teacherId })
+      if (rpcError || !serviceGroupId) throw rpcError ?? new Error('Не удалось получить служебную группу учителя')
+      groupId = serviceGroupId
+    }
+
     const base = {
-      groupId: addForm.groupId,
+      groupId,
       durationMin: addForm.durationMin || 60,
       topic: addForm.topic.trim() || '',
       type: addForm.type,
@@ -763,7 +803,16 @@ const statusLabel: Record<string, string> = {
             />
           </div>
 
+          <UFormField label="Тип занятия">
+            <USelect
+              v-model="addForm.type"
+              :items="LESSON_TYPE_OPTIONS"
+              class="w-full"
+            />
+          </UFormField>
+
           <UFormField
+            v-if="isGroupType"
             label="Группа"
             required
           >
@@ -771,6 +820,18 @@ const statusLabel: Record<string, string> = {
               v-model="addForm.groupId"
               :items="activeGroupItems"
               placeholder="Выберите группу..."
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField
+            v-else
+            label="Учитель"
+            required
+          >
+            <USelect
+              v-model="addForm.teacherId"
+              :items="teacherItems"
+              placeholder="Выберите учителя..."
               class="w-full"
             />
           </UFormField>
@@ -797,14 +858,6 @@ const statusLabel: Record<string, string> = {
               />
             </UFormField>
           </div>
-
-          <UFormField label="Тип занятия">
-            <USelect
-              v-model="addForm.type"
-              :items="LESSON_TYPE_OPTIONS"
-              class="w-full"
-            />
-          </UFormField>
 
           <div class="grid grid-cols-2 gap-3">
             <UFormField label="Длительность (мин)">
@@ -896,6 +949,7 @@ const statusLabel: Record<string, string> = {
                   {{ selectedLesson.groupName }}
                 </h2>
                 <UBadge
+                  v-if="selectedLesson.groupLevel"
                   :color="levelColor(selectedLesson.groupLevel)"
                   variant="subtle"
                   size="xs"

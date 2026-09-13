@@ -7,8 +7,8 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { groupId, topic, startsAt, durationMin, meetingUrl, type } = body
 
-  if (!groupId || !topic?.trim() || !startsAt) {
-    throw createError({ statusCode: 400, message: 'groupId, topic и startsAt обязательны' })
+  if (!topic?.trim() || !startsAt) {
+    throw createError({ statusCode: 400, message: 'topic и startsAt обязательны' })
   }
 
   // Validate before it reaches the LessonType enum column — an unknown value
@@ -18,6 +18,14 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: `type должен быть одним из: ${LESSON_TYPES.join(', ')}`
     })
+  }
+
+  // Группа обязательна только для GROUP — остальные типы (пробный/индивидуальный/
+  // отработка/speaking club) физически всё равно нужен Lesson.groupId (NOT NULL),
+  // но выбирать её вручную нелогично: подставляем служебную группу учителя.
+  const isGroupType = (type ?? 'GROUP') === 'GROUP'
+  if (isGroupType && !groupId) {
+    throw createError({ statusCode: 400, message: 'groupId обязателен для группового занятия' })
   }
 
   if (Number.isNaN(new Date(startsAt).getTime())) {
@@ -43,20 +51,31 @@ export default defineEventHandler(async (event) => {
 
   if (!teacherRow) throw createError({ statusCode: 403, message: 'Teacher profile not found' })
 
-  // Verify this group belongs to the teacher
-  const { data: group } = await supabase
-    .from('Group')
-    .select('id')
-    .eq('id', groupId)
-    .eq('teacherId', teacherRow.id)
-    .maybeSingle() as unknown as { data: { id: string } | null }
+  let resolvedGroupId: string
+  if (isGroupType) {
+    // Verify this group belongs to the teacher
+    const { data: group } = await supabase
+      .from('Group')
+      .select('id')
+      .eq('id', groupId)
+      .eq('teacherId', teacherRow.id)
+      .maybeSingle() as unknown as { data: { id: string } | null }
 
-  if (!group) throw createError({ statusCode: 403, message: 'Нет доступа к этой группе' })
+    if (!group) throw createError({ statusCode: 403, message: 'Нет доступа к этой группе' })
+    resolvedGroupId = groupId
+  } else {
+    const { data: serviceGroupId, error: rpcError } = await supabase
+      .rpc('get_or_create_service_group', { p_teacher_id: teacherRow.id }) as unknown as { data: string | null, error: unknown }
+    if (rpcError || !serviceGroupId) {
+      throw createError({ statusCode: 500, message: 'Не удалось получить служебную группу учителя' })
+    }
+    resolvedGroupId = serviceGroupId
+  }
 
   const { data: lesson, error } = await supabase
     .from('Lesson')
     .insert({
-      groupId,
+      groupId: resolvedGroupId,
       topic: topic.trim(),
       startsAt: new Date(startsAt).toISOString(),
       status: 'SCHEDULED',

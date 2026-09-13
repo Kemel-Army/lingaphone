@@ -122,7 +122,7 @@ export const useAdminStats = () => {
       supabase.from('Student').select('*', { count: 'exact', head: true }),
       supabase.from('Student').select('*', { count: 'exact', head: true }).gte('lastActiveDate', ago7d),
       supabase.from('Teacher').select('*', { count: 'exact', head: true }),
-      supabase.from('Group').select('*', { count: 'exact', head: true }),
+      supabase.from('Group').select('*', { count: 'exact', head: true }).eq('isService', false),
       supabase.from('MonthlyMedal').select('medal').eq('month', currentMonth),
       supabase.from('Payout').select('amount, status').eq('status', 'PENDING'),
       supabase.from('Student').select('*', { count: 'exact', head: true }).gte('createdAt', ago30d)
@@ -583,7 +583,8 @@ export const useAdminStats = () => {
       const { data: groupRows } = await supabase
         .from('Group')
         .select('teacherId, id')
-        .in('teacherId', teacherIds) as unknown as { data: { teacherId: string, id: string }[] | null }
+        .in('teacherId', teacherIds)
+        .eq('isService', false) as unknown as { data: { teacherId: string, id: string }[] | null }
 
       for (const g of groupRows ?? []) {
         if (!groupMap[g.teacherId]) groupMap[g.teacherId] = []
@@ -645,6 +646,7 @@ export const useAdminStats = () => {
     const { data, error } = await supabase
       .from('Group')
       .select('id, name, level, teacherId, branchId, schedule, maxStudents, createdAt, archivedAt, Teacher!teacherId ( User!userId ( name, surname ) )')
+      .eq('isService', false)
       .order('createdAt', { ascending: false }) as unknown as { data: RawGroupRow[] | null, error: unknown }
 
     if (error) throw error

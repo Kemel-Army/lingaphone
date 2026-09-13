@@ -197,6 +197,7 @@ export const useTeacher = () => {
       .from('Group')
       .select('id, name, level, maxStudents, schedule, branchId, createdAt, bookId')
       .in('id', groupIds)
+      .eq('isService', false)
       .order('name') as unknown as { data: RawGroupRow[] | null, error: unknown }
 
     if (error) throw error
@@ -840,7 +841,7 @@ export const useTeacher = () => {
   // ─── Lesson creation ──────────────────────────────────────────────────────────
 
   const createLesson = async (payload: {
-    groupId: string
+    groupId?: string
     topic: string
     startsAt: string
     durationMin?: number

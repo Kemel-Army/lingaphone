@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     return t >= monthStart && t < monthEnd
   }
 
-  let groupsQ = supabase.from('Group').select('id, maxStudents, teacherId, archivedAt, branchId')
+  let groupsQ = supabase.from('Group').select('id, maxStudents, teacherId, archivedAt, branchId').eq('isService', false)
   if (branchId) groupsQ = groupsQ.eq('branchId', branchId)
 
   let leadsQ = supabase.from('Lead').select('stage, trialLessonAt, paidAt, createdAt, branchId')

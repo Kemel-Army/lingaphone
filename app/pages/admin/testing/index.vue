@@ -33,6 +33,7 @@ const { data: groups, pending } = await useAsyncData('admin-testing', async () =
   const { data: rawGroups, error: groupErr } = await supabase
     .from('Group')
     .select('id, name, level, Teacher!teacherId ( User!userId ( name, surname ) )')
+    .eq('isService', false)
     .order('name') as unknown as {
     data: {
       id: string

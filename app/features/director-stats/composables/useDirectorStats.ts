@@ -52,7 +52,7 @@ export const useDirectorStats = () => {
       supabase.from('Lead').select('stage, trialLessonAt, paidAt, createdAt'),
       supabase.from('Payment').select('amount, paidAt, status').eq('status', 'COMPLETED'),
       supabase.from('Subscription').select('price, status, nextPaymentAt'),
-      supabase.from('Group').select('id, maxStudents, teacherId, archivedAt'),
+      supabase.from('Group').select('id, maxStudents, teacherId, archivedAt').eq('isService', false),
       supabase.from('GroupMember').select('groupId').eq('status', 'ACTIVE'),
       supabase.from('Teacher').select('id, rating, reviewCount, user:User(name, surname)')
     ])

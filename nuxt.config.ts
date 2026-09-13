@@ -67,6 +67,9 @@ export default defineNuxtConfig({
     paymentMockMode: process.env.PAYMENT_MOCK_MODE ?? 'true',
     // Wazzup24 aggregator (WhatsApp/Telegram/…) — ТЗ разд. 2.1/6, path A (iframe).
     wazzupApiKey: process.env.WAZZUP_API_KEY ?? '',
+    // Секрет вебхука входящих сообщений (POST /v3/webhooks → messagesUri).
+    // Wazzup не подписывает запросы — проверяем по ?token= в самом URL.
+    wazzupWebhookSecret: process.env.WAZZUP_WEBHOOK_SECRET ?? '',
     // Shared secret for server-internal $fetch calls. Routes that should
     // never be reachable from the public internet require this header.
     internalApiKey: process.env.INTERNAL_API_KEY ?? '',
