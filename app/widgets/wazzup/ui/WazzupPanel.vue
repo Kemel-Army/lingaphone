@@ -26,6 +26,40 @@ const error = ref('')
 const linkedToWazzupUser = ref(true)
 const wazzupUserName = ref('')
 
+/**
+ * Подсказку про роль можно закрыть навсегда: после настройки ролей в Wazzup
+ * она превращается в шум, а определить снаружи, что роль уже выдана, нельзя —
+ * iframe с чужого origin для нас чёрный ящик.
+ */
+const hintDismissed = useLocalStorage('wazzup-role-hint-dismissed', false)
+const showHint = computed(() => !linkedToWazzupUser.value && !hintDismissed.value)
+
+/**
+ * Во встроенной панели переписка ужимается до пары строк. Полноэкранный режим
+ * растягивает чат на всё окно — без него работать в нём неудобно.
+ */
+const fullscreen = ref(false)
+const toggleFullscreen = () => {
+  fullscreen.value = !fullscreen.value
+}
+
+// Esc — привычный выход из полноэкранного режима.
+onMounted(() => {
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && fullscreen.value) fullscreen.value = false
+  }
+  window.addEventListener('keydown', onKey)
+  onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+})
+
+// Пока чат развёрнут, страница под ним скроллиться не должна.
+watch(fullscreen, (on) => {
+  if (import.meta.client) document.body.style.overflow = on ? 'hidden' : ''
+})
+onBeforeUnmount(() => {
+  if (import.meta.client) document.body.style.overflow = ''
+})
+
 const load = async () => {
   loading.value = true
   notConfigured.value = false
@@ -107,27 +141,41 @@ onMounted(load)
     <div
       v-else
       class="flex h-full min-h-96 flex-col gap-3"
+      :class="fullscreen ? 'fixed inset-0 z-50 bg-default p-3' : ''"
     >
       <!-- shrink-0 обязателен: страница задаёт фиксированную высоту, а iframe
            ниже тянет `flex-1`. Без этого подсказку сжимает до одной строки и
            текст обрезается — видно только заголовок. -->
       <UAlert
-        v-if="!linkedToWazzupUser"
+        v-if="showHint"
         color="warning"
         variant="subtle"
         icon="i-lucide-user-cog"
         class="shrink-0"
+        close
         title="Wazzup пишет «Нет доступа к приложению»?"
-        :description="`Платформа вошла под техническим пользователем «${wazzupUserName}» — роли в Wazzup у него нет. Выдайте ему роль в ЛК Wazzup (Настройки аккаунта → Пользователи) либо укажите свой рабочий номер в профиле на платформе — тот же, что в Wazzup, тогда чат откроется под вашим сотрудником.`"
+        :description="`Платформа вошла под техническим пользователем «${wazzupUserName}» — роли в Wazzup у него нет. В ЛК Wazzup откройте «Интеграция с CRM» → «Выбрать роли», найдите «${wazzupUserName}» и выдайте роль «Руководитель». Роли задаются отдельно для каждого канала. Либо укажите свой рабочий номер в профиле на платформе — тот же, что в Wazzup, тогда чат откроется под вашим сотрудником.`"
+        @update:open="hintDismissed = true"
       />
 
-      <!-- min-h-0 позволяет iframe отдавать место подсказке: иначе он требует
-           свою минимальную высоту и выдавливает её из контейнера. -->
-      <iframe
-        :src="url"
-        class="w-full flex-1 min-h-0 rounded-lg border border-subtle"
-        allow="microphone *; clipboard-write *; autoplay *"
-      />
+      <div class="relative flex-1 min-h-0">
+        <!-- min-h-0 у обёртки позволяет iframe отдавать место подсказке:
+             иначе он требует свою минимальную высоту и выдавливает её. -->
+        <iframe
+          :src="url"
+          class="h-full w-full rounded-lg border border-subtle"
+          allow="microphone *; clipboard-write *; autoplay *"
+        />
+        <UButton
+          :icon="fullscreen ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
+          color="neutral"
+          variant="solid"
+          size="sm"
+          class="absolute right-3 top-3 shadow-lg"
+          :title="fullscreen ? 'Свернуть (Esc)' : 'Развернуть на весь экран'"
+          @click="toggleFullscreen"
+        />
+      </div>
     </div>
   </div>
 </template>
