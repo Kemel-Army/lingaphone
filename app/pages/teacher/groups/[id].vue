@@ -889,8 +889,8 @@ const formatSchedule = (schedule: unknown): string => {
             >
               <td class="px-4 py-3 font-medium">
                 <div class="flex items-center gap-2">
-                  <span :class="l.topic?.trim() ? '' : 'text-muted italic font-normal'">
-                    {{ l.topic?.trim() ? l.topic : 'Без темы' }}
+                  <span :class="((l.type === 'TRIAL' || l.type === 'MAKEUP') && l.guestName) || l.topic?.trim() ? '' : 'text-muted italic font-normal'">
+                    {{ (l.type === 'TRIAL' || l.type === 'MAKEUP') && l.guestName ? l.guestName : (l.topic?.trim() ? l.topic : 'Без темы') }}
                   </span>
                   <UBadge
                     v-if="l.id === nearestLessonId"

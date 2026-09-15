@@ -52,6 +52,8 @@ export interface TeacherLesson {
   durationMin: number
   meetingUrl: string | null
   createdAt: string
+  /** Имя ребёнка из гостевого приглашения (LessonGuestInvite) — только для TRIAL. */
+  guestName?: string | null
 }
 
 export interface TeacherHomework {

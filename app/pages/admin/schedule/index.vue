@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAdminStats } from '~/entities/admin-stats'
+import { useLeads } from '~/entities/lead'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -29,6 +30,8 @@ interface ScheduleLesson {
   isOnline: boolean
   meetLink: string | null
   isServiceGroup: boolean
+  /** Имя ребёнка на пробном (из LessonGuestInvite) — только для TRIAL. */
+  guestName: string | null
 }
 
 // Render the KZ-local date/time for a stored UTC timestamp.
@@ -113,7 +116,8 @@ const { data: lessons, pending, refresh } = await useAsyncData(
       .from('Lesson')
       .select(`
         id, startsAt, durationMin, topic, status, type, meetingUrl, groupId,
-        Group!groupId ( name, level, archivedAt, isService, Teacher!teacherId ( id, User!userId ( name, surname, avatarUrl ) ) )
+        Group!groupId ( name, level, archivedAt, isService, Teacher!teacherId ( id, User!userId ( name, surname, avatarUrl ) ) ),
+        LessonGuestInvite ( guestName )
       `)
       .gte('startsAt', from.toISOString())
       .lt('startsAt', to.toISOString())
@@ -134,6 +138,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           isService: boolean
           Teacher: { id: string, User: { name: string, surname: string, avatarUrl: string | null } | null } | null
         } | null
+        LessonGuestInvite: { guestName: string | null }[] | { guestName: string | null } | null
       }[] | null
       error: unknown
     }
@@ -146,6 +151,10 @@ const { data: lessons, pending, refresh } = await useAsyncData(
         const teacher = group ? (Array.isArray(group.Teacher) ? group.Teacher[0] : group.Teacher) : null
         const tUser = teacher ? (Array.isArray(teacher.User) ? teacher.User[0] : teacher.User) : null
         const isServiceGroup = !!group?.isService
+        // Несколько детей могут быть закреплены за одним слотом (пробный/отработка) —
+        // собираем имена всех гостевых приглашений урока.
+        const invites = Array.isArray(l.LessonGuestInvite) ? l.LessonGuestInvite : (l.LessonGuestInvite ? [l.LessonGuestInvite] : [])
+        const guestName = invites.map(i => i.guestName).filter((n): n is string => !!n).join(', ') || null
         return {
           id: l.id,
           date: kzDate(l.startsAt),
@@ -156,8 +165,9 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           status: l.status,
           type: l.type,
           groupId: l.groupId,
-          // Служебная группа — не настоящая группа, в ячейке показываем тип занятия.
-          groupName: isServiceGroup ? LESSON_TYPE_MAP[l.type].label : (group?.name ?? '—'),
+          // Служебная группа — не настоящая группа: для пробного показываем имя
+          // ребёнка (если привязан), иначе — тип занятия.
+          groupName: isServiceGroup ? (guestName ?? LESSON_TYPE_MAP[l.type].label) : (group?.name ?? '—'),
           groupLevel: isServiceGroup ? '' : (group?.level ?? ''),
           teacherId: teacher?.id ?? '',
           teacherName: tUser ? `${tUser.name} ${tUser.surname}`.trim() : '—',
@@ -165,6 +175,7 @@ const { data: lessons, pending, refresh } = await useAsyncData(
           isOnline: !!l.meetingUrl,
           meetLink: l.meetingUrl,
           isServiceGroup,
+          guestName,
           _archived: !!group?.archivedAt
         }
       })
@@ -313,6 +324,17 @@ const groupSize = computed(() => {
 
 const showAdd = ref(false)
 const adding = ref(false)
+const NEW_LEAD_VALUE = '__new__'
+
+interface ChildRow {
+  uid: number
+  leadId: string
+  newLeadName: string
+  newLeadPhone: string
+}
+let childUidSeq = 0
+const makeChildRow = (): ChildRow => ({ uid: childUidSeq++, leadId: '', newLeadName: '', newLeadPhone: '' })
+
 const addForm = reactive({
   groupId: '',
   teacherId: '',
@@ -321,13 +343,43 @@ const addForm = reactive({
   durationMin: 60,
   topic: '',
   type: 'GROUP' as LessonKind,
-  repeat: 'once' as 'once' | 'weekly'
+  repeat: 'once' as 'once' | 'weekly',
+  children: [] as ChildRow[]
 })
 
 // Группу выбираем только для типа GROUP — для остальных (пробный/индивидуальный/
 // отработка/speaking club) она физически всё равно нужна (Lesson.groupId NOT NULL),
 // но выбирать её вручную нелогично: резолвим служебную группу учителя автоматом.
 const isGroupType = computed(() => addForm.type === 'GROUP')
+// Несколько детей можно закрепить за одним слотом пробного/отработки — например,
+// групповой пробный или два ученика на одну отработку (запрос заказчика).
+const allowsChildren = computed(() => addForm.type === 'TRIAL' || addForm.type === 'MAKEUP')
+
+watch(() => addForm.type, (t) => {
+  if ((t === 'TRIAL' || t === 'MAKEUP') && addForm.children.length === 0) {
+    addForm.children.push(makeChildRow())
+  }
+})
+
+const addChildRow = () => {
+  addForm.children.push(makeChildRow())
+}
+const removeChildRow = (uid: number) => {
+  addForm.children = addForm.children.filter(c => c.uid !== uid)
+}
+
+// ─── Ребёнок на пробный/отработку (CRM-лид) ────────────────────────────────────
+
+const { fetchLeads } = useLeads()
+const { data: allLeads, refresh: refreshLeads } = await useAsyncData('admin-schedule-leads', fetchLeads)
+
+const leadOptions = computed(() => [
+  ...(allLeads.value ?? []).map(l => ({
+    label: l.phone ? `${l.fullName} · ${l.phone}` : l.fullName,
+    value: l.id
+  })),
+  { label: '+ Новый ребёнок...', value: NEW_LEAD_VALUE }
+])
 
 const RECUR_WEEKS = 12
 
@@ -344,6 +396,7 @@ const teacherItems = computed(() =>
 
 const canAdd = computed(() =>
   (isGroupType.value ? !!addForm.groupId : !!addForm.teacherId) && addForm.date && addForm.time
+  && addForm.children.every(c => c.leadId !== NEW_LEAD_VALUE || c.newLeadName.trim().length > 0)
 )
 
 const openAdd = () => {
@@ -355,6 +408,7 @@ const openAdd = () => {
   addForm.topic = ''
   addForm.type = 'GROUP'
   addForm.repeat = 'once'
+  addForm.children = []
   showAdd.value = true
 }
 
@@ -390,8 +444,46 @@ const submitAdd = async () => {
       startsAt: `${addDays(addForm.date, i * 7)}T${addForm.time}:00+05:00`
     }))
 
-    const { error } = await supabase.from('Lesson').insert(rows)
+    const { data: inserted, error } = await supabase.from('Lesson').insert(rows).select('id')
     if (error) throw error
+
+    // Пробный/отработка — привязываем одного или нескольких детей к первому уроку
+    // через гостевые приглашения (LessonGuestInvite, по одному на ребёнка): так
+    // же помечает «для кого этот слот» и синхронизирует Lead.trialLessonAt/
+    // trialTeacherId в CRM, заводя новых лидов там, где выбрано «+ Новый».
+    const firstLessonId = inserted?.[0]?.id as string | undefined
+    const childrenToLink = addForm.children.filter(c => c.leadId === NEW_LEAD_VALUE ? c.newLeadName.trim() : c.leadId)
+    if (allowsChildren.value && firstLessonId && childrenToLink.length) {
+      let anyFailed = false
+      for (const c of childrenToLink) {
+        try {
+          await $fetch('/api/teacher/lesson-invite', {
+            method: 'POST',
+            body: {
+              lessonId: firstLessonId,
+              guestName: c.leadId === NEW_LEAD_VALUE
+                ? c.newLeadName.trim()
+                : (allLeads.value ?? []).find(l => l.id === c.leadId)?.fullName,
+              leadId: c.leadId !== NEW_LEAD_VALUE ? c.leadId : undefined,
+              newLead: c.leadId === NEW_LEAD_VALUE
+                ? { fullName: c.newLeadName.trim(), phone: c.newLeadPhone.trim() || undefined }
+                : undefined
+            }
+          })
+        } catch {
+          anyFailed = true
+        }
+      }
+      await refreshLeads()
+      if (anyFailed) {
+        toast.add({
+          title: 'Урок добавлен, но не всех детей удалось привязать',
+          color: 'warning',
+          icon: 'i-lucide-triangle-alert'
+        })
+      }
+    }
+
     toast.add({
       title: addForm.repeat === 'weekly' ? `Добавлено ${count} уроков (еженедельно)` : 'Урок добавлен',
       color: 'success',
@@ -835,6 +927,70 @@ const statusLabel: Record<string, string> = {
               class="w-full"
             />
           </UFormField>
+
+          <template v-if="allowsChildren">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium">Дети на этот слот</label>
+                <UButton
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-plus"
+                  @click="addChildRow"
+                >
+                  Ещё ребёнок
+                </UButton>
+              </div>
+              <p class="text-xs text-muted -mt-2">
+                Можно закрепить нескольких детей за одним слотом (групповой пробный, совместная отработка) — свяжем каждого с CRM
+              </p>
+
+              <div
+                v-for="(child, i) in addForm.children"
+                :key="child.uid"
+                class="rounded-lg border border-subtle p-3 space-y-3"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-muted">Ребёнок {{ i + 1 }}</span>
+                  <UButton
+                    variant="ghost"
+                    color="neutral"
+                    size="xs"
+                    icon="i-lucide-x"
+                    @click="removeChildRow(child.uid)"
+                  />
+                </div>
+                <USelect
+                  v-model="child.leadId"
+                  :items="leadOptions"
+                  placeholder="Выберите или заведите нового..."
+                  class="w-full"
+                />
+                <div
+                  v-if="child.leadId === NEW_LEAD_VALUE"
+                  class="grid grid-cols-2 gap-3"
+                >
+                  <UFormField
+                    label="Имя ребёнка"
+                    required
+                  >
+                    <UInput
+                      v-model="child.newLeadName"
+                      placeholder="Например: Айгерим"
+                      class="w-full"
+                    />
+                  </UFormField>
+                  <UFormField label="Телефон родителя">
+                    <UInput
+                      v-model="child.newLeadPhone"
+                      placeholder="Необязательно"
+                      class="w-full"
+                    />
+                  </UFormField>
+                </div>
+              </div>
+            </div>
+          </template>
 
           <div class="grid grid-cols-2 gap-3">
             <UFormField

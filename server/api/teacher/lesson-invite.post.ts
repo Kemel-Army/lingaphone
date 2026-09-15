@@ -6,9 +6,17 @@
  * конца урока (+ запас) и ограничена числом входов, поэтому постоянный доступ
  * в платформу так не утекает.
  *
- * Body: { lessonId, guestName?, leadId?, maxUses? }
+ * Заодно это единственное место, где пробный урок помечается «за каким
+ * ребёнком» — leadId проставляется на инвайт, а Lead.trialLessonAt/
+ * trialTeacherId синхронизируются автоматически, чтобы в CRM не заполнять
+ * их вручную второй раз.
+ *
+ * Body: { lessonId, guestName?, leadId?, newLead?: { fullName, phone? }, maxUses? }
  */
 import { randomBytes } from 'node:crypto'
+import type { Database } from '~/shared/types/database.types'
+
+type LeadStage = Database['public']['Enums']['LeadStage']
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['TEACHER', 'ADMIN', 'DIRECTOR'])
@@ -18,6 +26,7 @@ export default defineEventHandler(async (event) => {
     lessonId?: string
     guestName?: string
     leadId?: string
+    newLead?: { fullName?: string, phone?: string }
     maxUses?: number
   }
   const lessonId = body.lessonId
@@ -50,8 +59,10 @@ export default defineEventHandler(async (event) => {
   }
   if (!lesson) throw createError({ statusCode: 404, message: 'Урок не найден' })
 
+  const group = Array.isArray(lesson.Group) ? lesson.Group[0] : lesson.Group
+  let resolvedTeacherId = group?.teacherId ?? null
+
   if (userRow.role === 'TEACHER') {
-    const group = Array.isArray(lesson.Group) ? lesson.Group[0] : lesson.Group
     const { data: teacherRow } = await supabase
       .from('Teacher').select('id').eq('userId', userRow.id).maybeSingle() as unknown as {
       data: { id: string } | null
@@ -59,6 +70,47 @@ export default defineEventHandler(async (event) => {
     if (!teacherRow || group?.teacherId !== teacherRow.id) {
       throw createError({ statusCode: 403, message: 'Нет доступа к этому уроку' })
     }
+    resolvedTeacherId = teacherRow.id
+  }
+
+  // ─── Ребёнок для этого приглашения: существующий лид или новый ──────────
+  let leadId = body.leadId || null
+  if (!leadId && body.newLead?.fullName?.trim()) {
+    const { data: newLeadRow, error: leadInsertError } = await supabase
+      .from('Lead')
+      .insert({
+        fullName: body.newLead.fullName.trim(),
+        phone: body.newLead.phone?.trim() || null,
+        source: 'OTHER',
+        stage: 'TRIAL',
+        trialTeacherId: resolvedTeacherId,
+        trialLessonAt: lesson.startsAt
+      })
+      .select('id')
+      .single() as unknown as { data: { id: string } | null, error: { message: string } | null }
+
+    if (leadInsertError || !newLeadRow) {
+      throw createError({ statusCode: 500, message: leadInsertError?.message ?? 'Не удалось завести лида' })
+    }
+    leadId = newLeadRow.id
+    await supabase.from('LeadStageHistory').insert({
+      leadId, fromStage: null, toStage: 'TRIAL', changedById: userRow.id
+    })
+  } else if (leadId) {
+    // Существующий лид записывается на этот пробный — обновляем служебные
+    // поля и продвигаем воронку, только если она ещё не ушла дальше «Пробного».
+    const { data: leadRow } = await supabase
+      .from('Lead').select('stage').eq('id', leadId).maybeSingle() as unknown as {
+      data: { stage: LeadStage } | null
+    }
+    const patch: Record<string, unknown> = { trialLessonAt: lesson.startsAt, trialTeacherId: resolvedTeacherId }
+    if (leadRow && (['NEW', 'CONTACTED'] as LeadStage[]).includes(leadRow.stage)) {
+      patch.stage = 'TRIAL'
+      await supabase.from('LeadStageHistory').insert({
+        leadId, fromStage: leadRow.stage, toStage: 'TRIAL', changedById: userRow.id
+      })
+    }
+    await supabase.from('Lead').update(patch).eq('id', leadId)
   }
 
   // Ссылка перестаёт работать через 2 часа после конца урока — гость не
@@ -74,7 +126,7 @@ export default defineEventHandler(async (event) => {
       token,
       lessonId,
       guestName: body.guestName?.trim() || null,
-      leadId: body.leadId || null,
+      leadId,
       maxUses,
       expiresAt,
       createdBy: userRow.id
@@ -90,5 +142,5 @@ export default defineEventHandler(async (event) => {
   }
 
   const origin = getRequestURL(event).origin
-  return { ...invite, url: `${origin}/join/${invite.token}`, lessonTopic: lesson.topic }
+  return { ...invite, url: `${origin}/join/${invite.token}`, lessonTopic: lesson.topic, leadId }
 })

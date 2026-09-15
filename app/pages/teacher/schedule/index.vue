@@ -17,7 +17,8 @@ const gridLessons = computed<GridLesson[]>(() =>
     id: l.id,
     startsAt: l.startsAt,
     durationMin: l.durationMin,
-    topic: l.topic,
+    // Пробный/отработка без темы — показываем имя(-а) детей из гостевых приглашений.
+    topic: (l.type === 'TRIAL' || l.type === 'MAKEUP') && l.guestName ? l.guestName : l.topic,
     status: l.status,
     type: l.type,
     groupId: l.groupId,

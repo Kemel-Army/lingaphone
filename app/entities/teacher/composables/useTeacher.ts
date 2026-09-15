@@ -47,6 +47,17 @@ interface RawLessonRow {
   meetingUrl: string | null
   createdAt: string
   Group: { name: string } | null
+  LessonGuestInvite?: { guestName: string | null }[] | { guestName: string | null } | null
+}
+
+/**
+ * Имена детей из гостевых приглашений урока (см. LessonGuestInvite) — TRIAL/MAKEUP.
+ * За одним слотом может быть закреплено несколько детей — соединяем имена через запятую.
+ */
+const pickGuestName = (row: RawLessonRow): string | null => {
+  const invites = Array.isArray(row.LessonGuestInvite) ? row.LessonGuestInvite : (row.LessonGuestInvite ? [row.LessonGuestInvite] : [])
+  const names = invites.map(i => i.guestName).filter((n): n is string => !!n)
+  return names.length ? names.join(', ') : null
 }
 
 interface RawHomeworkRow {
@@ -246,7 +257,7 @@ export const useTeacher = () => {
 
       supabase
         .from('Lesson')
-        .select('id, groupId, topic, startsAt, status, type, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
+        .select('id, groupId, topic, startsAt, status, type, durationMin, meetingUrl, createdAt, Group!groupId ( name ), LessonGuestInvite ( guestName )')
         .eq('groupId', groupId)
         .order('startsAt', { ascending: true })
         .limit(200) as unknown as { data: RawLessonRow[] | null, error: unknown }
@@ -296,7 +307,8 @@ export const useTeacher = () => {
       type: l.type,
       durationMin: l.durationMin,
       meetingUrl: l.meetingUrl,
-      createdAt: l.createdAt
+      createdAt: l.createdAt,
+      guestName: pickGuestName(l)
     }))
 
     return {
@@ -465,7 +477,7 @@ export const useTeacher = () => {
   const fetchMyLessons = async (groupId?: string): Promise<TeacherLesson[]> => {
     let query = supabase
       .from('Lesson')
-      .select('id, groupId, topic, startsAt, status, type, durationMin, meetingUrl, createdAt, Group!groupId ( name )')
+      .select('id, groupId, topic, startsAt, status, type, durationMin, meetingUrl, createdAt, Group!groupId ( name ), LessonGuestInvite ( guestName )')
       .order('startsAt', { ascending: true })
       .limit(200)
 
@@ -490,7 +502,8 @@ export const useTeacher = () => {
       type: l.type,
       durationMin: l.durationMin,
       meetingUrl: l.meetingUrl,
-      createdAt: l.createdAt
+      createdAt: l.createdAt,
+      guestName: pickGuestName(l)
     }))
   }
 
