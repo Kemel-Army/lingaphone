@@ -881,8 +881,8 @@ const statusLabel: Record<string, string> = {
       :ui="{ content: 'max-w-md' }"
     >
       <template #content>
-        <div class="p-6 space-y-4">
-          <div class="flex items-center justify-between">
+        <div class="flex flex-col flex-1 min-h-0">
+          <div class="flex items-center justify-between p-6 pb-0 shrink-0">
             <h2 class="text-lg font-bold">
               Добавить урок
             </h2>
@@ -895,179 +895,181 @@ const statusLabel: Record<string, string> = {
             />
           </div>
 
-          <UFormField label="Тип занятия">
-            <USelect
-              v-model="addForm.type"
-              :items="LESSON_TYPE_OPTIONS"
-              class="w-full"
-            />
-          </UFormField>
+          <div class="p-6 space-y-4 overflow-y-auto min-h-0 flex-1">
+            <UFormField label="Тип занятия">
+              <USelect
+                v-model="addForm.type"
+                :items="LESSON_TYPE_OPTIONS"
+                class="w-full"
+              />
+            </UFormField>
 
-          <UFormField
-            v-if="isGroupType"
-            label="Группа"
-            required
-          >
-            <USelect
-              v-model="addForm.groupId"
-              :items="activeGroupItems"
-              placeholder="Выберите группу..."
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField
-            v-else
-            label="Учитель"
-            required
-          >
-            <USelect
-              v-model="addForm.teacherId"
-              :items="teacherItems"
-              placeholder="Выберите учителя..."
-              class="w-full"
-            />
-          </UFormField>
+            <UFormField
+              v-if="isGroupType"
+              label="Группа"
+              required
+            >
+              <USelect
+                v-model="addForm.groupId"
+                :items="activeGroupItems"
+                placeholder="Выберите группу..."
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              v-else
+              label="Учитель"
+              required
+            >
+              <USelect
+                v-model="addForm.teacherId"
+                :items="teacherItems"
+                placeholder="Выберите учителя..."
+                class="w-full"
+              />
+            </UFormField>
 
-          <template v-if="allowsChildren">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <label class="text-sm font-medium">Дети на этот слот</label>
-                <UButton
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-plus"
-                  @click="addChildRow"
-                >
-                  Ещё ребёнок
-                </UButton>
-              </div>
-              <p class="text-xs text-muted -mt-2">
-                Можно закрепить нескольких детей за одним слотом (групповой пробный, совместная отработка) — свяжем каждого с CRM
-              </p>
-
-              <div
-                v-for="(child, i) in addForm.children"
-                :key="child.uid"
-                class="rounded-lg border border-subtle p-3 space-y-3"
-              >
+            <template v-if="allowsChildren">
+              <div class="space-y-3">
                 <div class="flex items-center justify-between">
-                  <span class="text-xs text-muted">Ребёнок {{ i + 1 }}</span>
+                  <label class="text-sm font-medium">Дети на этот слот</label>
                   <UButton
                     variant="ghost"
-                    color="neutral"
                     size="xs"
-                    icon="i-lucide-x"
-                    @click="removeChildRow(child.uid)"
-                  />
-                </div>
-                <USelect
-                  v-model="child.leadId"
-                  :items="leadOptions"
-                  placeholder="Выберите или заведите нового..."
-                  class="w-full"
-                />
-                <div
-                  v-if="child.leadId === NEW_LEAD_VALUE"
-                  class="grid grid-cols-2 gap-3"
-                >
-                  <UFormField
-                    label="Имя ребёнка"
-                    required
+                    icon="i-lucide-plus"
+                    @click="addChildRow"
                   >
-                    <UInput
-                      v-model="child.newLeadName"
-                      placeholder="Например: Айгерим"
-                      class="w-full"
+                    Ещё ребёнок
+                  </UButton>
+                </div>
+                <p class="text-xs text-muted -mt-2">
+                  Можно закрепить нескольких детей за одним слотом (групповой пробный, совместная отработка) — свяжем каждого с CRM
+                </p>
+
+                <div
+                  v-for="(child, i) in addForm.children"
+                  :key="child.uid"
+                  class="rounded-lg border border-subtle p-3 space-y-3"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-muted">Ребёнок {{ i + 1 }}</span>
+                    <UButton
+                      variant="ghost"
+                      color="neutral"
+                      size="xs"
+                      icon="i-lucide-x"
+                      @click="removeChildRow(child.uid)"
                     />
-                  </UFormField>
-                  <UFormField label="Телефон родителя">
-                    <UInput
-                      v-model="child.newLeadPhone"
-                      placeholder="Необязательно"
-                      class="w-full"
-                    />
-                  </UFormField>
+                  </div>
+                  <USelect
+                    v-model="child.leadId"
+                    :items="leadOptions"
+                    placeholder="Выберите или заведите нового..."
+                    class="w-full"
+                  />
+                  <div
+                    v-if="child.leadId === NEW_LEAD_VALUE"
+                    class="grid grid-cols-2 gap-3"
+                  >
+                    <UFormField
+                      label="Имя ребёнка"
+                      required
+                    >
+                      <UInput
+                        v-model="child.newLeadName"
+                        placeholder="Например: Айгерим"
+                        class="w-full"
+                      />
+                    </UFormField>
+                    <UFormField label="Телефон родителя">
+                      <UInput
+                        v-model="child.newLeadPhone"
+                        placeholder="Необязательно"
+                        class="w-full"
+                      />
+                    </UFormField>
+                  </div>
                 </div>
               </div>
-            </div>
-          </template>
+            </template>
 
-          <div class="grid grid-cols-2 gap-3">
-            <UFormField
-              label="Дата"
-              required
-            >
-              <UInput
-                v-model="addForm.date"
-                type="date"
-                class="w-full"
-              />
+            <div class="grid grid-cols-2 gap-3">
+              <UFormField
+                label="Дата"
+                required
+              >
+                <UInput
+                  v-model="addForm.date"
+                  type="date"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField
+                label="Время"
+                required
+              >
+                <UInput
+                  v-model="addForm.time"
+                  type="time"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <UFormField label="Длительность (мин)">
+                <UInput
+                  v-model.number="addForm.durationMin"
+                  type="number"
+                  :min="15"
+                  :max="240"
+                  :step="15"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Тема">
+                <UInput
+                  v-model="addForm.topic"
+                  placeholder="Необязательно"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <!-- Repeat -->
+            <UFormField label="Повторение">
+              <div class="flex rounded-lg border border-subtle overflow-hidden w-full">
+                <button
+                  type="button"
+                  class="flex-1 px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="addForm.repeat === 'once' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
+                  @click="addForm.repeat = 'once'"
+                >
+                  Единоразово
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 px-3 py-1.5 text-sm font-medium transition-colors"
+                  :class="addForm.repeat === 'weekly' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
+                  @click="addForm.repeat = 'weekly'"
+                >
+                  Каждую неделю
+                </button>
+              </div>
             </UFormField>
-            <UFormField
-              label="Время"
-              required
+            <p
+              v-if="addForm.repeat === 'weekly'"
+              class="text-xs text-muted flex items-center gap-1.5 -mt-1"
             >
-              <UInput
-                v-model="addForm.time"
-                type="time"
-                class="w-full"
+              <UIcon
+                name="i-lucide-repeat"
+                class="size-3.5 text-primary shrink-0"
               />
-            </UFormField>
+              Урок создастся на {{ RECUR_WEEKS }} недель вперёд в этот же день и время
+            </p>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <UFormField label="Длительность (мин)">
-              <UInput
-                v-model.number="addForm.durationMin"
-                type="number"
-                :min="15"
-                :max="240"
-                :step="15"
-                class="w-full"
-              />
-            </UFormField>
-            <UFormField label="Тема">
-              <UInput
-                v-model="addForm.topic"
-                placeholder="Необязательно"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-
-          <!-- Repeat -->
-          <UFormField label="Повторение">
-            <div class="flex rounded-lg border border-subtle overflow-hidden w-full">
-              <button
-                type="button"
-                class="flex-1 px-3 py-1.5 text-sm font-medium transition-colors"
-                :class="addForm.repeat === 'once' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
-                @click="addForm.repeat = 'once'"
-              >
-                Единоразово
-              </button>
-              <button
-                type="button"
-                class="flex-1 px-3 py-1.5 text-sm font-medium transition-colors"
-                :class="addForm.repeat === 'weekly' ? 'bg-primary text-white' : 'text-muted hover:bg-muted/20'"
-                @click="addForm.repeat = 'weekly'"
-              >
-                Каждую неделю
-              </button>
-            </div>
-          </UFormField>
-          <p
-            v-if="addForm.repeat === 'weekly'"
-            class="text-xs text-muted flex items-center gap-1.5 -mt-1"
-          >
-            <UIcon
-              name="i-lucide-repeat"
-              class="size-3.5 text-primary shrink-0"
-            />
-            Урок создастся на {{ RECUR_WEEKS }} недель вперёд в этот же день и время
-          </p>
-
-          <div class="flex justify-end gap-3 pt-1">
+          <div class="flex justify-end gap-3 p-6 pt-3 border-t border-default shrink-0">
             <UButton
               variant="ghost"
               color="neutral"
